@@ -1,0 +1,49 @@
+#!/bin/sh
+# 외부뇌 pre-commit: secret 차단 + sensitive unstage + frontmatter lint(경고)
+# 스펙: 제작가이드 §15-1
+
+fail=0
+# C1: quotepath=false → 한글 경로 옥탈인용 방지(안 하면 [ -f "$f" ] 실패 → 전 볼트 스킵 = 게이트 무력화).
+staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM)
+
+IFS='
+'   # 공백 포함 파일명 안전(개행만 구분자)
+for f in $staged; do
+	[ -f "$f" ] || continue
+
+	# 1. secret 스캔 — 히트 시 커밋 차단
+	#    실제 키 형태: sk-계열(하이픈 허용: sk-ant-/sk-proj-/sk-live-)·ghp_·AWS AKIA·PEM.
+	#    단어경계+16자+로 task-/짧은 CSS클래스 오탐 제외. (짧은 toy 'sk-test123'은 의도적 비매칭 — 실제 키는 40자+)
+	if git show ":$f" | grep -Eq '(\bsk-[A-Za-z0-9_-]{16,}|\bghp_[A-Za-z0-9]{16,}|\bAKIA[0-9A-Z]{16}|-----BEGIN[^-]*PRIVATE KEY-----)'; then
+		echo "❌ secret 의심: $f (커밋 차단)"
+		fail=1
+	fi
+
+	case "$f" in
+	*.md)
+		# 3. sensitive:true → unstage (push 제외)
+		#    frontmatter 필드만: 값 뒤 줄끝 앵커로 문서 산문("sensitive: true 시…") 오탐 제외
+		if git show ":$f" | grep -Eq '^sensitive:[[:space:]]*true[[:space:]]*$'; then
+			if git rev-parse --verify HEAD >/dev/null 2>&1; then
+				git reset -q HEAD "$f"
+			else
+				git rm --cached -q "$f"
+			fi
+			echo "⚠ sensitive 노트 unstage: $f (push 제외)"
+			continue   # M4: unstage 후 git show 실패 → frontmatter 오경고 방지
+		fi
+		# 2. frontmatter 없는 지식/수집 노트 → 경고(차단 안 함)
+		case "$f" in
+		2_지식/*|1_수집/*)
+			first=$(git show ":$f" 2>/dev/null | head -n 1)
+			if [ "$first" != "---" ]; then
+				echo "⚠ frontmatter 없음: $f (경고)"
+			fi
+			;;
+		esac
+		;;
+	esac
+done
+
+[ "$fail" -eq 1 ] && exit 1
+exit 0
