@@ -1,0 +1,2 @@
+source: kepano/obsidian-skills @ a1dc48e (MIT, Steph Ango)
+vendored: 2026-07-03

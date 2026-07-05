@@ -1,0 +1,8 @@
+3_시스템/_index/
+3_시스템/_claude-memory/*
+!3_시스템/_claude-memory/.gitkeep
+_변환본/
+*.pdf
+__pycache__/
+.obsidian/workspace*.json
+.claude/settings.local.json

@@ -1,0 +1,6 @@
+# 줄끝 = LF 고정 (마크다운·파이썬).
+# 근거: search.py B1 writer가 노트를 LF로 재기록 → HEAD가 CRLF면 매 --link-write마다
+#       전체 라인 플립(git churn). 구 외부뇌 §3.6("자동git 반복 sync") 교훈 = *.md LF 고정.
+# ps1(BOM·인코딩 2층 민감)·json·vendored 플러그인은 손대지 않음.
+*.md text eol=lf
+*.py text eol=lf
