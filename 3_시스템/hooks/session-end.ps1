@@ -20,7 +20,14 @@ if (Test-Path $searchPy) {
 # 1. 볼트 커밋 (1_수집 제외 = Claude 소유 변경분 → Claude author로 인간과 분리)
 git add -A -- ':!1_수집'
 git diff --cached --quiet
-if ($LASTEXITCODE -ne 0) { git commit -m "session: $today" --author="Claude <claude@local>" | Out-Null }
+if ($LASTEXITCODE -ne 0) {
+    git commit -m "session: $today" --author="Claude <claude@local>" | Out-Null
+    # pre-commit 차단(frontmatter/secret)으로 커밋 실패 시 스테이지 잔존 → 무성 좌초 가시화.
+    git diff --cached --quiet
+    if ($LASTEXITCODE -ne 0) {
+        Add-Content -Path (Join-Path $vault '3_시스템\_index\hooks.log') -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') SessionEnd commit BLOCKED by pre-commit - staged changes remain" -ErrorAction SilentlyContinue
+    }
+}
 
 # 2. 1_수집(사용자 저작물) 별도 커밋 — author 분리
 git add 1_수집
