@@ -32,9 +32,17 @@ for f in $staged; do
 			echo "⚠ sensitive 노트 unstage: $f (push 제외)"
 			continue   # M4: unstage 후 git show 실패 → frontmatter 오경고 방지
 		fi
-		# 2. frontmatter 없는 지식/수집 노트 → 경고(차단 안 함)
+		# 2. frontmatter 검사. 지식노트(2_지식)=차단(스키마 깨진 노트=실오류, Stop훅 백스톱).
+		#    사용자 저작물(1_수집)=경고만(무수정 원칙). MOC 등재는 Stop훅 담당(커밋 좌초 방지).
 		case "$f" in
-		2_지식/*|1_수집/*)
+		2_지식/*)
+			first=$(git show ":$f" 2>/dev/null | head -n 1)
+			if [ "$first" != "---" ]; then
+				echo "❌ frontmatter 없음: $f (커밋 차단)"
+				fail=1
+			fi
+			;;
+		1_수집/*)
 			first=$(git show ":$f" 2>/dev/null | head -n 1)
 			if [ "$first" != "---" ]; then
 				echo "⚠ frontmatter 없음: $f (경고)"
