@@ -171,7 +171,12 @@ def chunk_text(text):
             cur.append(ln)
     if cur: sections.append(cur)
     chunks = []
+    carry = []   # 본문 없는 제목-only 섹션 → 다음 섹션에 접두 병합(내용없는 청크가 이방성
+                 # 원뿔서 무관노트에 max 세우는 허위 이웃 방지. 제목 텍스트는 보존).
     for sec in sections:
+        if not any(l.strip() and not l.lstrip().startswith("#") for l in sec):
+            carry += sec; continue      # 제목·공백뿐 → 이월(단독 배출 안 함)
+        sec = carry + sec; carry = []
         if len(sec) <= WINDOW:
             c = "\n".join(sec).strip()
             if c: chunks.append(c)
@@ -179,6 +184,11 @@ def chunk_text(text):
             for i in range(0, len(sec), WINDOW):
                 c = "\n".join(sec[i:i + WINDOW]).strip()
                 if c: chunks.append(c)
+    if carry:                            # 말미 제목-only(뒤 본문섹션 없음) → 마지막 청크에 흡수
+        c = "\n".join(carry).strip()
+        if c:
+            if chunks: chunks[-1] = chunks[-1] + "\n" + c
+            else: chunks.append(c)
     if not chunks:
         chunks = [text.strip()[:2000]]
     return chunks[:MAX_CHUNKS]
