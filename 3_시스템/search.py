@@ -68,14 +68,20 @@ HALF_LIFE_DAYS = 90.0
 RRF_K = 60
 
 
-def load_model():
+def config_model_name():
+    """config.json의 embed_model만 읽는다(모델 로드 없음 — 지연로드용)."""
     model_name = "intfloat/multilingual-e5-small"
     try:
         with open(CONFIG_PATH, encoding="utf-8") as f:
             model_name = json.load(f).get("embed_model", model_name)
     except (FileNotFoundError, json.JSONDecodeError, ValueError):  # H2: 손상 config → 기본 모델
         pass
-    from sentence_transformers import SentenceTransformer
+    return model_name
+
+
+def load_model():
+    model_name = config_model_name()
+    from sentence_transformers import SentenceTransformer  # 무거움(torch) → 실제 인코딩 필요 시에만 호출
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
     return SentenceTransformer(model_name, device=device), model_name
@@ -199,7 +205,7 @@ def save_index(idx):
 
 
 def reindex(full=False):
-    model, model_name = load_model()
+    model_name = config_model_name()   # 모델명만(로드 X). 실제 모델은 to_embed 있을 때만 지연로드.
     idx = {} if full else load_index()
     if not full and idx.get("_model") not in (None, model_name):
         print(f"model changed ({idx.get('_model')} -> {model_name}): forcing full rebuild (차원혼합 방지)", file=sys.stderr)
@@ -217,6 +223,7 @@ def reindex(full=False):
     for rp in list(notes(idx).keys()):
         if rp not in cur: del idx[rp]
     if to_embed:
+        model, _ = load_model()   # 지연로드: 임베딩할 변경분 있을 때만 16s 모델로드(무변경 시 스킵)
         docs = [pdoc(model_name, c) for _, c in to_embed]
         vecs = model.encode(docs, normalize_embeddings=True, show_progress_bar=False, batch_size=32)
         by = {}
