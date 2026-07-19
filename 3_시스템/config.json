@@ -3,6 +3,6 @@
   "graph": {
     "neigh_k": 3,
     "neigh_dup": 0.999,
-    "neigh_floor": 0.05
+    "neigh_tau": 0.33
   }
 }
