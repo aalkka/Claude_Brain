@@ -9,13 +9,10 @@ Add-Content -Path (Join-Path $vault '3_시스템\_index\hooks.log') -Value "$(Ge
 
 $today = Get-Date -Format 'yyyy-MM-dd'
 
-# 0. B1 의미링크 자동 갱신 (search.py 있을 때만): reindex(이번 세션 변경분) → link-write(관리블록).
-#    직후 git add -A가 링크 변경분을 커밋에 흡수. 안전: strip_managed(피드백루프 차단)+newline LF(CRLF churn 차단).
-$searchPy = Join-Path $vault '3_시스템\search.py'
-if (Test-Path $searchPy) {
-    py -3 $searchPy --reindex 2>$null | Out-Null
-    py -3 $searchPy --link-write 2>$null | Out-Null
-}
+# [원인 시정] 구버전은 여기서 reindex+link-write(모델로드 16s+·link-write O(N²))를 **동기** 실행 후
+#   커밋했다 → 콜드 세션에서 훅 타임아웃(60s) 초과 → 커밋 라인 도달 전 kill → 한 주간 커밋 정지
+#   (incident 2026-07-19). 시정: ① 커밋은 Stop 훅(턴마다)이 이미 수행 → 여기선 best-effort 백업.
+#   ② ML은 맨 끝에서 **디태치**(비대기) → 이 훅은 절대 블록 안 함. 셧다운이 kill해도 커밋은 이미 안전.
 
 # 1. 볼트 커밋 (1_수집 제외 = Claude 소유 변경분 → Claude author로 인간과 분리)
 git add -A -- ':!1_수집'
@@ -41,3 +38,11 @@ if ($LASTEXITCODE -ne 0) { git commit -m "user: $today" --author="User <user@loc
 $claudeMd = Join-Path $vault 'CLAUDE.md'
 $slotsLeft = (Get-Content $claudeMd -Raw) -match '\{\{[^}]'
 if (-not $slotsLeft -and (git remote)) { git push 2>$null | Out-Null }
+
+# 4. B1 의미링크 갱신 — 맨 끝 **디태치**(비대기). reindex→link-write 1프로세스(main()이 순차 지원).
+#    비핵심(인덱스=gitignore, 링크블록=멱등·1세션 지연 무해) → 셧다운이 죽여도 다음 시작 reindex가 커버.
+#    이 훅이 여기서 절대 블록되지 않게 하는 게 목적(타임아웃 무의미화).
+$searchPy = Join-Path $vault '3_시스템\search.py'
+if (Test-Path $searchPy) {
+    Start-Process -FilePath 'py' -ArgumentList '-3', $searchPy, '--reindex', '--link-write' -WindowStyle Hidden -ErrorAction SilentlyContinue
+}
