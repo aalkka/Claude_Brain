@@ -356,8 +356,8 @@ def evaluate(golden_path, k=8):
 
 # B1 이웃 기본값(config.json "graph"서 오버라이드 — setup-interview 슬롯). 근거=results-b1-neighbors.md.
 NEIGH_K = 3          # 노드당 이웃 상한(per-node top-k). union 렌더 시 평균차수 ~4.5.
-NEIGH_DUP = 0.999    # 중복드롭: cos>=이면 색인중복(변환본↔pdf-cache 동일본) → 이웃 아님.
-NEIGH_FLOOR = 0.08   # 상대floor: 자기 top1보다 이만큼 낮은 이웃 배제(아웃라이어 억지링크 방지).
+NEIGH_DUP = 0.999    # 중복드롭: cos>=이면 색인중복(변환본↔pdf-cache 동일본) → 이웃 아님(센터 후도 dup=1.0 실증).
+NEIGH_TAU = 0.33     # 센터링 후 절대임계: top1(고립방지 레일) 외 이웃은 centered-cos>=이만 채택.
 
 
 def graph_cfg():
@@ -370,40 +370,62 @@ def graph_cfg():
         pass
     return (int(g.get("neigh_k", NEIGH_K)),
             float(g.get("neigh_dup", NEIGH_DUP)),
-            float(g.get("neigh_floor", NEIGH_FLOOR)))
+            float(g.get("neigh_tau", NEIGH_TAU)))
 
 
-def neighbors(path, k=None, dup=None, floor_delta=None):
-    """B1 의미이웃 = per-node top-k **상대**방식(절대임계 폐기).
+def _global_mean(ns):
+    """전 색인 청크벡터 글로벌 평균 μ(이방성 센터링용). 노트<2면 None(센터링 스킵)."""
+    if len(ns) < 2: return None
+    dim = len(next(iter(ns.values()))["vecs"][0])
+    mean = [0.0] * dim; n = 0
+    for e in ns.values():
+        for v in e["vecs"]:
+            for i in range(dim): mean[i] += v[i]
+            n += 1
+    return [x / n for x in mean] if n else None
 
-    근거(측정, results-b1-neighbors.md): e5-small 임베딩 이방성 → 전 노트쌍 cos
-    0.80~1.00 원뿔 압착(min 0.802). 절대임계는 0.80서 완전그래프(헤어볼) → 무용.
-    상대방식(각 노트의 top-k만 채택)이 절대임계 대체. k=3 union: 평균차수 4.5·고립0·
-    수동링크 recall 49%(허브링크 제외 시 의미이웃 대부분 회복). max-chunk-cos 유지
-    (mean-pool 대비 recall·페이스밸리디티 동등이상, 검색경로와 일관).
+
+def _center(v, mean):
+    """v − μ 후 재정규화(이방성 제거). norm 0(=μ와 동일 generic 청크)이면 0벡터 → max-pool 비기여."""
+    w = [v[i] - mean[i] for i in range(len(mean))]
+    nr = math.sqrt(sum(x * x for x in w)) or 1.0
+    return [x / nr for x in w]
+
+
+def neighbors(path, k=None, dup=None, tau=None):
+    """B1 의미이웃 = 평균 센터링 후 top-k.
+
+    근거(측정, results-b1-neighbors.md): e5-small 임베딩 **이방성** → 전 노트쌍 raw cos
+    0.80~1.00 원뿔 압착(절대임계 = 헤어볼, 원리적 무용). **평균 센터링**(All-but-the-Top
+    1단계 = 글로벌 μ 빼고 재정규화)이 원뿔을 펴 진짜 이웃을 노이즈 위로 분리 →
+    센터 후엔 절대임계 유효. 규칙: top1 무조건 유지(고립방지 레일) + 2~k위는
+    centered-cos>=tau. neighbors 전용(검색 vector_scores는 raw 유지 — 무영향).
+    실측(손라벨 골든): raw-floor 대비 평지형 스퍼리어스(행정공지·계획류 등) 추가 제거.
     """
-    ck, cdup, cfloor = graph_cfg()
+    ck, cdup, ctau = graph_cfg()
     if k is None: k = ck
     if dup is None: dup = cdup
-    if floor_delta is None: floor_delta = cfloor
+    if tau is None: tau = ctau
     idx = load_index()
     tgt = rel(os.path.abspath(path))
     if tgt not in idx:
         print(f"not indexed: {tgt}", file=sys.stderr); return []
-    tv = idx[tgt]["vecs"]
+    ns = notes(idx)
+    mean = _global_mean(ns)             # 소표본(<2)이면 None → 센터링 스킵(raw)
+    cv = ({rp: [_center(v, mean) for v in e["vecs"]] for rp, e in ns.items()}
+          if mean else {rp: e["vecs"] for rp, e in ns.items()})
+    tv = cv[tgt]
     rows = []
-    for rp, e in notes(idx).items():
+    for rp, e in ns.items():
         if rp == tgt: continue
-        cos = max(dot(a, b) for a in tv for b in e["vecs"])
+        cos = max(dot(a, b) for a in tv for b in cv[rp])
         if cos >= dup: continue            # 색인중복 억제(Phase5 dedup 전 임시)
         rows.append((cos, rp, e.get("gist", "")))
     rows.sort(reverse=True)
     if not rows: return []
-    top1 = rows[0][0]
-    out = []
-    for cos, rp, g in rows[:k]:
-        if cos < top1 - floor_delta: break  # 자기 top1 대비 상대 하한
-        out.append((cos, rp, g))
+    out = [rows[0]]                        # top1 무조건 유지(고립방지)
+    for cos, rp, g in rows[1:k]:
+        if cos >= tau: out.append((cos, rp, g))  # 2~k위는 센터 절대임계 통과분만
     return out
 
 
