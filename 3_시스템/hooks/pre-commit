@@ -41,6 +41,12 @@ for f in $staged; do
 				echo "❌ frontmatter 없음: $f (커밋 차단)"
 				fail=1
 			fi
+			# links: YAML 유효성 — 위키링크 무따옴표 [[x]]/[[[x]]]=파싱오류(Obsidian 적색). 따옴표 배열 "[[x]]"만 허용.
+			lk=$(git show ":$f" 2>/dev/null | grep -E '^links:')
+			if [ -n "$lk" ] && printf '%s' "$lk" | grep -q '\[\[' && ! printf '%s' "$lk" | grep -q '"\[\['; then
+				echo "❌ links 프론트매터 깨짐(따옴표 배열 \"[[x]]\" 필요): $f (커밋 차단)"
+				fail=1
+			fi
 			;;
 		1_수집/*)
 			first=$(git show ":$f" 2>/dev/null | head -n 1)

@@ -6,6 +6,7 @@ status: active
 # 프론트매터 스키마
 type: semantic|episodic|procedural|decision|moc|incident
 title, created, updated: ISO날짜, tags: [], links: []
+links 채울 때: 위키링크는 **따옴표 배열** — `links: ["[[노트명]]", "[[다른노트]]"]`. 무따옴표 `[[x]]`/`[[[x]]]`는 YAML 파싱오류(Obsidian 적색) → Stop훅·pre-commit이 차단.
 status: active|archived (기본 active)
 importance: 1-10 (선택, 정적. 기본 5)
 confidence: verified|hypothesized (합성·인제스트물은 hypothesized)
