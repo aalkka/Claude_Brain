@@ -47,4 +47,4 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 - 민감 노트는 frontmatter `sensitive: true` → push 제외.
 
 ## 라이선스·차용
-차용 스킬(`obsidian-markdown`·`defuddle`) = kepano/obsidian-skills (MIT).
+차용 스킬(`defuddle`) = kepano/obsidian-skills (MIT).
