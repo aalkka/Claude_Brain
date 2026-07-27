@@ -34,9 +34,17 @@ if (Test-Path $idx) {
 }
 Write-Output "[뇌] 노트 ${noteCount}개 | 인덱스 age $idxAge | 마지막커밋 $lastCommit"
 
-# 3. search.py 있으면 증분 인덱스 (Phase 3 이후에만 존재)
+# 3. search.py 있으면 증분 인덱스 — **디태치**(비대기, session-end와 동일 패턴).
+#    구 구조는 동기 실행이었다: 세션 시작 시점엔 직전 세션이 남긴 노트 변경분이 거의 항상 있어
+#    지연로드 스킵(search.py "to_embed 있을 때만")이 안 걸린다 → 모델로드 15.6s(HF Hub 확인
+#    5.1s 포함)+인코딩 ≈18s를 사용자가 그대로 대기(실측 중앙값 23s·p90 84s·최대 118s, 81회).
+#    비핵심(인덱스=gitignore·검색 품질에만 영향)이고 save_index가 tmp→os.replace 원자교체라
+#    중도 kill·SessionEnd 디태치와 동시 실행에도 손상 없음(다음 reindex가 hash 불일치로 자기치유).
+#    ※ push(4)는 동기 유지 — 1.5s로 짧고, git 동시 실행은 index.lock 경합 위험(2026-07-19 사례).
 $searchPy = Join-Path $vault '3_시스템\search.py'
-if (Test-Path $searchPy) { py -3 $searchPy --reindex 2>$null | Out-Null }
+if (Test-Path $searchPy) {
+    Start-Process -FilePath 'py' -ArgumentList '-3', $searchPy, '--reindex' -WindowStyle Hidden -ErrorAction SilentlyContinue
+}
 
 # 4. 원격 push — 밀린 커밋 동기(셧다운이 SessionEnd를 kill해도 다음 세션 시작 때 확실히 push).
 #    개인화 완료(미치환 슬롯 없음)+원격 존재 시만. stdout 무출력(주입 컨텍스트 오염 없음). 실패 무시.
