@@ -433,6 +433,7 @@ def neighbors(path, k=None, dup=None, tau=None):
 # 스코프 = Claude소유 지식노트만(1_수집 사용자저작·설계노트·기계파생 제외).
 WRITER_GLOBS = [
     "2_지식/notes/**/*.md",
+    "2_지식/modules/**/*.md",   # 모듈 산출물(2026-07-27 신설) — 교차링크가 차별점이라 이웃블록 필수
     "2_지식/sessions/**/*.md",
     "3_시스템/_ref/**/*.md",
 ]

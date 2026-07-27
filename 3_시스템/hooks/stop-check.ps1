@@ -20,8 +20,11 @@ $log   = Join-Path $idx 'hooks.log'
 if (-not (Test-Path $moc)) { exit 0 }   # MOC 없으면(초기 상태) 검사 스킵
 $mocText = Get-Content $moc -Raw -Encoding UTF8
 
-# 대상: notes/·decisions/ (재귀 — 하위폴더 포함). sessions/·_ref/·_접두 하위폴더는 MOC 대상 아님.
-$dirs = @('2_지식\notes', '2_지식\decisions')
+# 대상: notes/·decisions/·modules/ (재귀 — 하위폴더 포함). sessions/·_ref/·_접두 하위폴더는 MOC 대상 아님.
+# modules/ = 모듈 산출물 전용(2026-07-27 신설). 프론트매터는 요구하되 **MOC 등재는 면제** —
+# 모듈은 MOC에 '설계노트 1줄'로 대표되고, 산출물마다 등재하면 MOC가 폭증한다(도그푸드 실측 마찰점).
+$dirs = @('2_지식\notes', '2_지식\decisions', '2_지식\modules')
+$mocExempt = @('2_지식\modules')
 $noFm = @(); $noMoc = @(); $badLinks = @()
 foreach ($d in $dirs) {
     $p = Join-Path $vault $d
@@ -37,7 +40,7 @@ foreach ($d in $dirs) {
         if (-not ($txt -and $txt.StartsWith('---'))) { $noFm += $f.Name }
         # ② MOC 등재: [[name]] / [[name|별칭]] / [[name#섹션]]
         $esc = [regex]::Escape($name)
-        if ($mocText -notmatch "\[\[$esc[\]|#]") { $noMoc += $f.Name }
+        if (($mocExempt -notcontains $d) -and ($mocText -notmatch "\[\[$esc[\]|#]")) { $noMoc += $f.Name }
         # ②' links YAML 유효성: 무따옴표 [[x]]/[[[x]]]=파싱오류(선두 '---' 존재검사를 통과 → 별도). 따옴표 배열 "[[x]]"만 유효.
         if ($txt) {
             $fm = ($txt -split "`n---", 2)[0]
@@ -53,8 +56,24 @@ foreach ($d in $dirs) {
 $allMd = Get-ChildItem -Path (Join-Path $vault '2_지식'), (Join-Path $vault '3_시스템\_ref') -Filter *.md -File -Recurse -ErrorAction SilentlyContinue
 $dupNames = @($allMd | Group-Object BaseName | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })
 
+# ④ 블록수식 연속 검출 (Obsidian 렌더 깨짐 — 수식이 날것으로 노출).
+# 실측 2026-07-27: '$$...$$' 한 줄 블록이 빈 줄 없이 이어지면 마크다운 파서가 수식 경계를 잘못 잡는다.
+# 깨진 노트 Ch1 30건·Ch2 27건 vs 정상 노트 0건 → 이 패턴이 단독 원인. 규약(모델 준수) 아닌 훅으로 강제.
+$mathAdj = @()
+foreach ($f in $allMd) {
+    $lines = Get-Content $f.FullName -Encoding UTF8 -ErrorAction SilentlyContinue
+    if ($null -eq $lines) { continue }
+    $prevDD = $false; $hits = 0
+    foreach ($ln in $lines) {
+        $isDD = $ln -match '^\s*\$\$.*\$\$\s*$'
+        if ($isDD -and $prevDD) { $hits++ }
+        $prevDD = $isDD
+    }
+    if ($hits -gt 0) { $mathAdj += "$($f.Name)($hits)" }
+}
+
 # 위반 없음 → 가드 리셋 후 커밋(로컬 durability) → 통과.
-if ($noFm.Count -eq 0 -and $noMoc.Count -eq 0 -and $dupNames.Count -eq 0 -and $badLinks.Count -eq 0) {
+if ($noFm.Count -eq 0 -and $noMoc.Count -eq 0 -and $dupNames.Count -eq 0 -and $badLinks.Count -eq 0 -and $mathAdj.Count -eq 0) {
     Remove-Item $guard -Force -ErrorAction SilentlyContinue
     # [커밋 이관] 실제 종료 = PC 셧다운 → SessionEnd는 OS가 kill(torch+커밋 완주 불가).
     # 그래서 커밋을 살아있는 턴 종료(Stop)로 옮긴다. torch 미로드 → 빠름(~수백ms).
@@ -75,7 +94,7 @@ if ($noFm.Count -eq 0 -and $noMoc.Count -eq 0 -and $dupNames.Count -eq 0 -and $b
 # 순환 서킷브레이커: 동일 위반집합으로 이미 2회 차단됐으면 무한루프로 보고 해제(exit 0)한다.
 # 조용히 넘기지 않도록 hooks.log에 기록(미해결 위반 가시화 — 인시던트 교훈).
 if (-not (Test-Path $idx)) { New-Item -ItemType Directory $idx -Force | Out-Null }
-$sig = ($noMoc -join ',') + '||' + ($noFm -join ',') + '||' + ($dupNames -join ',') + '||' + ($badLinks -join ',')
+$sig = ($noMoc -join ',') + '||' + ($noFm -join ',') + '||' + ($dupNames -join ',') + '||' + ($badLinks -join ',') + '||' + ($mathAdj -join ',')
 $sha = [System.Security.Cryptography.SHA1]::Create()
 $sigHash = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($sig))) -replace '-'
 $count = 0
@@ -84,7 +103,7 @@ if (Test-Path $guard) {
     if ($prev.Count -ge 2 -and $prev[0] -eq $sigHash) { $count = [int]$prev[1] }
 }
 if ($count -ge 2) {
-    Add-Content -Path $log -Encoding UTF8 -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') stop-check 순환차단 해제 — 미해결 위반 잔존: MOC[$($noMoc -join ',')] FM[$($noFm -join ',')] LINKS[$($badLinks -join ',')]" -ErrorAction SilentlyContinue
+    Add-Content -Path $log -Encoding UTF8 -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') stop-check 순환차단 해제 — 미해결 위반 잔존: MOC[$($noMoc -join ',')] FM[$($noFm -join ',')] LINKS[$($badLinks -join ',')] MATH[$($mathAdj -join ',')]" -ErrorAction SilentlyContinue
     Remove-Item $guard -Force -ErrorAction SilentlyContinue
     exit 0
 }
@@ -95,11 +114,13 @@ if ($noMoc.Count) { $parts += 'MOC.md 미등재: ' + ($noMoc -join ', ') }
 if ($noFm.Count)  { $parts += "프론트매터 누락(선두 '---' 없음): " + ($noFm -join ', ') }
 if ($dupNames.Count) { $parts += '중복 파일명(위키링크 [[name]] 모호): ' + ($dupNames -join ', ') }
 if ($badLinks.Count) { $parts += 'links 프론트매터 깨짐(무따옴표 위키링크=YAML 파싱오류): ' + ($badLinks -join ', ') }
+if ($mathAdj.Count) { $parts += '블록수식 연속(Obsidian서 수식이 날것 노출 — 깨짐): ' + ($mathAdj -join ', ') }
 $reason = "규약 위반 — 종료 전 조치 필요.`n" + ($parts -join "`n") +
     "`n조치: 각 노트를 2_지식/MOC.md의 알맞은 섹션(## 지식/## 결정)에 [[파일명]]으로 등재하고, " +
     "누락 노트엔 프론트매터(3_시스템/conventions.md 스키마)를 추가하고, " +
     "중복 파일명은 하나를 고유 basename으로 개명하고, " +
     "깨진 links는 따옴표 배열(links: [`"[[노트명]]`"])로 고치세요. " +
+    '연속된 $$…$$ 블록 사이에는 빈 줄을 넣으세요(괄호 안 숫자=위반 건수). ' +
     "(세션로그·_ref·_접두 하위폴더는 MOC 대상 아님 — 조용히 생략하지 말고 이 목록을 처리)"
 
 $out = @{ decision = 'block'; reason = $reason } | ConvertTo-Json -Compress
