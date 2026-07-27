@@ -30,7 +30,7 @@ foreach ($d in $dirs) {
     $p = Join-Path $vault $d
     if (-not (Test-Path $p)) { continue }
     foreach ($f in Get-ChildItem -Path $p -Filter *.md -File -Recurse) {
-        # _접두 하위폴더(예 vocagrader/_ref)는 MOC 비대상 — top-level _ref와 동일(프로젝트 incident 등).
+        # _접두 하위폴더(예 <프로젝트>/_ref)는 MOC 비대상 — top-level _ref와 동일(프로젝트 incident 등).
         # '2_지식'의 '_'는 앞이 '2'라 '\_' 패턴에 안 걸림(오작동 없음).
         if ($f.DirectoryName.Substring($vault.Length) -match '\\_') { continue }
         $name = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
