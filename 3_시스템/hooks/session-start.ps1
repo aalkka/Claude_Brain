@@ -22,7 +22,7 @@ if (Test-Path $recent) { Write-Output "`n=== recent.md ==="; Get-Content $recent
 if (Test-Path $loops)  { Write-Output "`n=== open-loops.md ==="; Get-Content $loops -Raw -Encoding UTF8 }
 
 # 2. 헬스 1줄 (지식노트만: notes/sessions/decisions — profile/recent/open-loops/MOC 제외)
-$noteCount = (@('2_지식\notes','2_지식\sessions','2_지식\decisions') | ForEach-Object { Get-ChildItem (Join-Path $vault $_) -Recurse -Filter *.md -ErrorAction SilentlyContinue } | Measure-Object).Count
+$noteCount = (@('2_지식\notes','2_지식\sessions','2_지식\decisions','2_지식\modules') | ForEach-Object { Get-ChildItem (Join-Path $vault $_) -Recurse -Filter *.md -ErrorAction SilentlyContinue } | Measure-Object).Count
 $lastCommit = (git -C $vault log -1 --format='%cr' 2>$null)
 if (-not $lastCommit) { $lastCommit = '없음' }
 $idx = Join-Path $vault '3_시스템\_index\embeddings.json'
