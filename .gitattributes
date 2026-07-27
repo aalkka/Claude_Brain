@@ -1,6 +1,13 @@
-# 줄끝 = LF 고정 (마크다운·파이썬).
+# 줄끝 = LF 고정 (마크다운·파이썬·PowerShell 훅).
 # 근거: search.py B1 writer가 노트를 LF로 재기록 → HEAD가 CRLF면 매 --link-write마다
 #       전체 라인 플립(git churn). 구 외부뇌 §3.6("자동git 반복 sync") 교훈 = *.md LF 고정.
-# ps1(BOM·인코딩 2층 민감)·json·vendored 플러그인은 손대지 않음.
+# ps1 추가(2026-07-27): 구 주석은 "BOM·인코딩 2층 민감"을 이유로 제외했으나 **실측 기각** —
+#       eol=lf는 EOL만 바꾸고 BOM 바이트는 안 건드린다(라운드트립: CRLF+BOM → LF+BOM이
+#       LF본과 바이트 동일, PS 5.1 파싱·실행·한글/{{슬롯}} 판독 전부 정상).
+#       실피해 = 훅을 고치는 스크립트가 newline="\r\n"으로 쓰면 저장소가 CRLF로 오염된다.
+#       "파이썬은 newline='\n' 명시" 규칙은 문서에만 있어 지켜지지 않았다(뿌리②) → git 계층 강제.
+#       근거 = _ref/incident-2026-07-04-writer-crlf-eol-churn.
+# json·vendored 플러그인은 손대지 않음.
 *.md text eol=lf
 *.py text eol=lf
+*.ps1 text eol=lf
