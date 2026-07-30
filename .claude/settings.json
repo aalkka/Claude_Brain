@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "ask": [
+      "Edit(/CLAUDE.md)",
+      "Edit(/3_시스템/hooks/**)",
+      "Edit(/3_시스템/search.py)",
+      "Edit(/3_시스템/conventions.md)",
+      "Edit(/.claude/settings.json)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -6,6 +15,17 @@
           {
             "type": "command",
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/session-start.ps1\""
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/core-gate.ps1\""
           }
         ]
       }
