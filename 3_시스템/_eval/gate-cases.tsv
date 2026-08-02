@@ -1,0 +1,18 @@
+# 코어 게이트 회귀 케이스 (ADR-006). 탭 4필드: 기대	라벨	로그기대(-=생략)	페이로드(raw stdin JSON)
+# 새 케이스는 실측된 실패에만 근거해 추가한다. 라벨 뒤 [ ]는 그 케이스가 덮는 축.
+FIRE	01 Bash py -3 -c write	Bash CLAUDE.md	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 -c \"open('CLAUDE.md','w').write('x')\""}}
+FIRE	02 PS WriteAllText	PowerShell CLAUDE.md	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"[IO.File]::WriteAllText('C:/Claude_Brain/CLAUDE.md','x')"}}
+NOFIRE	03 py -3 search.py --eval [무인]	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/search.py --eval 3_시스템/_eval/golden.jsonl"}}
+FIRE	04 Bash python3 CLAUDE.md	Bash CLAUDE.md	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python3 -c \"import io\" CLAUDE.md"}}
+FIRE	05 Edit CLAUDE.md	Edit CLAUDE.md	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"C:\\Claude_Brain\\CLAUDE.md","old_string":"a","new_string":"b"}}
+NOFIRE	06 Bash cat CLAUDE.md [읽기]	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cat CLAUDE.md"}}
+NOFIRE	07 py -3 tokens.py [비코어]	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/tokens.py --n 10 --tools"}}
+NOFIRE	08 Edit 비코어 노트	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"C:\\Claude_Brain\\2_지식\\note.md","old_string":"a","new_string":"b"}}
+NOFIRE	09 py -3 search.py 질의 [무인]	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/search.py \"코어 게이트\""}}
+NOFIRE	10 PS Get-Content [읽기]	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"Get-Content C:\\Claude_Brain\\CLAUDE.md -TotalCount 20"}}
+FIRE	11 py -c read [알려진 오탐]	Bash CLAUDE.md	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -c \"print(open('CLAUDE.md').read())\""}}
+NOFIRE	12 PS ReadAllText [읽기]	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"[IO.File]::ReadAllText('C:/Claude_Brain/CLAUDE.md')"}}
+FIRE	13 명령속 가짜Edit [스푸핑]	PowerShell CLAUDE.md	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"echo '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"C:\\\\Claude_Brain\\\\CLAUDE.md\"}}' | Set-Content t.json"}}
+FIRE	14 필드순서 역전 [스푸핑]	PowerShell CLAUDE.md	{"permission_mode":"auto","tool_input":{"command":"echo '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"C:\\\\Claude_Brain\\\\CLAUDE.md\"}}' | Set-Content t.json"},"tool_name":"PowerShell"}
+NOFIRE	15 본문속 가짜 file_path [스푸핑]	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"C:\\Claude_Brain\\3_시스템\\_ref\\note.md","old_string":"see \"file_path\":\"C:\\\\Claude_Brain\\\\CLAUDE.md\" here","new_string":"b"}}
+FIRE	16 Write 훅 신규생성 [1층 구멍]	Write 3_시스템/hooks/new.ps1	{"tool_name":"Write","permission_mode":"auto","tool_input":{"file_path":"C:\\Claude_Brain\\3_시스템\\hooks\\new.ps1","content":"x"}}

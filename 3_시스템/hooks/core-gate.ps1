@@ -1,4 +1,4 @@
-# 외부뇌 코어 게이트 2층 — PreToolUse (ADR-006)
+﻿# 외부뇌 코어 게이트 2층 — PreToolUse (ADR-006)
 # 1층(permissions.ask)이 못 잡는 Bash/PowerShell 경유 쓰기·신규 파일 생성을 잡고,
 # 코어 접촉에 준수사항을 실어 보낸다. 상시 토큰 0 — 발동 시에만 출력.
 #
@@ -34,8 +34,10 @@ $target = $Matches[1]
 # ── 4. 셸 도구는 '쓰기 동사'가 함께 있을 때만 건다.
 # 경로만 보면 `grep CLAUDE.md`·`cat conventions.md`·`git log -- CLAUDE.md`가
 # 전부 걸려 게이트 피로를 만든다(오탐이 게이트를 죽이는 주 경로).
+# `py`는 -c(인라인 코드)에만 건다. 넓히면 `py -3 3_시스템/search.py`(weekly 4스텝·search 스킬)가
+# 걸려 무인 실행이 승인 대기로 죽는다. 코어 스크립트 '실행'과 코어 '쓰기'를 가르는 선이다.
 if ($tool -in 'Bash','PowerShell') {
-    if ($p -notmatch '>|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|\bpython\d?\b|\bnode\b|\bperl\b|git\s+(checkout|restore|apply|reset)') { exit 0 }
+    if ($p -notmatch '>|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|\bpython\d?\b|\bnode\b|\bperl\b|git\s+(checkout|restore|apply|reset)|\bpy\s+(-\d(\.\d+)?\s+)?-c\b|WriteAll\w+|AppendAll\w+') { exit 0 }
 }
 
 # ── 5. 발동 — 관측 로그(_index는 gitignore) 후 ask + 준수사항
@@ -92,5 +94,6 @@ $reason = @'
     hookEventName            = 'PreToolUse'
     permissionDecision       = 'ask'
     permissionDecisionReason = $reason
+    additionalContext        = $reason
 } } | ConvertTo-Json -Depth 5 -Compress
 exit 0
