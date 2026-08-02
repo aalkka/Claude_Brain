@@ -28,7 +28,8 @@ if ([string]::IsNullOrWhiteSpace($probe)) { exit 0 }
 $p = $probe -replace '\\\\', '/' -replace '\\', '/'
 
 # ── 3. 코어 경로 매치
-if ($p -notmatch '(CLAUDE\.md|3_시스템/hooks/[^\s",]*|3_시스템/search\.py|3_시스템/conventions\.md|\.claude/settings\.json)') { exit 0 }
+$core = 'CLAUDE\.md|3_시스템/hooks/[^\s",]*|3_시스템/search\.py|3_시스템/conventions\.md|\.claude/settings\.json'
+if ($p -notmatch ('(' + $core + ')')) { exit 0 }
 $target = $Matches[1]
 
 # ── 4. 셸 도구는 '쓰기 동사'가 함께 있을 때만 건다.
@@ -36,8 +37,10 @@ $target = $Matches[1]
 # 전부 걸려 게이트 피로를 만든다(오탐이 게이트를 죽이는 주 경로).
 # `py`는 -c(인라인 코드)에만 건다. 넓히면 `py -3 3_시스템/search.py`(weekly 4스텝·search 스킬)가
 # 걸려 무인 실행이 승인 대기로 죽는다. 코어 스크립트 '실행'과 코어 '쓰기'를 가르는 선이다.
+# 리다이렉트는 '대상이 코어일 때만' 건다. 맨 `>`는 `--eval x >> _eval/results.md`·`2>&1`처럼
+# 코어를 읽기만 하는 명령을 전부 걸었다(08-03 weekly 실측 7건).
 if ($tool -in 'Bash','PowerShell') {
-    if ($p -notmatch '>|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|\bpython\d?\b|\bnode\b|\bperl\b|git\s+(checkout|restore|apply|reset)|\bpy\s+(-\d(\.\d+)?\s+)?-c\b|WriteAll\w+|AppendAll\w+') { exit 0 }
+    if ($p -notmatch ('>\s*&?[^\s;|&]*(' + $core + ')|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|\bpython\d?\b|\bnode\b|\bperl\b|git\s+(checkout|restore|apply|reset)|\bpy\s+(-\d(\.\d+)?\s+)?-c\b|WriteAll\w+|AppendAll\w+')) { exit 0 }
 }
 
 # ── 5. 발동 — 관측 로그(_index는 gitignore) 후 ask + 준수사항

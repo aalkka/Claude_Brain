@@ -36,7 +36,7 @@ Write-Output "[뇌] 노트 ${noteCount}개 | 인덱스 age $idxAge | 마지막�
 
 # 3. search.py 있으면 증분 인덱스 — **디태치**(비대기, session-end와 동일 패턴).
 #    구 구조는 동기 실행이었다: 세션 시작 시점엔 직전 세션이 남긴 노트 변경분이 거의 항상 있어
-#    지연로드 스킵(search.py "to_embed 있을 때만")이 안 걸린다 → 모델로드 15.6s(HF Hub 확인
+#    지연로드 스킵(search.py:236 "to_embed 있을 때만")이 안 걸린다 → 모델로드 15.6s(HF Hub 확인
 #    5.1s 포함)+인코딩 ≈18s를 사용자가 그대로 대기(실측 중앙값 23s·p90 84s·최대 118s, 81회).
 #    비핵심(인덱스=gitignore·검색 품질에만 영향)이고 save_index가 tmp→os.replace 원자교체라
 #    중도 kill·SessionEnd 디태치와 동시 실행에도 손상 없음(다음 reindex가 hash 불일치로 자기치유).
