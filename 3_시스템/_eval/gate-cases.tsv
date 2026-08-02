@@ -16,3 +16,13 @@ FIRE	13 명령속 가짜Edit [스푸핑]	PowerShell CLAUDE.md	{"tool_name":"Powe
 FIRE	14 필드순서 역전 [스푸핑]	PowerShell CLAUDE.md	{"permission_mode":"auto","tool_input":{"command":"echo '{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"C:\\\\Claude_Brain\\\\CLAUDE.md\"}}' | Set-Content t.json"},"tool_name":"PowerShell"}
 NOFIRE	15 본문속 가짜 file_path [스푸핑]	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"C:\\Claude_Brain\\3_시스템\\_ref\\note.md","old_string":"see \"file_path\":\"C:\\\\Claude_Brain\\\\CLAUDE.md\" here","new_string":"b"}}
 FIRE	16 Write 훅 신규생성 [1층 구멍]	Write 3_시스템/hooks/new.ps1	{"tool_name":"Write","permission_mode":"auto","tool_input":{"file_path":"C:\\Claude_Brain\\3_시스템\\hooks\\new.ps1","content":"x"}}
+NOFIRE	E1 eval >> 비코어 [weekly 4스텝]	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/search.py --eval 3_시스템/_eval/golden.jsonl >> 3_시스템/_eval/results-weekly.md"}}
+NOFIRE	E2 eval 2>&1 [fd 리다이렉트]	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/search.py --eval golden.jsonl 2>&1"}}
+FIRE	E3 echo > hooks/new.ps1	Bash 3_시스템/hooks/new.ps1	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"echo x > 3_시스템/hooks/new.ps1"}}
+FIRE	E4 echo > CLAUDE.md	Bash CLAUDE.md	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"echo x > CLAUDE.md"}}
+NOFIRE	E5 cat CLAUDE.md > 비코어 [코어읽기]	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cat CLAUDE.md > /tmp/backup.txt"}}
+FIRE	E6 printf >> conventions.md	Bash 3_시스템/conventions.md	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"printf x >> 3_시스템/conventions.md"}}
+NOFIRE	E7 grep conventions.md > out	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"grep -n \"코어\" 3_시스템/conventions.md > out.txt"}}
+NOFIRE	E8 wc -l core-gate.ps1 > tmp	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"wc -l 3_시스템/hooks/core-gate.ps1 > /tmp/n"}}
+FIRE	E9 py -c ... > CLAUDE.md	Bash CLAUDE.md	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 -c \"print(1)\" > CLAUDE.md"}}
+FIRE	E10 sed -i CLAUDE.md [타동사 회귀]	Bash CLAUDE.md	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"sed -i 's/a/b/' CLAUDE.md"}}
