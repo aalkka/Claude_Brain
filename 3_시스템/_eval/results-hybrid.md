@@ -13,7 +13,7 @@ source: session
 
 ## 배경 — 노선 변경 이력
 1. Phase 2 grep 베이스라인 = hit@8 **100%** → 규약 사다리대로면 "벡터 불필요, grep 래퍼" 결론(results-baseline — 삭제·배포 제외).
-2. 건희님 기각: 100%는 **골든셋이 literal 기술어(MemGPT·LLMLingua 등)로 작성돼 grep 홈그라운드만 측정**한 산물. 실 외부뇌 질의 = 사용자 지식·경험을 **두루뭉술한 소수 키워드**로 찾음 → grep 취약, 의미검색 필요. **단 grep 정밀도는 버리지 말 것 → 하이브리드.**
+2. 사용자 기각: 100%는 **골든셋이 literal 기술어(MemGPT·LLMLingua 등)로 작성돼 grep 홈그라운드만 측정**한 산물. 실 외부뇌 질의 = 사용자 지식·경험을 **두루뭉술한 소수 키워드**로 찾음 → grep 취약, 의미검색 필요. **단 grep 정밀도는 버리지 말 것 → 하이브리드.**
 3. 측정으로 검증(측정 전 아키텍처 금지 준수).
 
 ## 측정 (search.py: 청킹 max-pool + recency off + RRF k60 하이브리드)
@@ -44,7 +44,7 @@ MemGPT PDF(영어) → 한국어 통찰노트(`2_지식/notes/MemGPT.md`) 인제
 - MemGPT 패러프레이즈 질의: 영어 _변환본서 **rank20(전모드 miss)** → 한국어 통찰노트 **rank1**.
 - **확증:** PDF 패러프레이즈 실패는 교차언어(영어원문)였지 모델용량 아님. 한국어 인제스트가 해결 → **bge-m3 불요 재확인.** 나머지 4 PDF도 인제스트 시 유사 회복 예상(패러프레이즈→~12/12 수렴 가설, Phase 5 전량 인제스트 후 확인).
 
-## 융합 비효율 조사 (2026-07-04, 건희님 지적: literal서 hybrid<lexical)
+## 융합 비효율 조사 (2026-07-04, 사용자 지적: literal서 hybrid<lexical)
 지적: grep/lexical=literal 29/30인데 hybrid 28 → 융합이 강한 arm 희석 = 비효율?
 **진단:** literal서 hybrid가 지는 질의 = **딱 1개(context_managing1)**. 랭크 L=5(hit)·V=20(쓰레기)·H=13(miss). 약한 vector가 강한 lexical을 문턱 밖으로 끌어냄.
 **융합 변형 실측(추측 금지):**
@@ -58,7 +58,7 @@ MemGPT PDF(영어) → 한국어 통찰노트(`2_지식/notes/MemGPT.md`) 인제
 **최종 상태:** hybrid ≥ max(arm) — literal 29(=lexical)·패러프레이즈 8(>7). 이상적 Pareto.
 출처: [RRF vs 점수기반/convex](https://medium.com/mongodb/reciprocal-rank-fusion-and-relative-score-fusion-classic-hybrid-search-techniques-3bf91008b81d) · [Weighted RRF](https://medium.com/@shubhamsarkar996/hybrid-search-in-rag-concept-of-weighted-reciprocal-rank-fusion-rrf-part-1-ae570d9c1879) · [Assembled: RRF for RAG](https://www.assembled.com/blog/better-rag-results-with-reciprocal-rank-fusion-and-hybrid-search)
 
-## 핵심 증거 (건희님 주장 검증)
+## 핵심 증거 (사용자 주장 검증)
 - **상보성 실증:** 패러프레이즈서 lexical·vector가 **서로 다른 6문**을 맞힘 → RRF 합집합 = 7문. 융합이 각 arm 단독을 능가(**58.3 > 50**). = 하이브리드의 존재 이유.
 - **미스 분해(패러프레이즈, hybrid):** 한국어 대상(설계노트·세션·incident) **7/7 성공**, 영어 PDF(_변환본) **0/5 실패**. → 한국어→한국어 의미질의선 하이브리드 사실상 완벽. 실패는 전부 **교차언어(한국어 질의 vs 영어 원문)**.
 - literal서 hybrid(90) < lexical(93)인 건 **한 arm 지배 구간선 RRF가 소폭 손해**(정상). 실사용은 패러프레이즈 우세 → 두 구간 합산 커버가 하이브리드.
@@ -76,7 +76,7 @@ MemGPT PDF(영어) → 한국어 통찰노트(`2_지식/notes/MemGPT.md`) 인제
 n=12 자작셋의 통계력 부족을 대규모 IR 벤치마크가 대체. 우리 측정 패턴이 정설과 일치:
 - **상보성:** dense(벡터)=의미·패러프레이즈·동의어·교차언어 우세 / BM25(grep형)=고유명사·기술코드·희귀어 우세. "각자 놓친 걸 상대가 찾음." → 우리 per-query(정합패스=lexical만, 문제해결=vector만)와 동형.
 - **hybrid > max(각 arm):** BEIR "거의 모든 경우" 성립(nDCG 43.4→52.6). → 우리 hybrid ≥ 각 arm 재현.
-- **vocabulary mismatch = dense 존재이유.** 건희님 "지식은 두루뭉술 키워드라 grep 어려움" = 이 문제 그대로.
+- **vocabulary mismatch = dense 존재이유.** 사용자 "지식은 두루뭉술 키워드라 grep 어려움" = 이 문제 그대로.
 - ⚠ **경고(BEIR 2021):** 약한 dense(MS MARCO·zero-shot 교차도메인)는 BM25 못 이김 — pooling이 정확문자열·희귀어 어휘정체성 파괴. **우리 e5-small(작음·미파인튜닝·한국어)이 이 케이스** → 벡터 arm 50~58%는 **바닥이지 천장 아님.**
 
 **결정: 하이브리드 확정**(문헌+측정+메커니즘 3중 근거). 남은 미결 = "hybrid냐"(해결) 아니라 "dense arm 품질 어디까지".
@@ -94,7 +94,7 @@ n=12 자작셋의 통계력 부족을 대규모 IR 벤치마크가 대체. 우�
 1. **search.py = 하이브리드 RRF (확정 채택).** lexical arm(토큰빈도) + vector arm(청킹 max-pool cosine). recency 가중 = **0**(지식검색서 역효과 실측: 66.7→70→73.3% as 0.2→0.1→0).
 2. **청킹 채택:** 헤딩 단위 + 긴 섹션 창(40줄), 노트 스코어=max-chunk. 통짜 임베딩 희석 해결(벡터 73.3→83.3%).
 3. **bge-m3 = 빌더에겐 DEFERRED, 배포판엔 1급 티어 옵션(폐기 아님).** ⚠ 두 개념 분리:
-   - **빌더(건희님 RTX3060 6GB) 측정경로:** e5-small 하이브리드로 측정 충분 → 상향 불요. 잔여 실패=영어 PDF 교차언어인데 **Phase 4 인제스트(영어PDF→한국어 통찰노트)가 더 싸게 해결**(질의도 한국어). 모델용량 병목 미실증.
+   - **빌더 환경(RTX3060 6GB) 측정경로:** e5-small 하이브리드로 측정 충분 → 상향 불요. 잔여 실패=영어 PDF 교차언어인데 **Phase 4 인제스트(영어PDF→한국어 통찰노트)가 더 싸게 해결**(질의도 한국어). 모델용량 병목 미실증.
    - **배포 사용자(제각각 하드웨어):** bge-m3는 **상시 지원 티어**. setup-interview 슬롯8이 하드웨어 감지→티어 자동선택.
 
 ### 모델 티어 전환 절차 (배포판 — 잘 꺼내 쓸 것)
