@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "touches": ["3_시스템/_index/modules.json"],
+  "forbids": ["1_수집/**"],
+  "writes_config": [],
+  "invocation": "model",
+  "surfaces": { "skills": ["new", "check"], "hooks": [], "mcp": [] },
+  "note": "설계노트·ADR·스캐폴드 산출물은 '대상 모듈'의 경계에 귀속된다(module-forge가 대신 쓸 뿐 소유 아님). module-forge가 직접 소유하는 볼트 산출물 = 레지스트리 1개."
+}
