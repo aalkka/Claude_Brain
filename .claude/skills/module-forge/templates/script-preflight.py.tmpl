@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""{{module}} — {{script_purpose}}
+
+  py -3 이 스크립트 <입력> [--out <출력>]
+
+module-forge 스캐폴드 보일러플레이트. 아래 ①~⑤는 **실측 인시던트 대응**이라 지우지 말 것.
+경로는 인자로 받는다(하드코딩 금지 = touches 계약 준수·check.py 경고 회피).
+"""
+import sys, os, argparse
+
+# ① stdout/stderr UTF-8 강제 — Windows 콘솔 기본 cp949 → 한글 출력 시 크래시.
+#    (incident-2026-07-04-search-stdout-cp949 계열)
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
+# ② 플러그인 루트 = 이 파일 기준 상대. ${CLAUDE_PLUGIN_ROOT}와 동형(이식성).
+HERE = os.path.dirname(os.path.abspath(__file__))
+PLUGIN_ROOT = os.path.abspath(os.path.join(HERE, ".."))
+# ③ 파생·캐시는 반드시 _index/{{module}}/ 아래(gitignore 안 — 볼트·push 오염 0)
+VAULT = os.path.abspath(os.path.join(PLUGIN_ROOT, "..", "..", ".."))
+
+
+def read_text(path):
+    # ④ 읽기·쓰기 모두 encoding 명시. 쓰기는 newline="\n" 고정
+    #    (CRLF churn 방지 — incident-2026-07-04-writer-crlf-eol-churn)
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def write_text(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+
+
+def main():
+    ap = argparse.ArgumentParser(description="{{script_purpose}}")
+    ap.add_argument("src", help="입력 경로")
+    ap.add_argument("--out", help="출력 경로(생략 시 stdout)")
+    a = ap.parse_args()
+
+    result = read_text(a.src)  # TODO: 실제 처리
+
+    # ⑤ 실측 게이트 — "산출물 존재 ≠ 완료". 성공/실패를 exit code로 자백한다.
+    if not result.strip():
+        print("빈 결과 — 입력 확인 필요", file=sys.stderr)
+        return 1
+
+    if a.out:
+        write_text(a.out, result)
+        print(f"작성: {a.out} ({len(result)}자)")
+    else:
+        print(result)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

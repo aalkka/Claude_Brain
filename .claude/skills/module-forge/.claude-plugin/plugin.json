@@ -1,0 +1,6 @@
+{
+  "name": "module-forge",
+  "version": "0.1.0",
+  "description": "외부뇌 개발지원 모듈. 신규 볼트 모듈을 설계조력(분해·경계 co-design·예방접종·ADR)과 충돌방지(정적검사·경계계약)로 체계적으로 빚어내는 dogfooding 플러그인.",
+  "author": { "name": "외부뇌" }
+}
