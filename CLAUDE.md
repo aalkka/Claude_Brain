@@ -23,4 +23,4 @@
 - 이 파일에 규칙 추가 시 **기존 규칙 하나 삭제**(one-in-one-out). 총 200줄 이하 유지.
 
 ## 스킬
-setup-interview · search · session-close · inbox-sort · pdf-ingest · weekly-review · defuddle · deep-loop
+setup-interview · search · session-record · inbox-sort · pdf-ingest · weekly-review · defuddle · deep-loop

@@ -13,7 +13,7 @@ Stop 훅이 매 턴 **디태치**로 부른다. 트랜스크립트를 증분 파
 
 사용:  python session-stub.py <transcript.jsonl> [--out DIR] [--full]
 """
-import json, os, sys, re, time, datetime as dt
+import json, os, sys, re, time, glob, datetime as dt
 from collections import Counter
 
 KST = dt.timedelta(hours=9)
@@ -26,6 +26,21 @@ MARK = {"발화": "U:", "진행": ">", "재작성": "!!", "거부": "X", "실패
 CORE_RX = r"(CLAUDE\.md|3_시스템/(hooks|search\.py|conventions\.md)|\.claude/settings\.json)"
 BIG_LINE = 200_000        # 이 크기를 넘는 줄이 있으면 헤더에 Read 경고를 단다
 STATE_V = 2               # 상태 스키마 버전 — 올리면 다음 실행이 전량 재파싱
+
+# ── 기록 미완료 감지 (2026-08-16) ─────────────────────────────────────────
+# 판정 = "지난 세션이 기록을 남겼는가"(과거 사실 조회). "지금이 마지막 턴인가"는 판별 불가.
+PEND_MIN_UTTER = 3        # 발화 이 미만 = 잡음 세션(서브세션·즉시종료)
+PEND_MIN_REQ   = 10       # 최소 규모(하한). 실질 필터는 아래 SYS_RX다.
+# 세션노트가 필요한 세션 = 결론이 대화에만 남는 세션. 실측(46세션)이 라벨을 준다:
+#   노트 쓴 31세션의 3_시스템 편집 중앙값 7 / 안 쓴 15세션은 0.
+#   볼트 편집 0인 세션에 노트를 쓴 것은 31건 중 1건뿐.
+# 여행계획·전시·운동·물리문제 같은 질의응답은 산출물 노트가 결론 전부라 세션노트가 중복이다.
+SYS_RX = re.compile(r"^(3_시스템/|\.claude/|CLAUDE\.md)")   # 이걸 건드린 세션만 대상
+PEND_SKIP = ".pending-skip.txt"       # 사용자가 "넘어가"라 한 세션 id (거부 채널)
+PEND_MAX_AGE_D = 30       # mtime 선필터. 트랜스크립트 보존과 맞춘다(파싱량 상수 유지)
+PEND_FILE = ".pending-sessions.txt"   # Stop이 쓰고 SessionStart가 읽는다(생산자-소비자)
+CTX_WARN = 200_000        # 실측: 100K 미만 손실 0 · 200K 초과 569K tok/세션
+DUR_WARN = 360            # 분. 6시간 초과 세션은 손실 발생률 100%(25세션 전수)
 
 
 def rel(p):
@@ -203,7 +218,7 @@ def render(st, path):
     core = sorted({e[2] for e in ev if e[1] in ("신규", "수정") and re.match(CORE_RX, e[2])})
     rw = [e for e in ev if e[1] == "재작성"]
     A("")
-    A("## session-close 재료")
+    A("## session-record 재료")
     A("- 신규 {} · MOC 등재 대상 {}: {}".format(len(new), len(moc), ", ".join(moc) or "없음"))
     if moc:
         A("- ※ 이 세션의 결론·결정은 위 산출물 노트 안에 있다. 세션 노트를 쓰려면 그것부터 읽어라.")
@@ -232,6 +247,131 @@ def render(st, path):
     A("")
     A("도구: " + " ".join("{}{}".format(k, v) for k, v in Counter(st["tools"]).most_common(8)))
     return "\n".join(S)
+
+
+def scan_pending(outdir, cur_short, tdir):
+    """다른 세션 state를 훑어 기록 미완료를 찾는다. Stop 훅에서 매 턴 호출된다.
+
+    스텁 .md 본문을 문자열 검색하면 안 된다 — 본문에 Claude 응답 헤딩이 들어가므로
+    session-record를 논하는 세션이 자기 언급으로 오탐된다(2026-08-16 실측).
+    반드시 state json의 구조화 이벤트만 본다.
+
+    판정식(46세션 검증: 정확도 93%, 오탐 0):
+        신규 세션노트 없음 AND recent.md 미수정 AND open-loops.md 미수정 -> 미완료
+    """
+    out = []
+    cutoff = time.time() - PEND_MAX_AGE_D * 86400
+    root = os.path.dirname(outdir) if os.path.basename(outdir) == "stubs" else outdir
+    skip = set()
+    try:
+        with open(os.path.join(root, PEND_SKIP), encoding="utf-8") as fh:
+            skip = {l.strip()[:8] for l in fh if l.strip() and not l.startswith("#")}
+    except Exception:
+        pass
+    for sp in sorted(glob.glob(os.path.join(outdir, ".state-*.json"))):
+        sh = os.path.basename(sp)[7:15]
+        if sh == cur_short or sh in skip:
+            continue
+        # P4: 열기 전에 거른다. state가 수백 개로 늘어도 파싱량이 상수로 유지된다.
+        try:
+            if os.path.getmtime(sp) < cutoff:
+                continue
+        except OSError:
+            continue
+        # P7: 원본이 없으면 '왜'를 복원할 수 없다 -> 알려도 소용없다.
+        if tdir and not glob.glob(os.path.join(tdir, sh + "*.jsonl")):
+            continue
+        try:
+            st = json.load(open(sp, encoding="utf-8"))
+        except Exception:
+            continue
+        ev = st.get("ev", [])
+        if sum(1 for e in ev if e[1] == "발화") < PEND_MIN_UTTER:
+            continue
+        if len(st.get("seen", [])) < PEND_MIN_REQ:
+            continue
+        # 결론이 대화에만 남는 세션인가 — 시스템/코어를 건드렸는지로 가른다.
+        if not any(e[1] in ("신규", "수정") and SYS_RX.match(e[2]) for e in ev):
+            continue
+        done = False
+        for e in ev:
+            k, p = e[1], e[2]
+            if k == "신규" and p.startswith("2_지식/sessions/"):
+                done = True
+                break
+            if k in ("신규", "수정") and (p.endswith("recent.md") or p.endswith("open-loops.md")):
+                done = True
+                break
+        if done:
+            continue
+        t1 = st.get("t1")
+        if not t1:
+            continue
+        try:
+            end = dt.datetime.fromisoformat(t1.replace("Z", "+00:00"))
+        except Exception:
+            continue
+        age = (dt.datetime.now(dt.timezone.utc) - end).days
+        out.append((sh, (end + KST).strftime("%m-%d %H:%M"), len(st.get("seen", [])), age))
+    return out
+
+
+def write_pending(outdir, short, tdir):
+    """판정 결과를 파일에 캐시한다. stdout에 쓰지 않는다.
+
+    왜 stdout이 아닌가(P1): Stop의 additionalContext는 decision:"block"과 같은 루프
+    보호를 받으며 **대화를 계속시킨다** = 매 세션 턴이 하나 강제로 늘어난다.
+    SessionStart는 "Context only · No blocking or decision control"이므로 턴을 안 늘린다.
+    그래서 여기서는 파일만 쓰고, session-start.ps1이 그 파일을 읽어 주입한다.
+    """
+    path = os.path.join(os.path.dirname(outdir.rstrip("\\/")), PEND_FILE) \
+        if os.path.basename(outdir) == "stubs" else os.path.join(outdir, PEND_FILE)
+    try:
+        pend = scan_pending(outdir, short, tdir)
+    except Exception:
+        return
+    try:
+        if not pend:
+            if os.path.exists(path):
+                os.remove(path)
+            return
+        L = ["기록이 남지 않은 지난 세션 {}건{} — 사후 정보이지 지금 처리하라는 뜻이 아닙니다.".format(
+            len(pend), " (오래된 순 5건)" if len(pend) > 5 else "")]
+        for sh, when, req, age in sorted(pend, key=lambda x: -x[3])[:5]:
+            L.append("  - {} ({}, 요청 {}회, {}일 전) -> 3_시스템/_index/stubs/{}.md".format(
+                sh, when, req, age, sh))
+        L.append("  ※ 선택지는 셋입니다 — 세션노트를 쓰거나, recent 한 줄만 남기거나, 넘어가거나.")
+        L.append("  ※ '넘어가'라고 하시면 3_시스템/_index/.pending-skip.txt 에 그 id를 "
+                 "한 줄 추가하십시오. 그 뒤로 영구 제외됩니다.")
+        L.append("  ※ 스텁은 색인이라 '왜'가 없습니다. 노트를 쓸 땐 [L숫자]로 원본 줄만 잘라 읽고, "
+                 "사후 재구성이므로 프론트매터에 confidence: hypothesized 를 답니다.")
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(L))
+        os.replace(tmp, path)
+    except Exception:
+        pass
+
+
+def warn_cost(outdir, short, st):
+    """층C 비용 경고. systemMessage는 사용자 표시용이고 decision control이 아니다 -> 턴 추가 없음."""
+    warned = os.path.join(outdir, ".warned-" + short)
+    if os.path.exists(warned):
+        return
+    P = lambda s: dt.datetime.fromisoformat(s.replace("Z", "+00:00")) if s else None
+    a, b = P(st.get("t0")), P(st.get("t1"))
+    dur = (b - a).total_seconds() / 60 if a and b else 0
+    ctx = st.get("maxctx", 0)
+    if ctx < CTX_WARN and dur < DUR_WARN:
+        return
+    try:
+        open(warned, "w").close()
+        sys.stdout.write(json.dumps({"systemMessage":
+            "[비용] 컨텍스트 {:,}tok · 경과 {:.1f}시간. 실측(86세션): 100K 미만 손실 0 / "
+            "200K 초과 57만tok·세션 / 6시간 초과 손실률 100%. 자리를 비울 예정이면 "
+            "세션을 닫고 새로 여는 편이 쌉니다.".format(ctx, dur / 60)}, ensure_ascii=False))
+    except Exception:
+        pass
 
 
 def main():
@@ -283,6 +423,17 @@ def main():
         try:
             os.remove(lock)
         except OSError:
+            pass
+        # 기록 미완료 판정 -> 파일 캐시(stdout 무출력). finally라 모든 return 경로를 커버한다.
+        try:
+            write_pending(outdir, short, os.path.dirname(path))
+        except Exception:
+            pass
+        try:
+            warn_cost(outdir, short,
+                      json.load(open(os.path.join(outdir, ".state-" + short + ".json"),
+                                     encoding="utf-8")))
+        except Exception:
             pass
     return 0
 

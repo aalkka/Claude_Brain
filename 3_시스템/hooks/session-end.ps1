@@ -1,4 +1,4 @@
-﻿# 외부뇌 SessionEnd 훅 (결정론층 — 커밋만. 요약/recent 갱신은 session-close 스킬이 함)
+﻿# 외부뇌 SessionEnd 훅 (결정론층 — 커밋만. 요약/recent 갱신은 session-record 스킬이 함)
 # 동작: 볼트 커밋(Claude author) → 1_수집 별도 커밋(User author) → push
 $ErrorActionPreference = 'SilentlyContinue'
 $vault = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent

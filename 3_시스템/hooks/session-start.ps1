@@ -21,6 +21,14 @@ $loops  = Join-Path $vault '2_지식\open-loops.md'
 if (Test-Path $recent) { Write-Output "`n=== recent.md ==="; Get-Content $recent -Raw -Encoding UTF8 }
 if (Test-Path $loops)  { Write-Output "`n=== open-loops.md ==="; Get-Content $loops -Raw -Encoding UTF8 }
 
+# 1.5 기록 미완료 세션 — Stop 훅(session-stub.py)이 매 턴 계산해 캐시한 결과를 **읽기만** 한다.
+#     여기서 판정하지 않는 이유: state json 파싱에 파이썬 프로세스가 필요하고(+160ms),
+#     SessionStart는 23s->1.85s로 줄여둔 자리다. 생산자(Stop)/소비자(Start) 분리.
+#     Stop의 additionalContext를 안 쓰는 이유: 그건 decision:"block"과 같은 루프 보호를 받으며
+#     **대화를 계속시킨다**(매 세션 턴 1개 추가). SessionStart는 "Context only, no blocking".
+$pend = Join-Path $vault '3_시스템\_index\.pending-sessions.txt'
+if (Test-Path $pend) { Write-Output "`n=== 기록 미완료 ==="; Get-Content $pend -Raw -Encoding UTF8 }
+
 # 2. 헬스 1줄 (지식노트만: notes/sessions/decisions — profile/recent/open-loops/MOC 제외)
 $noteCount = (@('2_지식\notes','2_지식\sessions','2_지식\decisions','2_지식\modules') | ForEach-Object { Get-ChildItem (Join-Path $vault $_) -Recurse -Filter *.md -ErrorAction SilentlyContinue } | Measure-Object).Count
 $lastCommit = (git -C $vault log -1 --format='%cr' 2>$null)
