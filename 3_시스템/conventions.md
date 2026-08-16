@@ -5,7 +5,10 @@ status: active
 ---
 # 프론트매터 스키마
 type: semantic|episodic|procedural|decision|moc|incident
+  ← 6종 밖 값을 만들지 않는다. 맞는 값이 없어 보이면 semantic.
 title, created, updated: ISO날짜, tags: [], links: []
+  created 면제 = 상시 갱신 핵심파일(MOC·recent·open-loops·profile·설계노트·사용자설명서). 그 밖엔 필수.
+  필드명은 created — `date` 아님(일반 Obsidian 스키마와 충돌).
 links 채울 때: 위키링크는 **따옴표 배열** — `links: ["[[노트명]]", "[[다른노트]]"]`. 무따옴표 `[[x]]`/`[[[x]]]`는 YAML 파싱오류(Obsidian 적색) → Stop훅·pre-commit이 차단.
 status: active|archived (기본 active)
 importance: 1-10 (선택, 정적. 기본 5)
