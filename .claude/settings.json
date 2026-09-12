@@ -8,6 +8,14 @@
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/session-start.ps1\""
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/session-notice.py\""
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -27,6 +35,17 @@
           {
             "type": "command",
             "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/session-end.ps1\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/loop-pin.py\"",
+            "timeout": 10
           }
         ]
       }
