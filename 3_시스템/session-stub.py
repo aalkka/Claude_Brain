@@ -335,7 +335,7 @@ def write_pending(outdir, short, tdir):
             if os.path.exists(path):
                 os.remove(path)
             return
-        L = ["기록이 남지 않은 지난 세션 {}건{} — 사후 정보이지 지금 처리하라는 뜻이 아닙니다.".format(
+        L = ["기록이 남지 않은 지난 세션 {}건{} (사용자 화면에는 session-notice.py 가 systemMessage 로 이미 띄웠다).".format(
             len(pend), " (오래된 순 5건)" if len(pend) > 5 else "")]
         for sh, when, req, age in sorted(pend, key=lambda x: -x[3])[:5]:
             L.append("  - {} ({}, 요청 {}회, {}일 전) -> 3_시스템/_index/stubs/{}.md".format(
