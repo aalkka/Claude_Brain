@@ -88,7 +88,7 @@ SKILL.md의 각 조항이 왜 그 형태인지. **조항을 고치기 전에 이
 
 응급의학 cognitive forcing strategy 통제시험 — 191명, 훈련군 **52%** vs 대조군 **48%**가 두 번째 진단을 탐색. 차이 없음. *"cognitive forcing strategy 교육과정이 효과적이라는 실험적 증거는 없다"*([Ineffectiveness of cognitive forcing strategies, CJEM](https://www.cambridge.org/core/journals/canadian-journal-of-emergency-medicine/article/ineffectiveness-of-cognitive-forcing-strategies-to-reduce-biases-in-diagnostic-reasoning-a-controlled-trial/B768948819704516DBE325909A8D611E) · [The effectiveness of cognitive forcing strategies, PubMed 21240788](https://pubmed.ncbi.nlm.nih.gov/21240788/)).
 
-이 볼트도 독립적으로 같은 결론에 도달해 있었다 — LLM 수학·물리 풀이 신뢰도 조사: *"LLM 자기검증 단독은 약함, 자기 오류 못 봄"* · *"가장 신뢰 높은 레버 = 외부 결정적 검증. 계산코어를 LLM 밖으로 뺀다."* 그 조사의 재발방지책도 성찰이 아니라 **검산**이다(특수 케이스·극한·차원 대입).
+제작자 볼트도 독립적으로 같은 결론에 도달해 있었다 — LLM 수학·물리 풀이 신뢰도 조사: *"LLM 자기검증 단독은 약함, 자기 오류 못 봄"* · *"가장 신뢰 높은 레버 = 외부 결정적 검증. 계산코어를 LLM 밖으로 뺀다."* 그 조사의 재발방지책도 성찰이 아니라 **검산**이다(특수 케이스·극한·차원 대입).
 
 ⚠ 단 그 노트의 실측 3건째: **검증자의 셋업 오류** 2/13 — 검증식을 잘못 세워 맞은 답을 틀렸다고 판정했다. 외부 검증도 그 자체로 틀릴 수 있다.
 
@@ -158,7 +158,7 @@ compaction은 침묵의 안전 실패면이다. 7모델·1,323 에피소드에�
 
 §E가 예약한 "개정 전후 대조"를 시도했더니 **개정 전(2026-08-21) 세션이 0건**으로 나왔다.
 트랜스크립트 mtime 이 09-02 에 일괄 갱신돼(백업·복원 흔적) **날짜 대리지표로 쓸 수 없다.**
-§E 1·3 은 이 볼트에서 영구히 닫을 수 없는 항목이다. 절대값만 쓴다.
+§E 1·3 은 제작자 볼트에서 영구히 닫을 수 없는 항목이다. 절대값만 쓴다.
 
 절대값에서 확정된 것 하나 — **§2.2 의 "볼트 자료 없음" 은 59세션 0회로 사문이었다.**
 그래서 이번에 «통제 밖 값 하나»로 교체했다.

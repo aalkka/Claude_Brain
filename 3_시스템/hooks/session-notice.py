@@ -9,7 +9,7 @@ terminal·transcript 표시 경로가 없다(anthropics/claude-code#47117).
 
 그래서 같은 자료를 `systemMessage` 로 낸다 — 문서상 "Warning message shown to the user"
 이고 SessionStart 절이 그 사용을 직접 권한다(hooks.md L1081). 층C 비용 경고가 이미 쓰는
-경로라 이 볼트 안에 선례가 있다(층C 비용 경고).
+경로라 제작자 볼트에 선례가 있다(층C 비용 경고).
 
 경계: 판정하지 않는다. Stop(`session-stub.py`)이 계산해 둔 캐시를 **읽어 한 줄로 줄일** 뿐이다.
 생산자(Stop)/소비자(SessionStart) 분리는 기존 설계 그대로다.
