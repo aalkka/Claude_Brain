@@ -58,9 +58,9 @@ description: 세션 기록 확정. "세션 종료"·"정리해줘"·"기록 남�
    ```bash
    py -3 -c "import itertools;print(next(itertools.islice(open(P,encoding='utf-8'),N-1,N))[:4000])"
    ```
-3. 프론트매터에 `confidence: hypothesized`, 본문 첫 줄에 **"사후 재구성(스텁 기반, 원본 발췌 N곳)"**을 명시한다. 표시하지 않으면 추정이 사실로 굳고 다음 요약이 그것을 근거로 삼는다.
+3. 프론트매터에 `confidence: hypothesized` 와 `session: <세션 id 8자>`, 본문 첫 줄에 **"사후 재구성(스텁 기반, 원본 발췌 N곳)"**을 명시한다. 표시하지 않으면 추정이 사실로 굳고 다음 요약이 그것을 근거로 삼는다.
 4. 트랜스크립트가 이미 삭제됐으면(보존 기간 경과) **뼈대만 쓰고 그 사실을 적는다.** 없는 '왜'를 지어내지 않는다.
-5. 기록을 마치면 `.pending-sessions.txt`는 다음 턴에 자동 갱신된다(직접 지우지 않는다).
+5. 기록을 마치면 `.pending-sessions.txt`는 다음 턴에 자동 갱신된다(직접 지우지 않는다). 그 세션이 목록에서 빠지는 근거는 3의 `session:` 키다 — 빼먹으면 계속 뜬다. recent 한 줄만 남긴 경우엔 `.pending-skip.txt` 에 id 를 적는다.
 
 ## 하지 않는 것
 

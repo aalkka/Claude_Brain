@@ -39,6 +39,10 @@ SYS_RX = re.compile(r"^(3_시스템/|\.claude/|CLAUDE\.md)")   # 이걸 건드�
 PEND_SKIP = ".pending-skip.txt"       # 사용자가 "넘어가"라 한 세션 id (거부 채널)
 PEND_MAX_AGE_D = 30       # mtime 선필터. 트랜스크립트 보존과 맞춘다(파싱량 상수 유지)
 PEND_FILE = ".pending-sessions.txt"   # Stop이 쓰고 SessionStart가 읽는다(생산자-소비자)
+# 셸 명령 속 기록 쓰기. 경로만 나오면(cat·grep) 읽기일 수 있어 쓰기 표지가 함께 있을 때만 인정한다.
+REC_RX = re.compile(r"(2_지식[/\\]+(?:recent|open-loops)\.md|2_지식[/\\]+sessions[/\\]+[^\s\"'`|;>]+\.md)")
+SHELL_WRITE_RX = re.compile(r"open\([^)]*['\"][wa]['\"]|\.write\(|write_text|Add-Content|Set-Content|Out-File"
+                            r"|sed -i|tee |>>?\s*[\"']?[^\s\"']*(?:recent|open-loops|sessions[/\\][^\s\"']*)\.md")
 CTX_WARN = 200_000        # 실측: 100K 미만 손실 0 · 200K 초과 569K tok/세션
 DUR_WARN = 360            # 분. 6시간 초과 세션은 손실 발생률 100%(25세션 전수)
 
@@ -147,6 +151,12 @@ def scan(path, st):
                     c = inp.get("description") or inp.get("command", "")[:70]
                     if c:
                         ev.append([ts, "실행", c.replace("\n", " ")[:120], ln])
+                    # 기록을 셸·파이썬으로 쓴 세션도 기록한 것이다(10-03 실측: 14일 오탐 2건이 전부 이 경로).
+                    cmd = inp.get("command", "")
+                    if REC_RX.search(cmd) and SHELL_WRITE_RX.search(cmd):
+                        for p in sorted(set(REC_RX.findall(cmd))):
+                            p = re.sub(r"[/\\]+", "/", p)
+                            ev.append([ts, "신규" if "/sessions/" in p else "수정", p, ln])
                 elif n == "Read" and fp:
                     readset.add(fp); ev.append([ts, "읽기", rel(fp), ln])
                 elif n in ("WebFetch", "WebSearch"):
@@ -249,6 +259,31 @@ def render(st, path):
     return "\n".join(S)
 
 
+TITLE_RX = re.compile(rb'"customTitle":"((?:[^"\\]|\\.)*)"')
+
+
+def session_title(tdir, sh, st):
+    """알림에 붙일 세션 제목. id 만으로는 기록할지 고를 수 없다(사용자 지적 2026-10-03).
+
+    1순위 = 트랜스크립트의 마지막 `custom-title`(데스크탑 사이드바 제목과 같다).
+    없으면(실측 40세션 중 5) 첫 발화 앞부분. 미완료 세션(≤5)에만 불리므로 전량 읽어도 싸다.
+    """
+    t = ""
+    try:
+        for p in glob.glob(os.path.join(tdir, sh + "*.jsonl")) if tdir else []:
+            with open(p, "rb") as fh:
+                hits = TITLE_RX.findall(fh.read())
+            if hits:
+                t = json.loads(b'"' + hits[-1] + b'"')
+                break
+    except Exception:
+        t = ""
+    if not t:
+        t = next((e[2] for e in st.get("ev", []) if e[1] == "발화"), "")
+    t = re.sub(r"[\s«»]+", " ", t).strip()
+    return (t[:40] + "…") if len(t) > 40 else t
+
+
 def scan_pending(outdir, cur_short, tdir):
     """다른 세션 state를 훑어 기록 미완료를 찾는다. Stop 훅에서 매 턴 호출된다.
 
@@ -268,6 +303,15 @@ def scan_pending(outdir, cur_short, tdir):
             skip = {l.strip()[:8] for l in fh if l.strip() and not l.startswith("#")}
     except Exception:
         pass
+    # 다른 세션이 뒤늦게 쓴 세션노트(프론트매터 `session: <8자>`)도 기록이다.
+    for f in glob.glob(os.path.join(VAULT, "2_지식", "sessions", "*.md")):
+        try:
+            with open(f, encoding="utf-8") as fh:
+                mm = re.search(r"^session:\s*([0-9a-f]{8})", fh.read(1500), re.M)
+            if mm:
+                skip.add(mm.group(1))
+        except Exception:
+            pass
     for sp in sorted(glob.glob(os.path.join(outdir, ".state-*.json"))):
         sh = os.path.basename(sp)[7:15]
         if sh == cur_short or sh in skip:
@@ -312,7 +356,8 @@ def scan_pending(outdir, cur_short, tdir):
         except Exception:
             continue
         age = (dt.datetime.now(dt.timezone.utc) - end).days
-        out.append((sh, (end + KST).strftime("%m-%d %H:%M"), len(st.get("seen", [])), age))
+        out.append((sh, (end + KST).strftime("%m-%d %H:%M"), len(st.get("seen", [])), age,
+                    session_title(tdir, sh, st)))
     return out
 
 
@@ -335,16 +380,22 @@ def write_pending(outdir, short, tdir):
             if os.path.exists(path):
                 os.remove(path)
             return
-        L = ["기록이 남지 않은 지난 세션 {}건{} (사용자 화면에는 session-notice.py 가 systemMessage 로 이미 띄웠다).".format(
+        L = ["기록이 남지 않은 지난 세션 {}건{} (화면 알림은 session-notice.py 담당 — CLI 는 systemMessage, 데스크탑은 질문창 지시).".format(
             len(pend), " (오래된 순 5건)" if len(pend) > 5 else "")]
-        for sh, when, req, age in sorted(pend, key=lambda x: -x[3])[:5]:
-            L.append("  - {} ({}, 요청 {}회, {}일 전) -> 3_시스템/_index/stubs/{}.md".format(
-                sh, when, req, age, sh))
+        for sh, when, req, age, title in sorted(pend, key=lambda x: -x[3])[:5]:
+            # 세이브포인트(idle-save 훅이 시킨 Write 1회)가 있으면 '왜'가 있다 -> 기록·이어가기의 1차 재료
+            sv = " · 세이브포인트 {}.save.md".format(sh) if os.path.exists(
+                os.path.join(outdir, sh + ".save.md")) else ""
+            # 제목은 «» 로 감싼다 — session-notice.py 가 이 모양으로 뽑는다
+            L.append("  - {} «{}» ({}, 요청 {}회, {}일 전) -> 3_시스템/_index/stubs/{}.md{}".format(
+                sh, title or "제목 없음", when, req, age, sh, sv))
         L.append("  ※ 선택지는 셋입니다 — 세션노트를 쓰거나, recent 한 줄만 남기거나, 넘어가거나.")
         L.append("  ※ '넘어가'라고 하시면 3_시스템/_index/.pending-skip.txt 에 그 id를 "
                  "한 줄 추가하십시오. 그 뒤로 영구 제외됩니다.")
         L.append("  ※ 스텁은 색인이라 '왜'가 없습니다. 노트를 쓸 땐 [L숫자]로 원본 줄만 잘라 읽고, "
                  "사후 재구성이므로 프론트매터에 confidence: hypothesized 를 답니다.")
+        L.append("  ※ 세이브포인트가 있으면 그것이 1차 재료입니다('왜' 포함). '이어가기 <id>' = "
+                 "세이브포인트 → 스텁 순으로 읽고 그 세션을 새 세션에서 이어갑니다.")
         tmp = path + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:
             fh.write("\n".join(L))
