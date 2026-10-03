@@ -230,4 +230,5 @@ git reset --hard backup-before-update
 - 민감 노트는 frontmatter `sensitive: true` → push 제외.
 
 ## 라이선스·차용
+이 저장소 = MIT — [LICENSE](LICENSE).
 차용 스킬(`defuddle`) = kepano/obsidian-skills (MIT).
