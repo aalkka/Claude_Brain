@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "touches": ["3_시스템/_index/dist-sync/"],
+  "forbids": ["1_수집/**"],
+  "writes_config": [],
+  "invocation": "model",
+  "surfaces": { "skills": ["update", "publish"], "hooks": [], "mcp": [] }
+}

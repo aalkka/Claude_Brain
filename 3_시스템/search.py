@@ -32,7 +32,7 @@ CLI:
 인덱스: 3_시스템/_index/embeddings.json  {"_model":<name>, <path>:{hash,mtime,status,gist,vecs:[[..],..]}}
   - 청킹: 헤딩 단위 → 긴 섹션은 WINDOW줄 창. 노트 스코어 = max-chunk cosine(통짜희석 방지).
   - vector 스코어 = max_chunk_cos (+ recency_w*recency). archived ×0.5.
-  - lexical 스코어 = 질의 토큰 노트내 출현빈도(문서길이 정규화 log).
+  - lexical 스코어 = BM25(k1=1.2, b=0.75 · 질의 토큰의 노트내 부분문자열 빈도 · IDF 는 노트 단위).
   - hybrid = RRF(lexical_rank, vector_rank), k_rrf=60.
 
 측정 이력:
@@ -85,6 +85,112 @@ def load_model():
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
     return SentenceTransformer(model_name, device=device), model_name
+
+
+class _NumpyBert:
+    """질의 1건용 BERT 순전파(numpy) — torch·transformers·sentence_transformers import 없이.
+
+    왜(2026-09-24 실측): 질의 경로의 지연 40~49초 중 계산은 0.08초였고 나머지는 import 였다
+    (`sentence_transformers` 26.5초 = transformers 5.x 가 fp8·deepgemm 통합을 거쳐 torch._dynamo 까지
+    끌어옴 · torch 7.3초 · HF 허브 확인 ~9초). 이 경로는 import 0.5초 + 가중치 1.2초 + 인코딩 0.6초.
+    등가성: 저장된 문서 벡터 41청크와 코사인 최소 1.000000 · 골든 두 셋 순위 결과 동일.
+    범위: HF 캐시에 이미 받아 둔 model_type=bert + mean/cls 풀링만. 그 밖(bge-m3=xlm-roberta 등)이나
+    어떤 실패든 예외를 내고 load_query_model() 이 기존 load_model() 로 떨어진다(fail-open · 09-24 실측:
+    캐시 없는 환경에서 같은 순위). 재인덱스는 기존 경로 그대로.
+    """
+
+    def __init__(self, snap):
+        import numpy as np
+        from tokenizers import Tokenizer
+        from safetensors import safe_open
+        self.np = np
+        cfg = json.load(open(os.path.join(snap, "config.json"), encoding="utf-8"))
+        if cfg.get("model_type") != "bert" or cfg.get("hidden_act") != "gelu" \
+                or cfg.get("position_embedding_type", "absolute") != "absolute":
+            raise ValueError("unsupported")
+        pool = {}
+        pp = os.path.join(snap, "1_Pooling", "config.json")
+        if os.path.exists(pp):
+            pool = json.load(open(pp, encoding="utf-8"))
+        self.cls = bool(pool.get("pooling_mode_cls_token")) and not pool.get("pooling_mode_mean_tokens")
+        if not (self.cls or pool.get("pooling_mode_mean_tokens", True)):
+            raise ValueError("unsupported pooling")
+        maxlen = 512
+        sp = os.path.join(snap, "sentence_bert_config.json")
+        if os.path.exists(sp):
+            maxlen = json.load(open(sp, encoding="utf-8")).get("max_seq_length", 512)
+        self.tok = Tokenizer.from_file(os.path.join(snap, "tokenizer.json"))
+        self.tok.enable_truncation(maxlen)
+        f = safe_open(os.path.join(snap, "model.safetensors"), "np")
+        pre = "bert." if any(k.startswith("bert.") for k in f.keys()) else ""
+        self.W = {k[len(pre):]: f.get_tensor(k) for k in f.keys()
+                  if k.startswith(pre) and not k.startswith(pre + "embeddings.word_")
+                  and not k.startswith(pre + "pooler")}
+        self.wemb = f.get_slice(pre + "embeddings.word_embeddings.weight")
+        self.L, self.H = cfg["num_hidden_layers"], cfg["num_attention_heads"]
+        self.D = cfg["hidden_size"] // self.H
+        self.eps = cfg.get("layer_norm_eps", 1e-12)
+
+    def _ln(self, x, p):
+        m = x.mean(-1, keepdims=True); v = ((x - m) ** 2).mean(-1, keepdims=True)
+        return (x - m) / self.np.sqrt(v + self.eps) * self.W[p + ".weight"] + self.W[p + ".bias"]
+
+    def _gelu(self, x):  # 정확한 erf GELU (Abramowitz-Stegun 7.1.26, |오차|<1.5e-7)
+        np = self.np
+        z = x / math.sqrt(2.0); a = np.abs(z); t = 1.0 / (1.0 + 0.3275911 * a)
+        y = 1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t
+                   + 0.254829592) * t * np.exp(-a * a)
+        return 0.5 * x * (1.0 + np.sign(z) * y)
+
+    def _one(self, text):
+        np, W = self.np, self.W
+        ids = self.tok.encode(text).ids; n = len(ids)
+        x = np.stack([self.wemb[i:i + 1][0] for i in ids]) \
+            + W["embeddings.position_embeddings.weight"][:n] + W["embeddings.token_type_embeddings.weight"][0]
+        x = self._ln(x, "embeddings.LayerNorm")
+        H, D = self.H, self.D
+        lin = lambda h, p: h @ W[p + ".weight"].T + W[p + ".bias"]
+        for l in range(self.L):
+            p = "encoder.layer.%d." % l
+            q, k, v = (lin(x, p + "attention.self." + s).reshape(n, H, D).transpose(1, 0, 2)
+                       for s in ("query", "key", "value"))
+            s = q @ k.transpose(0, 2, 1) / math.sqrt(D)
+            s = np.exp(s - s.max(-1, keepdims=True)); s /= s.sum(-1, keepdims=True)
+            c = (s @ v).transpose(1, 0, 2).reshape(n, H * D)
+            x = self._ln(lin(c, p + "attention.output.dense") + x, p + "attention.output.LayerNorm")
+            x = self._ln(lin(self._gelu(lin(x, p + "intermediate.dense")), p + "output.dense") + x,
+                         p + "output.LayerNorm")
+        e = x[0] if self.cls else x.mean(0)
+        return e / np.linalg.norm(e)
+
+    def encode(self, texts, normalize_embeddings=True, **_):
+        return self.np.stack([self._one(t) for t in texts])
+
+
+def _hf_snapshot(model_name):
+    """HF 캐시에 받아 둔 스냅숏 경로(네트워크 없음). 없으면 None."""
+    base = os.environ.get("HF_HUB_CACHE") or os.path.join(
+        os.environ.get("HF_HOME") or os.path.join(os.path.expanduser("~"), ".cache", "huggingface"), "hub")
+    d = os.path.join(base, "models--" + model_name.replace("/", "--"))
+    try:
+        rev = open(os.path.join(d, "refs", "main"), encoding="utf-8").read().strip()
+        snap = os.path.join(d, "snapshots", rev)
+    except OSError:
+        snaps = glob.glob(os.path.join(d, "snapshots", "*"))
+        snap = snaps[0] if len(snaps) == 1 else None
+    return snap if snap and os.path.exists(os.path.join(snap, "model.safetensors")) else None
+
+
+def load_query_model():
+    """질의 인코더 — 빠른 numpy 경로를 먼저, 안 되면 기존 load_model()."""
+    model_name = config_model_name()
+    try:
+        snap = _hf_snapshot(model_name)
+        if snap:
+            return _NumpyBert(snap), model_name
+    except Exception:
+        pass
+    return load_model()
 
 
 def is_bge(m): return "bge" in m.lower()
@@ -280,16 +386,31 @@ def note_text(rp):
     return _TEXTCACHE[rp]
 
 
+BM25_K1, BM25_B = 1.2, 0.75
+
+
 def lexical_scores(query, idx):
+    # BM25(2026-09-24 교체). 옛 식 «매칭 토큰수×10 + log(빈도)» 는 IDF·길이 보정이 없어 긴 노트
+    # (MOC·인수인계)가 흔한 낱말만으로 위에 올랐다 — 패러프레이즈 정답을 밀어낸 자리의 청크 수 중앙값 37
+    # (코퍼스 9). 세 평가셋 모두 비후퇴: lexical MRR@8 literal 0.58→0.96 · 패러프레이즈 3→5/12 ·
+    # MOC 설명 167쌍 0.65→0.85, hybrid 0.89→0.94 · 4→5/12 · 0.76→0.82. 근거 = _eval/results-hybrid.md.
     ts = toks(query)
+    docs = [(rp, note_text(rp)) for rp in notes(idx)]
+    docs = [(rp, t) for rp, t in docs if t]
+    if not docs or not ts: return []
+    avg = sum(len(t) for _, t in docs) / len(docs)
+    n = len(docs)
+    idf = {}
+    for w in ts:
+        df = sum(1 for _, t in docs if w in t)
+        idf[w] = math.log(1 + (n - df + 0.5) / (df + 0.5))
     rows = []
-    for rp in notes(idx):
-        txt = note_text(rp)
-        if not txt: continue
-        hit = sum(txt.count(t) for t in ts)
-        matched = sum(1 for t in ts if t in txt)
-        # 매칭 토큰수 우선 + 빈도 log 보정
-        score = matched * 10 + math.log1p(hit)
+    for rp, txt in docs:
+        norm = BM25_K1 * (1 - BM25_B + BM25_B * len(txt) / avg)
+        score = 0.0
+        for w in ts:
+            tf = txt.count(w)
+            if tf: score += idf[w] * tf * (BM25_K1 + 1) / (tf + norm)
         if score > 0:   # M2: 0매칭 노트 배제(토큰 없는 질의가 전 노트를 가짜 top-k로 반환 방지)
             rows.append((score, rp))
     rows.sort(reverse=True)
@@ -335,7 +456,7 @@ def evaluate(golden_path, k=8):
     pairs = [json.loads(l) for l in open(golden_path, encoding="utf-8") if l.strip()]
     if not pairs:  # M1: 빈 골든 가드(ZeroDivisionError 방지)
         print(f"골든 비어 있음: {golden_path}", file=sys.stderr); return {}
-    model, model_name = load_model()
+    model, model_name = load_query_model()
     idx = load_index()
     res = {}
     for mode in ("lexical", "vector", "hybrid"):
@@ -540,7 +661,7 @@ def main():
     elif args.q:
         model, model_name = (None, None)
         if args.mode != "lexical":
-            model, model_name = load_model()
+            model, model_name = load_query_model()
         idx = load_index()
         for sc, rp in ranked(args.q, idx, args.mode, model, model_name)[:(args.k or 8)]:
             e = idx.get(rp, {})
