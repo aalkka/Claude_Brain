@@ -27,7 +27,9 @@ if ($tool -in 'Bash','PowerShell') {
     $fire = $false
     $rxCode = "(?s)(?:-c|-Command)\s+(['""]).*?\1|<<\s*['""]?(\w+).*?\2"
     $code = -join ([regex]::Matches($p, $rxCode) | ForEach-Object { $_.Value })
-    $shell = [regex]::Replace($p, $rxCode, ' ')
+    # 코드를 지운 자리에 표지를 남긴다. 공백으로 지우면 python3 -c "…" CLAUDE.md 에서
+    # 코어가 스크립트 자리로 보여, 아래 인터프리터 예외가 이것까지 통과시킨다(케이스 04).
+    $shell = [regex]::Replace($p, $rxCode, ' INL ')
     # 인용문은 절 구분자를 담아도 절을 나누지 않는다 — `sed -i 's/;/x/' CLAUDE.md` 가
     # 세미콜론에서 쪼개져 통과했다(2026-08-17 검증 X1·X2). 다만 인용문 안에 코어 경로가
     # 있으면(`> "CLAUDE.md"`) 지우지 않는다 — 지우면 그 코어를 놓친다.
@@ -38,12 +40,36 @@ if ($tool -in 'Bash','PowerShell') {
         [System.Text.RegularExpressions.MatchEvaluator]{
             param($m) if ($coreRx.IsMatch($m.Value)) { $m.Value } else { ' Q ' } })
     # (a) 인라인 코드 '안'의 코어 = 쓰기 표지로 가른다. json.load·open().read()·py_compile은 읽기다.
-    if ($code -match ('(' + $core + ')') -and
-        $code -match ',\s*[''"][wax]\+?b?[''"]|WriteAll\w+|AppendAll\w+|write_text|Set-Content|Add-Content|Out-File|os\.remove|\.unlink|os\.rename|shutil\.|json\.dump\(|\.truncate\(') { $fire = $true }
+    # 코드 전체에서 AND로 보면 코어를 '읽기만' 하는 코드가 **다른 파일**에 쓰기만 해도 걸린다
+    # (2026-08-22 실측: 분기 a 21건 중 11건이 그것). 그래서 문(;·줄바꿈) 단위로 좁힌다.
+    # 다만 경로를 담은 변수를 함께 추적해야 한다 — 이 볼트의 실제 코어 쓰기가
+    # P="CLAUDE.md" 와 io.open(P,"w") 로 줄이 갈린다(케이스 N19). 줄 단위 단순 AND는
+    # 그 형태를 놓친다. 별칭(Q=P)·경로 조립은 추적하지 않는다 = 수용한 거짓 음성(N22).
+    $rxW = ',\s*[''"][wax]\+?b?[''"]|WriteAll\w+|AppendAll\w+|write_text|Set-Content|Add-Content|Out-File|os\.remove|\.unlink|os\.rename|shutil\.|json\.dump\(|\.truncate\('
+    if ($code -match ('(' + $core + ')') -and $code -match $rxW) {
+        # 줄바꿈은 이 시점에 '/n' 으로 접혀 있다(머리 파일의 백슬래시 정규화).
+        $stmts = $code -split '(?:;|/n|\r?\n)'
+        $vars = @()
+        foreach ($st in $stmts) {
+            foreach ($m in [regex]::Matches($st, '([A-Za-z_]\w*)\s*=\s*[''"]([^''"]*)[''"]')) {
+                if ($m.Groups[2].Value -match ('(' + $core + ')')) { $vars += $m.Groups[1].Value }
+            }
+        }
+        $rxV = if ($vars) { '\b(?:' + ((($vars | Sort-Object -Unique) |
+                ForEach-Object { [regex]::Escape($_) }) -join '|') + ')\b' } else { $null }
+        foreach ($st in $stmts) {
+            if ($st -notmatch $rxW) { continue }
+            if (($st -match ('(' + $core + ')')) -or ($rxV -and $st -match $rxV)) { $fire = $true; break }
+        }
+    }
     # (b) 코드 '밖'의 코어 = 쓰기 동사가 같은 절에 있을 때만. 껍데기에서 판정하므로
     #     `python3 -c "…" CLAUDE.md`(인자 전달)는 남고 `py -c "…CLAUDE.md…"`(코드 안)는 사라진다.
     if (-not $fire) {
-        $verbs ='>\s*&?[^\s;|&]*(' + $core + ')|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|git\s+(checkout|restore|apply|reset)|WriteAll\w+|AppendAll\w+|\bpython\d?\b|\bnode\b|\bperl\b|\bpy\s+(-\d(\.\d+)?\s+)?-c\b|\bchmod\b|update-index'
+        # 인터프리터는 '코어를 실행'과 '코어를 미지의 코드에 넘김'을 가른다. 코어가 첫
+        # 비옵션 인자(스크립트 자리)면 실행 = 읽기다 — python 3_시스템/search.py --q …
+        # 가 승인을 물었다(2026-08-22 실측 3건, 전부 볼트 검색). 그 자리가 아니면
+        # (python3 -c "…" CLAUDE.md) 코드를 볼 수 없으므로 그대로 건다.
+        $verbs ='>\s*&?[^\s;|&]*(' + $core + ')|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|git\s+(checkout|restore|apply|reset)|WriteAll\w+|AppendAll\w+|\b(?:python\d?|node|perl)\b(?!\s+(?:-\S+\s+)*(?:' + $core + '))|\bpy\s+(-\d(\.\d+)?\s+)?-c\b|\bchmod\b|update-index'
         foreach ($c in ($shell -split '(?:;|&&|\|\||\||\r?\n)')) {
             if ($c -notmatch ('(' + $core + ')')) { continue }
             if ($c -match $verbs) { $fire = $true; break }
@@ -153,7 +179,7 @@ $reason = @'
 ■ 6. 환경 (이 볼트의 상습 실패모드 — incident 4건)
   · .ps1은 UTF-8 BOM 저장. PS 5.1이 cp949로 오독한다.
   · 한글 경로(3_시스템)·한글 유저명이 글롭·로캘·stdout에서 깨진다.
-  · 줄바꿈은 .gitattributes가 강제. 파이썬 writer에 newline 지정 금지.
+  · 줄바꿈 LF 고정(.gitattributes). 파이썬 writer는 newline='' 로 열 것 — 빼면 Windows가 CRLF로 쓴다.
 
 ■ 7. 파급
   · 무인 실행(weekly-review 스케줄)이 이 변경으로 죽지 않는가 — 승인 대기 = 조용한 사망.
@@ -164,7 +190,7 @@ $reason = @'
 '@
 
 # 토큰은 '승인'만 면제한다. 준수사항은 그대로 간다 —
-# ADR-006 원 요구(건희님 인박스 2026-07-28)가 "승인받은 수정이더라도 매번 준수사항"이었다.
+# ADR-006 원 요구(사용자 인박스 2026-07-28)가 "승인받은 수정이더라도 매번 준수사항"이었다.
 # 게이트의 두 기능(차단 / 준수사항 주입) 중 토큰이 끄는 것은 차단뿐이다.
 if ($decision -eq 'allow') {
     @{ hookSpecificOutput = @{

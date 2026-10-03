@@ -1,0 +1,6 @@
+{
+  "name": "dist-sync",
+  "description": "볼트↔배포판↔사용자볼트 코어 동기화 — 3층 분류로 개인 데이터를 건드리지 않고 코어만 옮긴다.",
+  "version": "0.1.0",
+  "author": { "name": "External Brain" }
+}

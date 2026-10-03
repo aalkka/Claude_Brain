@@ -6,3 +6,5 @@ _변환본/
 __pycache__/
 .obsidian/workspace*.json
 .claude/settings.local.json
+# 커뮤니티 플러그인 본체(수 MB 의 main.js 등)는 추적하지 않는다. 설정·스니펫만 추적.
+.obsidian/plugins/
