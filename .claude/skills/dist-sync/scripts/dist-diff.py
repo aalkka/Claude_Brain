@@ -51,6 +51,11 @@ SEED = [
 EXCLUDE_SEG = {"__pycache__", ".git", ".obsidian", "_index", "_claude-memory", "node_modules"}
 EXCLUDE_EXT = (".pyc", ".pyo", ".lock", ".tmp")
 
+# 배포판이 직접 만든 Obsidian 플러그인(2026-10-13 Brain Sheet) — `.obsidian/` 은 통째로 제외지만 이 폴더는 코어다.
+# 남의 커뮤니티 플러그인 본체는 여전히 제외. 플러그인 설정(data.json)은 사용자 것이라 개인.
+DIST_PLUGINS = [".obsidian/plugins/brain-sheet/"]  # mf:allow-path
+DIST_PLUGIN_PERSONAL = {"data.json"}
+
 L_CLAUDE = "CLAUDE.md"  # mf:allow-path  (층 라벨 겸 경로 — 리터럴은 여기 한 곳뿐)
 SPECIAL = [L_CLAUDE]
 
@@ -87,6 +92,11 @@ def layer(rel):
     """경로 → 층. 제외가 가장 강하고, 그다음 개인, 예외가 개인보다 강하다."""
     p = rel.replace("\\", "/")
     segs = p.split("/")
+    for d in DIST_PLUGINS:
+        if p.startswith(d):
+            if p.endswith(EXCLUDE_EXT):
+                return "제외"
+            return "개인" if p[len(d):] in DIST_PLUGIN_PERSONAL else "코어"
     if EXCLUDE_SEG & set(segs) or p.endswith(EXCLUDE_EXT):
         return "제외"
     if p in PERSONAL_EXCEPT:
@@ -123,8 +133,10 @@ def walk(root):
         rel_dir = os.path.relpath(dp, root).replace("\\", "/")
         if rel_dir == ".":
             rel_dir = ""
+        # 배포 플러그인으로 가는 길(.obsidian · .obsidian/plugins)은 그 폴더 하나만 보러 들어간다 — 형제 파일은 layer 가 제외한다
         dns[:] = [d for d in dns
-                  if layer((rel_dir + "/" + d).lstrip("/") + "/x") not in ("개인", "제외")]
+                  if any(x.startswith((rel_dir + "/" + d).lstrip("/") + "/") for x in DIST_PLUGINS)
+                  or layer((rel_dir + "/" + d).lstrip("/") + "/x") not in ("개인", "제외")]
         for fn in fns:
             rel = (rel_dir + "/" + fn).lstrip("/")
             if layer(rel) in ("개인", "제외"):

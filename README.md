@@ -30,7 +30,7 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
    ```
    py -3 3_시스템/search.py --rebuild
    ```
-5. Obsidian에서 이 폴더를 볼트로 열기.
+5. Obsidian에서 이 폴더를 볼트로 열기. «제한 모드 끄기(커뮤니티 플러그인 켜기)»를 고르면 동봉 플러그인 **Brain Sheet**(엑셀식 `.sheet` 편집기 · 같은 이름 md 를 시트 아래 메모 칸으로)가 켜진다.
 6. 폴더에서 `claude` 실행 → 트러스트 수락.
 7. 첫 세션에 "⚠ 개인화 미완료" → `setup-interview` 실행(~10분). **네이티브 메모리 볼트 리다이렉트(옵션R)**·호칭·언어·톤·하드웨어(임베딩 모델 자동)·**개인 백업 repo 연결**.
    → **개인 repo를 연결하기 전까지 자동 push는 비활성**(개인정보 보호). 인터뷰가 `origin`을 개인 repo로 설정한다.
@@ -44,10 +44,10 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 
 | 층 | 무엇 | 업데이트 때 |
 |---|---|---|
-| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · `3_시스템/_ref/**` · `3_시스템/_eval/**` | **덮어쓴다** |
+| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · `3_시스템/_ref/**` · `3_시스템/_eval/**` · `.obsidian/plugins/brain-sheet/`(설정 `data.json` 제외) | **덮어쓴다** |
 | **씨앗** | `2_지식/recent.md` · `open-loops.md` · `MOC.md` · `profile.md` · `3_시스템/config.json` · `2_지식/notes/설계노트.md` · `사용자설명서.md` | **덮어쓰지 않는다.** 위쪽 머리말(사용법 안내)만 새것으로 바꾸고 그 아래 내가 쓴 항목은 그대로 둔다 |
 | **`CLAUDE.md`** | — | **§0(내 호칭·말투)만 남기고 나머지를 새것으로.** 한 파일에 섞여 있어 자동 복사 불가 |
-| **개인** | `1_수집/**` · `2_지식/notes·sessions·decisions·modules/**` · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` | **열지도 않는다** |
+| **개인** | `1_수집/**` · `2_지식/notes·sessions·decisions·modules/**` · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` · `.obsidian/plugins/brain-sheet/data.json` | **열지도 않는다** |
 
 ---
 
@@ -102,6 +102,14 @@ git checkout dist/main -- "3_시스템/hooks" "3_시스템/search.py" "3_시스�
 
 - 배포판에 없는 경로를 적으면 `pathspec did not match` 오류가 난다. 그 경로만 빼고 다시 실행하면 된다.
 - **씨앗·개인 층 경로는 이 명령에 절대 넣지 않는다.**
+
+동봉 플러그인 Brain Sheet 는 파일만 바꾸고 git 에는 올리지 않는다(`checkout` 은 14.5MB 짜리 `main.js` 를 내 저장소에 추적시킨다). 설정 `data.json` 은 건드리지 않는다:
+
+```bash
+git restore --source=dist/main --worktree -- .obsidian/plugins/brain-sheet/main.js .obsidian/plugins/brain-sheet/manifest.json .obsidian/plugins/brain-sheet/styles.css .obsidian/plugins/brain-sheet/LICENSE .obsidian/plugins/brain-sheet/THIRD_PARTY_NOTICES.md
+```
+
+처음 받는 것이면 Obsidian 설정 → 커뮤니티 플러그인에서 Brain Sheet 를 켠다. 이미 켜져 있으면 «저장하지 않고 앱 다시 불러오기».
 
 **5단계 — 없어진 파일을 지운다**
 
@@ -196,7 +204,7 @@ py -3 .claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --mo
 
 현재 버전의 업데이터는 **진단까지만** 한다(의도적이다 — 볼트마다 상태가 달라 자동 적용이 안전하다고 확인되기 전에는 열지 않는다). 리포트를 근거로 A의 4~8단계를 실행한다. Claude에게 맡기려면 리포트를 보여주며 이렇게 말한다:
 
-> *"이 리포트의 «코어» 층만 `git checkout dist/main -- <경로>`로 가져오고, 씨앗·개인 층은 건드리지 마. `CLAUDE.md`는 §0만 남기고 갱신해줘. 삭제 목록은 하나씩 확인받고 지워."*
+> *"이 리포트의 «코어» 층만 `git checkout dist/main -- <경로>`로 가져오고(`.obsidian/plugins/brain-sheet/` 는 A의 4단계처럼 `git restore --worktree` 로), 씨앗·개인 층은 건드리지 마. `CLAUDE.md`는 §0만 남기고 갱신해줘. 삭제 목록은 하나씩 확인받고 지워."*
 
 **6단계 — 뒷정리와 확인**
 
@@ -231,4 +239,5 @@ git reset --hard backup-before-update
 
 ## 라이선스·차용
 이 저장소 = MIT — [LICENSE](LICENSE).
+동봉 플러그인 Brain Sheet(`.obsidian/plugins/brain-sheet/`) = Apache-2.0 — 같은 폴더 `LICENSE`. 그 `main.js` 에 묶인 오픈소스 118개(Univer·ExcelJS·React 등, 전부 MIT·Apache-2.0·ISC·0BSD)의 고지 = 같은 폴더 `THIRD_PARTY_NOTICES.md`.
 차용 스킬(`defuddle`) = kepano/obsidian-skills (MIT).

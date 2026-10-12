@@ -11,3 +11,5 @@
 *.md text eol=lf
 *.py text eol=lf
 *.ps1 text eol=lf
+# 동봉 플러그인 번들(한 줄 14.5MB)은 줄 단위 diff 를 만들지 않는다 — git diff·log -p 가 멈추지 않게. 바이트는 그대로.
+.obsidian/plugins/brain-sheet/main.js -diff
