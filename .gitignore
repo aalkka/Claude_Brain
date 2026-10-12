@@ -6,5 +6,8 @@ _변환본/
 __pycache__/
 .obsidian/workspace*.json
 .claude/settings.local.json
-# 커뮤니티 플러그인 본체(수 MB 의 main.js 등)는 추적하지 않는다. 설정·스니펫만 추적.
-.obsidian/plugins/
+# 남의 커뮤니티 플러그인 본체(수 MB 의 main.js 등)는 추적하지 않는다. 설정·스니펫만 추적.
+# 예외 = 배포판이 직접 만든 Obsidian 플러그인 Brain Sheet(모듈이 아님). 설정 data.json 은 사용자 것이라 제외.
+.obsidian/plugins/*
+!.obsidian/plugins/brain-sheet/
+.obsidian/plugins/brain-sheet/data.json
