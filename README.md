@@ -11,7 +11,7 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 ## 설치
 1. 템플릿 clone → **즉시 main 브랜치 생성**(태그 clone은 detached HEAD — 이 단계 없으면 세션 커밋이 고아가 되고 push가 영구 실패):
    ```
-   git clone <repo> --branch v0-template <내볼트경로>
+   git clone <repo> --branch v1-template <내볼트경로>
    cd <내볼트경로>
    git switch -c main
    ```
