@@ -58,7 +58,7 @@ description: Obsidian 캔버스(.canvas)를 만들거나 고친다. "캔버스 �
 - **그룹 라벨은 상자 바깥 위**에 그려진다. 안쪽에 여백을 비울 필요 없다.
 - **프론트매터는 기본 펼침**이고 파일카드 높이의 약 45%를 먹는다. 접는 방법은 CSS 스니펫뿐 —
   `.obsidian/snippets/canvas-card-properties.css`(설정 → 모양 → CSS 스니펫에서 켜야 적용).
-  ⚠ 이 볼트에만 있다. 배포판 v0-template에는 없으므로 새 설치에서는 다르게 보인다.
+  ⚠ 이 볼트에만 있다. 배포판에는 없으므로 새 설치에서는 다르게 보인다.
 - 본문 폭은 Obsidian `readable line length` 700px에 걸린다. 카드를 700보다 넓혀도 글자 줄이 안 길어진다.
 
 ## 5. 스펙 형식
