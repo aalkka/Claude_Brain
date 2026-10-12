@@ -1,0 +1,9 @@
+{
+  "id": "brain-sheet",
+  "name": "Brain Sheet",
+  "version": "0.2.0",
+  "minAppVersion": "1.5.0",
+  "description": "엑셀식 시트(.sheet) 편집기 — 수식·서식·리본·xlsx 내보내기, 같은 이름 md 를 시트 아래 메모 칸으로. Sheet Plus 형식과 호환.",
+  "author": "External Brain",
+  "isDesktopOnly": true
+}
