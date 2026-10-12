@@ -103,9 +103,10 @@ git checkout dist/main -- "3_시스템/hooks" "3_시스템/search.py" "3_시스�
 - 배포판에 없는 경로를 적으면 `pathspec did not match` 오류가 난다. 그 경로만 빼고 다시 실행하면 된다.
 - **씨앗·개인 층 경로는 이 명령에 절대 넣지 않는다.**
 
-동봉 플러그인 Brain Sheet 는 파일만 바꾸고 git 에는 올리지 않는다(`checkout` 은 14.5MB 짜리 `main.js` 를 내 저장소에 추적시킨다). 설정 `data.json` 은 건드리지 않는다:
+동봉 플러그인 Brain Sheet 는 파일만 바꾸고 git 에는 올리지 않는다(`checkout` 은 14.5MB 짜리 `main.js` 를 내 저장소에 추적시킨다). 설정 `data.json` 은 건드리지 않는다. 첫 줄 = `main.js` 를 줄바꿈 변환 없이 받는 규칙(`.gitattributes`)을 먼저 가져온다:
 
 ```bash
+git checkout dist/main -- .gitattributes
 git restore --source=dist/main --worktree -- .obsidian/plugins/brain-sheet/main.js .obsidian/plugins/brain-sheet/manifest.json .obsidian/plugins/brain-sheet/styles.css .obsidian/plugins/brain-sheet/LICENSE .obsidian/plugins/brain-sheet/THIRD_PARTY_NOTICES.md
 ```
 
