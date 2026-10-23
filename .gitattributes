@@ -11,5 +11,15 @@
 *.md text eol=lf
 *.py text eol=lf
 *.ps1 text eol=lf
-# 동봉 플러그인 번들(14.5MB)은 binary — 줄바꿈 변환 금지(Windows autocrlf 가 LF 480개를 CRLF 로 바꿨다 — 10-13 실측. 문자열 리터럴 안 줄바꿈이면 동작이 달라질 수 있다) · 줄 단위 diff 도 만들지 않는다.
-.obsidian/plugins/brain-sheet/main.js binary
+# 동봉 플러그인 폴더(번들 js·wasm·css·manifest)는 통째로 binary — 줄바꿈 변환 금지(Windows autocrlf 가 LF 480개를 CRLF 로 바꿨다 — 10-13 실측. 문자열 리터럴 안 줄바꿈이면 동작이 달라질 수 있다) · 줄 단위 diff 도 만들지 않는다.
+.obsidian/plugins/brain-source/** binary
+# 원본 문서·이미지 — 바이너리 고정(다른 PC 의 autocrlf 대비 · 줄 diff 안 만듦). PDF 는 git 자동 판정으로도 바이너리였다(제작자 볼트 22/22).
+*.pdf binary
+*.docx binary
+*.pptx binary
+*.xlsx binary
+*.hwp binary
+*.hwpx binary
+*.png binary
+*.jpg binary
+*.jpeg binary

@@ -1,0 +1,9 @@
+{
+  "id": "brain-source",
+  "name": "Brain Source",
+  "version": "0.29.5",
+  "minAppVersion": "1.5.0",
+  "description": "원본(pdf·그림·문서·표) 아래에 같은 이름 md 를 메모 칸으로 · 검색 결과를 누르면 색인 대신 원본의 그 자리로 · 옵시디언이 못 여는 docx·pptx·hwp·xlsx·csv·html·txt 보기 · 원본 보호를 풀면 xlsx·docx·pptx·hwp·csv·txt·html 원본 편집(txt·코드·html 소스 = 메모장 리본 · 찾기/바꾸기 · html 나란히 미리 보기)(docx = Word 리본 홈·삽입·검토 탭 — 표·그림·머리글·각주·변경 내용 수락/거부 · 자동 저장 스위치) · pdf 주석(형광펜·밑줄·펜·메모 — 색 바꾸기·메모 고치기·지우기).",
+  "author": "External Brain",
+  "isDesktopOnly": true
+}
