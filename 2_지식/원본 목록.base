@@ -1,0 +1,24 @@
+properties:
+  format:
+    displayName: 형식
+  pages:
+    displayName: 쪽
+  quality:
+    displayName: 추출 품질
+  origin:
+    displayName: 원본 경로
+  updated:
+    displayName: 색인 갱신
+views:
+  - type: table
+    name: 원본
+    filters:
+      and:
+        - file.inFolder("1_수집/_색인")
+    order:
+      - file.name
+      - format
+      - pages
+      - quality
+      - origin
+      - updated

@@ -3,11 +3,37 @@
 !3_시스템/_claude-memory/.gitkeep
 _변환본/
 *.pdf
+# 1_수집 원본(md 아닌 파일)은 git 에 올리지 않는다 — 저장소가 원본 크기만큼 영구히 커지지 않게. 원본 백업은 사용자 몫이다.
+# md(메모·아이디어)만 추적. (2026-10-14)
+1_수집/**
+!1_수집/**/
+!1_수집/**/*.md
+!1_수집/_inbox/.gitkeep
+# 원본 색인 — ingest.py 가 원본에서 다시 만든다(md 지만 제외). (2026-10-14)
+1_수집/_색인/
+# 0_작업 = 진행 중 작업 폴더. 넣고 지우기 자유 · 끝나면 승격하거나 삭제.
+# 빌드마다 바뀌는 docx·그림·캡처가 git 에 쌓이지 않게 md 아닌 파일은 추적하지 않는다. (2026-10-18)
+0_작업/**
+!0_작업/**/
+!0_작업/**/*.md
+# 영상·무손실 오디오 — 볼트 어디서든 git 에 넣지 않는다(GitHub 100MB push 차단 · 저장소 영구 증가).
+*.mp4
+*.mkv
+*.mov
+*.avi
+*.m4v
+*.wmv
+*.webm
+*.wav
+*.flac
+# 글씨체 사전(사용자 필기 버릇·표본 그림)은 개인 것 — 설명서만 추적.
+3_시스템/handwriting/*
+!3_시스템/handwriting/README.md
 __pycache__/
 .obsidian/workspace*.json
 .claude/settings.local.json
 # 남의 커뮤니티 플러그인 본체(수 MB 의 main.js 등)는 추적하지 않는다. 설정·스니펫만 추적.
-# 예외 = 배포판이 직접 만든 Obsidian 플러그인 Brain Sheet(모듈이 아님). 설정 data.json 은 사용자 것이라 제외.
+# 예외 = 배포판이 직접 만든 Obsidian 플러그인 Brain Source(모듈이 아님). 설정 data.json 은 사용자 것이라 제외.
 .obsidian/plugins/*
-!.obsidian/plugins/brain-sheet/
-.obsidian/plugins/brain-sheet/data.json
+!.obsidian/plugins/brain-source/
+.obsidian/plugins/brain-source/data.json
