@@ -31,7 +31,9 @@ $p = $probe -replace '\\"', '"' -replace '\\\\', '/' -replace '\\', '/'
 
 # ── 3. 코어 경로 매치. 절대경로면 이 볼트 안이어야 한다.
 # dist 사본·git worktree·scratchpad 검증본은 코어가 아니다(2026-08-17 실측 27건).
-$core = 'CLAUDE\.md|3_시스템/hooks/[^\s",;|&''<>)]*|3_시스템/search\.py|3_시스템/conventions\.md|\.claude/settings\.json|3_시스템/_index/\.core-token'
+# .obsidian/plugins/ = 옵시디언 안에서 실제로 도는 플러그인(2026-10-23 편입). 배포판엔 다른 보호(ACL)가 없다 —
+# brain-source 만이 아니라 폴더 전체를 건다: 옆에 새 플러그인을 심으면 brain-source 만 지켜도 소용없다.
+$core = 'CLAUDE\.md|3_시스템/hooks/[^\s",;|&''<>)]*|3_시스템/search\.py|3_시스템/conventions\.md|\.claude/settings\.json|3_시스템/_index/\.core-token|\.obsidian/plugins/[^\s",;|&''<>)]*'
 # 값싼 1차 검사를 먼저 한다. 대부분의 호출은 코어와 무관하고, 아래 절대경로 순회는
 # 선택적 접두 + non-greedy 라 백트래킹이 붙는다 — 1차를 빼면 비코어 경로가
 # 220ms→296ms 로 늘어난다(2026-08-17 실측). 상시 비용은 여기서 결정된다.
