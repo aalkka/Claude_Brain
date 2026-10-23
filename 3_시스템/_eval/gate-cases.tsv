@@ -79,3 +79,12 @@ ASK	N19 heredoc 변수 경유 코어 쓰기 [실측 형태]	Bash CLAUDE.md	-	{"t
 NOFIRE	N20 heredoc 코어 읽기 + 비코어 쓰기	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python - <<'PY'\nimport io\ns=io.open(\"CLAUDE.md\").read()\nio.open(\"2_지식/x.md\",\"w\").write(s)\nPY"}}
 ASK	N21 heredoc 같은 문에서 코어 쓰기	Bash CLAUDE.md	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python - <<'PY'\nimport io\nio.open(\"CLAUDE.md\",\"w\").write(\"x\")\nPY"}}
 NOFIRE	N22 heredoc 별칭 변수 경유 [수용된 FN]	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python - <<'PY'\nimport io\nP=\"CLAUDE.md\"; Q=P\nio.open(Q,\"w\").write(\"x\")\nPY"}}
+# 옵시디언 플러그인 편입(2026-10-23) — .obsidian/plugins/ 아래 = 코어. 제작자 볼트 밖에선 이 게이트가 플러그인의 유일한 보호다(OS 권한 보호 없음).
+ASK	P1 Edit 플러그인 main.js	Edit .obsidian/plugins/brain-source/main.js	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\plugins\\brain-source\\main.js","old_string":"a","new_string":"b"}}
+ASK	P2 Write 새 플러그인 심기	Write .obsidian/plugins/evil/main.js	-	{"tool_name":"Write","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\plugins\\evil\\main.js","content":"x"}}
+ASK	P3 Bash cp 빌더→플러그인	Bash .obsidian/plugins/brain-source/	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp C:/brain-source/build/main.js .obsidian/plugins/brain-source/"}}
+ASK	P4 PS Copy-Item 플러그인	PowerShell .obsidian/plugins/brain-source/main.js	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"Copy-Item build/main.js .obsidian/plugins/brain-source/main.js"}}
+NOFIRE	P5 Bash ls 플러그인 [읽기]	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"ls -la .obsidian/plugins/brain-source"}}
+NOFIRE	P6 Edit 배포판 사본 플러그인 [볼트 밖]	-	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>_dist\\.obsidian\\plugins\\brain-source\\main.js","old_string":"a","new_string":"b"}}
+NOFIRE	P7 Edit .obsidian/app.json [플러그인 밖]	-	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\app.json","old_string":"a","new_string":"b"}}
+ALLOW	P8 토큰 범위 내(plugins/brain-source/*)	TOKEN-ALLOW Edit .obsidian/plugins/brain-source/styles.css	expires=2099-01-01T00:00:00Z\nscope=.obsidian/plugins/brain-source/*\nreason=플러그인 갱신	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\plugins\\brain-source\\styles.css","old_string":"a","new_string":"b"},"session_id":"88888888-aaaa-bbbb-cccc-000000000008"}

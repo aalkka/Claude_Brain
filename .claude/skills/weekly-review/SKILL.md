@@ -9,7 +9,7 @@ description: 주간 점검. 사용자가 주 1회 호출.
 5. _ref 신규 incident 있으면 MOC 반영.
 6. 헬스: 인덱스·백업·노트 수 보고. **T1 크기**(`recent.md`+`open-loops.md` 바이트, 상한 open-loops 6KB) + `_index` 총용량 + `_index/work/` 잔여 개수 함께 보고. **삭제하지 않는다** — 설계노트 §10 임계(`_index`>200MB 또는 `work/`>50개) 초과 시에만 사용자에게 정리를 제안. **마지막 커밋 경과시간**(`git log -1 --format=%cr`) — **24시간 초과면 경고**. 자동커밋은 조용히 죽는다(제작자 볼트 실측: 0바이트 `.git/index.lock`이 62시간 동안 커밋을 막았는데 사용자에게 가는 신호가 0이었다).
 7. **코어 게이트 계측**(→ `_ref/코어수정-준수사항-체크리스트.md`). 읽기 전용 2줄 실행 → 보고:
-   - `git log --since="7 days ago" --oneline -- "3_시스템/hooks/" "3_시스템/search.py" CLAUDE.md "3_시스템/conventions.md" .claude/settings.json` → **코어 변경 커밋 수**, 그중 메시지가 `session:`인 것(=절차 흔적 없는 익명 수정) 수를 함께.
+   - `git log --since="7 days ago" --oneline -- "3_시스템/hooks/" "3_시스템/search.py" CLAUDE.md "3_시스템/conventions.md" .claude/settings.json .obsidian/plugins/` → **코어 변경 커밋 수**, 그중 메시지가 `session:`인 것(=절차 흔적 없는 익명 수정) 수를 함께.
    - `3_시스템/_index/core-gate.log` 줄 수 → **게이트 발동 횟수**. **판정태그별로 나눠 센다**(`ASK`·`TOKEN-ALLOW`·`TOKEN-DENY`·`TOKEN-OTHERSESSION`·`TOKEN-EXPIRED`·`TOKEN-NOSESSION`·`TOKEN-BINDFAIL`·`GATE-BROKEN`). **`GATE-BROKEN`이 1건이라도 있으면 최우선 보고** — 판정부(`core-gate-decide.ps1`)가 사라져 게이트가 죽은 상태다(fail-open이라 조용하다). `TOKEN-*`가 있으면 그 주에 무인 위임이 있었다는 뜻이므로 대상 경로를 함께 나열한다.
    판정: 발동 0인데 코어 변경이 있으면 **게이트가 죽었거나 우회됐다**(교차검증 — 두 수의 불일치가 유일한 생존 신호). 익명 커밋이 있으면 해당 해시를 나열해 사후 검토 대상으로 보고. **고치지 말고 보고만** 한다.
    - **나열한 익명 코어 커밋마다 근거 문서를 붙인다** — 같은 날짜(`%cs`)의 `2_지식/sessions/`·`decisions/`·`3_시스템/_ref/` 노트를 찾아 커밋 해시 옆에 적는다. 날짜가 안 맞으면 전후 1일까지 본다(incident는 발생일로 `created`가 박혀 후속 섹션이 다음 날 붙는다). **못 찾은 것만** 사후 검토 대상으로 올린다.
