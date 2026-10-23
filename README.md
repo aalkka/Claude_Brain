@@ -5,13 +5,13 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 ## 필수 요건
 - **Windows** (훅이 PowerShell — 현재 Windows 전용. 타 OS는 훅 스크립트 포팅 필요)
 - git · Claude Code v2.1.59+ · Obsidian
-- **Python 3.10+** + `sentence-transformers`(하이브리드 검색) + `markitdown`(PDF 인제스트).
+- **Python 3.10+** + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
   첫 검색 시 임베딩 모델(기본 `intfloat/multilingual-e5-small`, ~470MB)을 자동 내려받아 로컬 인덱스를 만든다.
 
 ## 설치
 1. 템플릿 clone → **즉시 main 브랜치 생성**(태그 clone은 detached HEAD — 이 단계 없으면 세션 커밋이 고아가 되고 push가 영구 실패):
    ```
-   git clone <repo> --branch v1-template <내볼트경로>
+   git clone <repo> --branch v2-template <내볼트경로>
    cd <내볼트경로>
    git switch -c main
    ```
@@ -22,15 +22,15 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
    (미실행 시 secret-scan 안 돎.)
 3. **Python 의존성**:
    ```
-   py -3 -m pip install sentence-transformers markitdown
+   py -3 -m pip install sentence-transformers "markitdown[docx,pptx,xlsx]" pypdfium2 pillow olefile
    ```
-   (`sentence-transformers`=하이브리드 검색 · `markitdown`=PDF 인제스트. 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
+   (`sentence-transformers`=하이브리드 검색 · 나머지 = `3_시스템/ingest.py` 원본 색인(PDF 글자·쪽 그림 · docx·pptx·xlsx · hwp). 그림 쪽 글자는 윈도우 내장 OCR 로 읽는다(설치 없음). 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
    `py -3 -m pip install torch --index-url https://download.pytorch.org/whl/cu121`)
 4. **첫 인덱스 빌드**(최초 1회 수동 — 모델 ~470MB 다운로드 + 임베딩이 세션 훅 타임아웃을 넘길 수 있어 수동 권장):
    ```
    py -3 3_시스템/search.py --rebuild
    ```
-5. Obsidian에서 이 폴더를 볼트로 열기. «제한 모드 끄기(커뮤니티 플러그인 켜기)»를 고르면 동봉 플러그인 **Brain Sheet**(엑셀식 `.sheet` 편집기 · 같은 이름 md 를 시트 아래 메모 칸으로)가 켜진다.
+5. Obsidian에서 이 폴더를 볼트로 열기. «제한 모드 끄기(커뮤니티 플러그인 켜기)»를 고르면 동봉 플러그인 **Brain Source**가 켜진다 — 원본(PDF·docx·pptx·xlsx·hwp·csv·html)을 옵시디언 안에서 보고 고치고, 엑셀식 `.sheet` 를 편집하고, 같은 이름 md 를 원본 아래 메모 칸으로 붙인다. 원본은 기본으로 보호(읽기 전용) 상태로 열린다.
 6. 폴더에서 `claude` 실행 → 트러스트 수락.
 7. 첫 세션에 "⚠ 개인화 미완료" → `setup-interview` 실행(~10분). **네이티브 메모리 볼트 리다이렉트(옵션R)**·호칭·언어·톤·하드웨어(임베딩 모델 자동)·**개인 백업 repo 연결**.
    → **개인 repo를 연결하기 전까지 자동 push는 비활성**(개인정보 보호). 인터뷰가 `origin`을 개인 repo로 설정한다.
@@ -44,10 +44,10 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 
 | 층 | 무엇 | 업데이트 때 |
 |---|---|---|
-| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · `3_시스템/_ref/**` · `3_시스템/_eval/**` · `.obsidian/plugins/brain-sheet/`(설정 `data.json` 제외) | **덮어쓴다** |
+| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · `ingest.py` · `ingest_vision.py` · `3_시스템/_ref/**` · `3_시스템/_eval/**` · `.obsidian/plugins/brain-source/`(설정 `data.json` 제외) | **덮어쓴다** |
 | **씨앗** | `2_지식/recent.md` · `open-loops.md` · `MOC.md` · `profile.md` · `3_시스템/config.json` · `2_지식/notes/설계노트.md` · `사용자설명서.md` | **덮어쓰지 않는다.** 위쪽 머리말(사용법 안내)만 새것으로 바꾸고 그 아래 내가 쓴 항목은 그대로 둔다 |
 | **`CLAUDE.md`** | — | **§0(내 호칭·말투)만 남기고 나머지를 새것으로.** 한 파일에 섞여 있어 자동 복사 불가 |
-| **개인** | `1_수집/**` · `2_지식/notes·sessions·decisions·modules/**` · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` · `.obsidian/plugins/brain-sheet/data.json` | **열지도 않는다** |
+| **개인** | `1_수집/**` · `2_지식/notes·sessions·decisions·modules/**` · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` · `.obsidian/plugins/*/data.json` | **열지도 않는다** |
 
 ---
 
@@ -98,19 +98,22 @@ BASE=$(git merge-base HEAD dist/main) && echo "설치 기준점: $BASE" && git d
 ```bash
 git checkout dist/main -- .claude/skills .claude/settings.json .claude/output-styles
 git checkout dist/main -- "3_시스템/hooks" "3_시스템/search.py" "3_시스템/session-stub.py" "3_시스템/tokens.py" "3_시스템/conventions.md" "3_시스템/_ref" "3_시스템/_eval"
+git checkout dist/main -- "3_시스템/ingest.py" "3_시스템/ingest_vision.py" "3_시스템/handwriting/README.md" "2_지식/원본 목록.base"
 ```
 
 - 배포판에 없는 경로를 적으면 `pathspec did not match` 오류가 난다. 그 경로만 빼고 다시 실행하면 된다.
 - **씨앗·개인 층 경로는 이 명령에 절대 넣지 않는다.**
 
-동봉 플러그인 Brain Sheet 는 파일만 바꾸고 git 에는 올리지 않는다(`checkout` 은 14.5MB 짜리 `main.js` 를 내 저장소에 추적시킨다). 설정 `data.json` 은 건드리지 않는다. 첫 줄 = `main.js` 를 줄바꿈 변환 없이 받는 규칙(`.gitattributes`)을 먼저 가져온다:
+동봉 플러그인 Brain Source 는 파일만 바꾼다. 설정 `data.json` 은 건드리지 않는다. 첫 줄 = 번들을 줄바꿈 변환 없이 받는 규칙(`.gitattributes`)을 먼저 가져온다:
 
 ```bash
-git checkout dist/main -- .gitattributes
-git restore --source=dist/main --worktree -- .obsidian/plugins/brain-sheet/main.js .obsidian/plugins/brain-sheet/manifest.json .obsidian/plugins/brain-sheet/styles.css .obsidian/plugins/brain-sheet/LICENSE .obsidian/plugins/brain-sheet/THIRD_PARTY_NOTICES.md
+git checkout dist/main -- .gitattributes .gitignore
+git restore --source=dist/main --worktree -- .obsidian/plugins/brain-source
 ```
 
-처음 받는 것이면 Obsidian 설정 → 커뮤니티 플러그인에서 Brain Sheet 를 켠다. 이미 켜져 있으면 «저장하지 않고 앱 다시 불러오기».
+처음 받는 것이면 Obsidian 설정 → 커뮤니티 플러그인에서 Brain Source 를 켠다. 이미 켜져 있으면 «저장하지 않고 앱 다시 불러오기».
+
+**옛 Brain Sheet 가 있으면**(`.obsidian/plugins/brain-sheet/`) 배포판이 Brain Source 로 바꿨다 — `.sheet` 는 Brain Source 가 이어 맡는다. Obsidian 설정에서 **Brain Sheet 를 끄고** Brain Source 를 켠 뒤, 그 폴더에서 `data.json` 만 남기고 지운다. 끄지 않고 폴더만 지우면 켜짐 목록에 이름이 남는다(Brain Source 0.29.5 부터는 그래도 `.sheet` 를 맡는다).
 
 **5단계 — 없어진 파일을 지운다**
 
@@ -120,7 +123,7 @@ git restore --source=dist/main --worktree -- .obsidian/plugins/brain-sheet/main.
 rm -rf .claude/skills/obsidian-markdown .claude/skills/session-close
 ```
 
-⚠ **`.obsidian/plugins/` 아래는 지우지 않는다.** 배포판에서 빠진 것일 뿐, 내가 계속 써도 되는 Obsidian 플러그인이다.
+⚠ **`.obsidian/plugins/` 아래는 이 단계에서 지우지 않는다.** 배포판에서 빠진 것일 뿐, 내가 계속 써도 되는 Obsidian 플러그인이다. 예외 = 옛 Brain Sheet(4단계 끝에서 정리).
 
 **6단계 — `CLAUDE.md`를 손으로 합친다 (자동 복사 금지)**
 
@@ -190,10 +193,10 @@ git branch backup-before-update
 **3단계 — 진단을 돌린다 (파일을 고치지 않는다)**
 
 ```bash
-py -3 .claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --mode update --out "3_시스템/_index/dist-sync/update.md"
+py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --mode update --out "3_시스템/_index/dist-sync/update.md"
 ```
 
-`3_시스템/_index/dist-sync/update.md`에 리포트가 생긴다. 또는 Claude에게 *"업데이트 있어?"* 라고만 해도 된다 — `dist-sync:update` 스킬이 위 명령을 대신 실행한다.
+`3_시스템/_index/dist-sync/update.md`에 리포트가 생긴다. **배포판 쪽(`../brain-dist`) 스크립트를 돌린다** — 내 볼트의 스크립트는 옛 판이라 새 판의 규칙을 모른다. 또는 Claude에게 *"업데이트 있어?"* 라고만 해도 된다 — `dist-sync:update` 스킬이 위 명령을 대신 실행한다.
 
 **4단계 — 리포트에서 이 셋을 먼저 본다**
 
@@ -201,13 +204,23 @@ py -3 .claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --mo
 - **「미분류」** — 층 규칙에 없는 파일이다. 판단이 설 때까지 옮기지 않는다.
 - **「코어 — 내용 다름」** — 여기에 **내가 직접 고친 파일이 섞여 있을 수 있다.** 덮어쓰면 내 수정이 사라진다. 고친 기억이 있으면 그 파일만 따로 빼둔다.
 
-**5단계 — 적용은 A의 4~8단계 그대로**
+**5단계 — 동봉 플러그인 교체 (리포트에 «배포 플러그인 교체 계획»이 있을 때)**
 
-현재 버전의 업데이터는 **진단까지만** 한다(의도적이다 — 볼트마다 상태가 달라 자동 적용이 안전하다고 확인되기 전에는 열지 않는다). 리포트를 근거로 A의 4~8단계를 실행한다. Claude에게 맡기려면 리포트를 보여주며 이렇게 말한다:
+Obsidian 을 닫고 실행한다(켜 둔 Obsidian 은 플러그인 목록을 자기 기억으로 다시 쓴다):
 
-> *"이 리포트의 «코어» 층만 `git checkout dist/main -- <경로>`로 가져오고(`.obsidian/plugins/brain-sheet/` 는 A의 4단계처럼 `git restore --worktree` 로), 씨앗·개인 층은 건드리지 마. `CLAUDE.md`는 §0만 남기고 갱신해줘. 삭제 목록은 하나씩 확인받고 지워."*
+```bash
+py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --apply-plugins
+```
 
-**6단계 — 뒷정리와 확인**
+Brain Source 폴더를 배포판과 같게 하고, 옛 Brain Sheet 파일을 지우고(설정 `data.json` 은 남김), 켜짐 목록에서 Brain Sheet 를 Brain Source 로 바꾼다. 다시 돌려도 같다.
+
+**6단계 — 나머지 적용은 A의 4~8단계 그대로**
+
+현재 버전의 업데이터는 플러그인 교체 말고는 **진단까지만** 한다(의도적이다 — 볼트마다 상태가 달라 자동 적용이 안전하다고 확인되기 전에는 열지 않는다). 리포트를 근거로 A의 4~8단계를 실행한다(4단계의 플러그인 줄은 5단계가 했으니 건너뛴다). Claude에게 맡기려면 리포트를 보여주며 이렇게 말한다:
+
+> *"이 리포트의 «코어» 층만 `git checkout dist/main -- <경로>`로 가져오고(플러그인 폴더는 빼고), 씨앗·개인 층은 건드리지 마. `CLAUDE.md`는 §0만 남기고 갱신해줘. 삭제 목록은 하나씩 확인받고 지워."*
+
+**7단계 — 뒷정리와 확인**
 
 ```bash
 git worktree remove ../brain-dist
@@ -216,7 +229,7 @@ git status --short
 
 `status`에 개인 층 경로가 보이면 잘못된 것이다. `git reset --hard backup-before-update`로 되돌린다.
 
-**7단계 — 새 세션으로 다시 연다.** (A의 9단계와 같다)
+**8단계 — 새 세션으로 다시 연다.** (A의 9단계와 같다)
 
 ---
 
@@ -240,5 +253,5 @@ git reset --hard backup-before-update
 
 ## 라이선스·차용
 이 저장소 = MIT — [LICENSE](LICENSE).
-동봉 플러그인 Brain Sheet(`.obsidian/plugins/brain-sheet/`) = Apache-2.0 — 같은 폴더 `LICENSE`. 그 `main.js` 에 묶인 오픈소스 118개(Univer·ExcelJS·React 등, 전부 MIT·Apache-2.0·ISC·0BSD)의 고지 = 같은 폴더 `THIRD_PARTY_NOTICES.md`.
+동봉 플러그인 Brain Source(`.obsidian/plugins/brain-source/`) = Apache-2.0 — 같은 폴더 `LICENSE`. 번들에 묶인 오픈소스 127개(Univer·ExcelJS·docx-preview·pdf-lib·rhwp·React 등 — MIT·Apache-2.0·ISC·0BSD · 이중 라이선스는 MIT 쪽)의 고지 = 같은 폴더 `THIRD_PARTY_NOTICES.md`.
 차용 스킬(`defuddle`) = kepano/obsidian-skills (MIT).
