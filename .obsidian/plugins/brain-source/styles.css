@@ -319,6 +319,10 @@
 .bs-text-status { flex: none; display: flex; justify-content: flex-end; padding: 0 6px; height: 24px; align-items: center; font-family: "Segoe UI", "Malgun Gothic", var(--font-interface), sans-serif; font-size: 12px; color: var(--text-muted); background: var(--background-secondary); border-top: 1px solid var(--background-modifier-border); user-select: none; }
 .bs-text-status > span { padding: 0 12px; border-left: 1px solid var(--background-modifier-border); white-space: nowrap; }
 .bs-text-status > span:first-child { margin-right: auto; border-left: none; }
+.bs-text-status > .bs-text-fmt { cursor: pointer; }
+.bs-text-status > .bs-text-fmt:hover { color: var(--text-normal); background: var(--background-modifier-hover); }
+.bs-text-status > .bs-text-fmt.is-locked { cursor: default; }
+.bs-text-status > .bs-text-fmt.is-locked:hover { color: inherit; background: none; }
 .brain-source-slot.has-ribbon > .bs-html-wrap { display: flex; overflow: hidden; }
 .bs-html-wrap > .bs-html-src { flex: 1 1 50%; min-width: 0; height: 100%; }
 .bs-html-wrap > .brain-source-html { flex: 1 1 50%; min-width: 0; height: 100%; width: auto; }
