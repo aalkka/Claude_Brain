@@ -59,10 +59,14 @@ TARGET_GLOBS = [
     "2_지식/**/*.md",   # notes(설계노트·사용자설명서 포함)·sessions·decisions·profile·MOC 등
     "3_시스템/_ref/**/*.md",
     "3_시스템/_claude-memory/**/*.md",
-    "3_시스템/_index/pdf-cache/**/*.md",  # PDF 정제본(pdf-ingest step4). 청킹→부분읽기.
+    "1_수집/**/*.md",   # 원본 색인(_색인/, ingest.py)·원본 메모(사람). 10-14 ADR-013.
+    "3_시스템/_index/pdf-cache/**/*.md",  # 원본이 볼트에 없는 옛 PDF 정제본만 남김(물성전자) — 색인과 겹친 기물실 10개는 pdf-cache-retired/ 로 옮김(10-14).
 ]
+# 승격 원문(_promoted) = 2_지식 노트와 같은 글 → 중복 적중 방지로 제외.
+EXCLUDE_PREFIX = ("1_수집/_inbox/_promoted/",)
 WINDOW = 40           # 헤딩 없는/긴 섹션 창 크기(줄)
 MAX_CHUNKS = 120      # 노트당 청크 상한(거대 _변환본 비용 바운드)
+MAX_CHUNKS_INDEX = 2000   # 원본 색인은 찾기가 목적 — 120 이면 긴 PDF 뒷부분(쪽당 1청크)이 검색에서 빠진다
 RECENCY_W = 0.0       # 지식검색 recency 역효과(진단) → 기본 0. 필요시 상향.
 HALF_LIFE_DAYS = 90.0
 RRF_K = 60
@@ -204,7 +208,7 @@ def iter_files():
     for g in TARGET_GLOBS:
         for p in glob.glob(os.path.join(VAULT, g), recursive=True):
             ap = os.path.abspath(p)
-            if ap not in seen and ap.endswith(".md"):
+            if ap not in seen and ap.endswith(".md") and not rel(ap).startswith(EXCLUDE_PREFIX):
                 seen.add(ap); yield ap
 
 
@@ -259,7 +263,7 @@ def gist(text):
     return ""
 
 
-def chunk_text(text):
+def chunk_text(text, cap=MAX_CHUNKS):
     """헤딩 단위 분할 → 긴 섹션은 WINDOW줄 창. 청크 리스트(문자열) 반환."""
     lines = text.splitlines()
     # frontmatter 제거
@@ -297,7 +301,7 @@ def chunk_text(text):
             else: chunks.append(c)
     if not chunks:
         chunks = [text.strip()[:2000]]
-    return chunks[:MAX_CHUNKS]
+    return chunks[:cap]
 
 
 def load_index():
@@ -333,8 +337,8 @@ def reindex(full=False):
         if idx.get(rp, {}).get("hash") == h:
             continue
         text = strip_managed(read_text(ap))
-        ch = chunk_text(text)
-        meta[rp] = (h, os.path.getmtime(ap), parse_status(text), gist(text), len(ch))
+        ch = chunk_text(text, MAX_CHUNKS_INDEX if rp.startswith("1_수집/_색인/") else MAX_CHUNKS)
+        meta[rp] =(h, os.path.getmtime(ap), parse_status(text), gist(text), len(ch))
         for c in ch: to_embed.append((rp, c))
     for rp in list(notes(idx).keys()):
         if rp not in cur: del idx[rp]
@@ -559,7 +563,7 @@ WRITER_GLOBS = [
     "3_시스템/_ref/**/*.md",
 ]
 # 링크 대상서 제외(기계파생 중복본 — 지식은 통찰노트에 있음). 그래프 오염 방지.
-LINK_TARGET_EXCLUDE = ("3_시스템/_index/pdf-cache/", "3_시스템/_claude-memory/",
+LINK_TARGET_EXCLUDE = ("3_시스템/_index/pdf-cache/", "3_시스템/_claude-memory/", "1_수집/_색인/",
                        "2_지식/notes/설계노트.md", "2_지식/notes/사용자설명서.md")
 # 검색은 되나 B1 위키링크 대상서 제외: pdf캐시·개인메모리(gitignore=배포 미포함→dangling 방지)·시스템문서(지식그래프 오염 방지)
 # 블록 매치 = 3세대 공용 패턴(_BLOCK_ALT). 마이그레이션 시 구→신 무중복 교체.

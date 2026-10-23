@@ -3,14 +3,17 @@
 """dist-sync — 두 볼트의 코어 괴리를 층별로 진단한다 (P0: 읽기 전용).
 
   py -3 dist-diff.py --a <원본볼트> --b <대상볼트> --mode update|publish [--out <파일>]
+  py -3 dist-diff.py --a <배포판> --b <대상볼트> --apply-plugins      (승인 뒤에만)
 
-**파일을 고치지 않는다.** 무엇이 다르고 무엇이 바뀔 것인지만 낸다.
+**진단은 파일을 고치지 않는다.** 무엇이 다르고 무엇이 바뀔 것인지만 낸다.
 적용은 P1 이후이고, 그때도 이 리포트가 입력이 된다.
+쓰기는 `--apply-plugins` 하나뿐이다(2026-10-23) — 배포 플러그인 폴더를 배포판과 같게 하고
+배포판이 거둔 플러그인을 지운다. data.json(사용자 설정)은 어느 쪽도 건드리지 않는다.
 
 층 분류 근거 → 제작자 볼트의 dist-sync 설계 노트(배포판 미포함).
 module-forge 스캐폴드 보일러플레이트 ①~⑤는 실측 인시던트 대응이라 지우지 말 것.
 """
-import sys, os, re, argparse, hashlib, fnmatch, datetime
+import sys, os, re, argparse, hashlib, fnmatch, datetime, json, shutil, filecmp, subprocess
 
 # ① stdout/stderr UTF-8 강제 — Windows 콘솔 기본 cp949 → 한글 출력 시 크래시.
 #    (incident-2026-07-04-search-stdout-cp949 계열)
@@ -33,6 +36,9 @@ PERSONAL = [
     # DoD 검증(2026-09-12)이 잡은 결함 — settings.local.json 은 개인 권한 설정이고
     # gitignore 대상인데 `.claude/skills/*` 형제라 코어로 분류됐다. 적용 단계였다면 유출.
     ".claude/settings.local.json", "_변환본/*",  # mf:allow-path
+    # 2026-10-23 — 작업 폴더(ADR-014 계열)·금고·글씨체 사전은 사용자 것. 금고 파일이 «미분류»로 리포트에 올라왔다.
+    "0_작업/*", "3_시스템/vault/*", "3_시스템/handwriting/samples/*",  # mf:allow-path
+    "3_시스템/handwriting/profile.md", "3_시스템/handwriting/samples.json",  # mf:allow-path
 ]
 # 예외 — 개인 폴더 안이지만 제작자가 배포하는 것
 PERSONAL_EXCEPT = ["2_지식/notes/설계노트.md", "2_지식/notes/사용자설명서.md"]  # mf:allow-path
@@ -53,8 +59,13 @@ EXCLUDE_EXT = (".pyc", ".pyo", ".lock", ".tmp")
 
 # 배포판이 직접 만든 Obsidian 플러그인(2026-10-13 Brain Sheet) — `.obsidian/` 은 통째로 제외지만 이 폴더는 코어다.
 # 남의 커뮤니티 플러그인 본체는 여전히 제외. 플러그인 설정(data.json)은 사용자 것이라 개인.
-DIST_PLUGINS = [".obsidian/plugins/brain-sheet/"]  # mf:allow-path
+DIST_PLUGINS = [".obsidian/plugins/brain-source/"]  # mf:allow-path
 DIST_PLUGIN_PERSONAL = {"data.json"}
+# 배포판이 거둔 플러그인 → 대신 쓰는 것(2026-10-22 brain-sheet → brain-source · .sheet 를 이어 맡음).
+# 거둔 것만 지우고 대신 쓰는 것을 켜야 한다 — 거둔 것이 «켜짐» 으로 남아 있으면 brain-source 는
+# 그쪽이 .sheet 를 맡는 줄 알고 비켜서, 아무도 안 맡은 .sheet 가 탐색기에서 사라진다(10-18 버그와 같은 꼴).
+RETIRED_PLUGINS = {"brain-sheet": "brain-source"}
+COMMUNITY = ".obsidian/community-plugins.json"  # mf:allow-path
 
 L_CLAUDE = "CLAUDE.md"  # mf:allow-path  (층 라벨 겸 경로 — 리터럴은 여기 한 곳뿐)
 SPECIAL = [L_CLAUDE]
@@ -65,6 +76,9 @@ CORE = [
     "3_시스템/hooks/*", "3_시스템/search.py", "3_시스템/session-stub.py",  # mf:allow-path
     "3_시스템/tokens.py", "3_시스템/conventions.md", "3_시스템/_ref/*",  # mf:allow-path
     "3_시스템/_eval/*", "README.md", ".gitattributes", ".gitignore",  # mf:allow-path
+    # 원본 형식 수용(2026-10-14) — 색인기·그림 소화·원본 목록 보기
+    "3_시스템/ingest.py", "3_시스템/ingest_vision.py", "2_지식/원본 목록.base",  # mf:allow-path
+    "3_시스템/handwriting/README.md",  # mf:allow-path
 ]
 
 # publish 방향에서 배포판에 새어 나가면 안 되는 것 (2026-08-03 전수검사 계열)
@@ -148,12 +162,17 @@ def walk(root):
 def scan_leaks(files):
     hits = []
     for rel, full in sorted(files.items()):
-        if not re.search(r"\.(md|py|ps1|json|sh|tsv|txt)$", rel):
+        # css·js 도 본다 — brain-source styles.css 주석에 호칭이 7곳 있었다(2026-10-22).
+        # 압축된 js 는 16진 8자가 흔해 세션 id 후보는 거기서 세지 않는다.
+        code = re.search(r"\.(css|js|mjs)$", rel)
+        if not (code or re.search(r"\.(md|py|ps1|json|sh|tsv|txt)$", rel)):
             continue
         try:
             with open(full, encoding="utf-8", errors="replace") as f:
                 for i, line in enumerate(f, 1):
                     for rx, label in LEAK:
+                        if code and label.startswith("세션 id"):
+                            continue
                         if re.search(rx, line):
                             hits.append((rel, i, label, line.strip()[:90]))
                             break
@@ -277,6 +296,16 @@ def report(A, B, mode):
             w("- `%s:%d` — `%s`" % (rel, i, txt))
         w("")
 
+    if mode == "update":
+        plan, _ = plugins(A, B, dry=True)
+        w("## 배포 플러그인 교체 계획 — %d건" % sum(1 for x in plan if x[0] != "·"))
+        w("")
+        w("승인 뒤 `--apply-plugins` 로만 실행한다. **옵시디언을 닫고** 돌린다(켜 둔 옵시디언은 플러그인 목록을 자기 기억으로 다시 쓴다).")
+        w("")
+        for x in plan:
+            w("- %s %s" % x)
+        w("")
+
     w("## 이 리포트가 하지 않은 것")
     w("")
     w("- 파일을 **하나도 고치지 않았다**(P0 = 진단 전용).")
@@ -284,6 +313,88 @@ def report(A, B, mode):
     w("- 씨앗 파일의 «머리말과 항목의 경계»는 재지 않았다 — 사람·Claude 가 읽어야 한다.")
     w("- 대상 볼트가 코어를 **직접 고쳤는지**, 그리고 «대상에만 있는 파일»이 배포판이 지운 것인지 대상이 만든 것인지 — 둘 다 **구분하지 못한다.** 공통 조상 3자 비교가 필요하다(P1).")
     return "\n".join(L) + "\n", (len(added), len(changed), len(removed))
+
+
+def plugin_dir(root, name):
+    return os.path.join(root, ".obsidian", "plugins", name)
+
+
+def obsidian_running():
+    if os.name != "nt":
+        return False
+    try:
+        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq Obsidian.exe", "/NH"],
+                             capture_output=True, text=True, errors="replace").stdout
+    except OSError:
+        return False
+    return "obsidian.exe" in out.lower()
+
+
+def plugins(A, B, dry):
+    """배포 플러그인 교체 — 들이기(DIST_PLUGINS 폴더를 A 와 같게) + 거두기(RETIRED_PLUGINS 지우기) + 켜짐 목록.
+    data.json 은 어느 쪽도 건드리지 않는다. 돌려주는 것 = [(표시, 설명)], 실행 여부."""
+    log = []
+    names = [d.rstrip("/").rsplit("/", 1)[1] for d in DIST_PLUGINS]
+    for n in names:
+        src, dst = plugin_dir(A, n), plugin_dir(B, n)
+        if not os.path.isfile(os.path.join(src, "manifest.json")):
+            # 들일 것이 없는데 거두면 .sheet 를 맡을 플러그인이 하나도 안 남는다
+            return log + [("✗", "배포판에 `%s` 가 없다 — 들이기·거두기 모두 멈춤" % n)], False
+        want = {f for f in os.listdir(src)
+                if os.path.isfile(os.path.join(src, f))
+                and f not in DIST_PLUGIN_PERSONAL and not f.endswith(EXCLUDE_EXT)}
+        have = {f for f in os.listdir(dst) if os.path.isfile(os.path.join(dst, f))} if os.path.isdir(dst) else set()
+        if not dry:
+            os.makedirs(dst, exist_ok=True)
+        same = 0
+        for f in sorted(want):
+            s, d = os.path.join(src, f), os.path.join(dst, f)
+            if f in have and filecmp.cmp(s, d, shallow=False):
+                same += 1
+                continue
+            log.append(("+", "`%s/%s` %s" % (n, f, "바꿈" if f in have else "넣음")))
+            if not dry:
+                shutil.copyfile(s, d)
+        for f in sorted(have - want - DIST_PLUGIN_PERSONAL):
+            log.append(("-", "`%s/%s` 지움(배포판에 없음)" % (n, f)))
+            if not dry:
+                os.remove(os.path.join(dst, f))
+        if same:
+            log.append(("·", "`%s` 같은 파일 %d개 그대로" % (n, same)))
+
+    on_path = os.path.join(B, COMMUNITY)
+    try:
+        with open(on_path, encoding="utf-8") as f:
+            on = json.load(f)
+    except (OSError, ValueError):
+        on = []
+    new_on = list(on)
+    for old, new in RETIRED_PLUGINS.items():
+        d = plugin_dir(B, old)
+        if os.path.isdir(d):
+            for f in sorted(os.listdir(d)):
+                p = os.path.join(d, f)
+                if f in DIST_PLUGIN_PERSONAL:
+                    log.append(("·", "`%s/%s` 남김(사용자 설정)" % (old, f)))
+                elif os.path.isfile(p):
+                    log.append(("-", "`%s/%s` 지움(배포판이 거둠 → `%s`)" % (old, f, new)))
+                    if not dry:
+                        os.remove(p)
+            if not dry and not os.listdir(d):
+                os.rmdir(d)
+        if old in new_on:
+            new_on.remove(old)
+            log.append(("-", "켜짐 목록에서 `%s` 뺌" % old))
+            if new not in new_on:
+                new_on.append(new)
+                log.append(("+", "켜짐 목록에 `%s` 넣음(`%s` 를 이어 맡음)" % (new, old)))
+    if new_on != on and not dry:
+        with open(on_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(json.dumps(new_on, indent=2, ensure_ascii=False) + "\n")
+    for n in names:
+        if n not in new_on:
+            log.append(("·", "`%s` 는 꺼져 있다 — 옵시디언 설정 › 커뮤니티 플러그인에서 켠다" % n))
+    return log, True
 
 
 def write_text(path, text):
@@ -300,14 +411,28 @@ def main():
     ap = argparse.ArgumentParser(description="두 볼트의 코어 괴리를 층별로 진단한다(읽기 전용)")
     ap.add_argument("--a", required=True, help="원본 볼트 경로(가져올 쪽)")
     ap.add_argument("--b", required=True, help="대상 볼트 경로(받을 쪽)")
-    ap.add_argument("--mode", choices=["update", "publish"], required=True)
+    ap.add_argument("--mode", choices=["update", "publish"])
     ap.add_argument("--out", help="리포트 저장 경로(생략 시 stdout)")
+    ap.add_argument("--apply-plugins", action="store_true",
+                    help="배포 플러그인 교체를 실행한다(update 리포트의 계획을 승인한 뒤에만)")
     a = ap.parse_args()
+    if not (a.mode or a.apply_plugins):
+        ap.error("--mode 또는 --apply-plugins 가 필요하다")
 
     for p in (a.a, a.b):
         if not os.path.isdir(p):
             print("경로 없음: %s" % p, file=sys.stderr)
             return 2
+
+    if a.apply_plugins:
+        if obsidian_running():
+            print("옵시디언이 켜져 있다 — 닫고 다시 돌린다(켜 둔 옵시디언은 플러그인 목록을 자기 기억으로 다시 쓴다).",
+                  file=sys.stderr)
+            return 3
+        log, ok = plugins(os.path.abspath(a.a), os.path.abspath(a.b), dry=False)
+        for x in log:
+            print("%s %s" % x)
+        return 0 if ok else 1
 
     text, (n_add, n_chg, n_del) = report(os.path.abspath(a.a), os.path.abspath(a.b), a.mode)
 
