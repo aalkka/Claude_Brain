@@ -9,7 +9,8 @@
   --force   해시·판이 같아도 다시 만든다
   --dry     쓰지 않고 할 일만 보고
   --prune   원본이 없어진 색인(고아)을 지운다(기본은 보고만)
-  --vision  그림 쪽(글자 층 20자 미만)·그림 파일을 Claude(claude -p · sonnet 5.5)로 읽어 «그림 키워드 + 손글씨» 를 색인에 덧붙인다.
+  --vision  그림을 Claude(claude -p · sonnet 5.5)로 읽어 «무엇을 그렸나(명사구) + 손글씨(있으면)» 를 색인에 덧붙인다. 대상 = 그림 쪽(글자 층 20자 미만)·
+            그림 든 쪽(10-26)·그림 파일·docx·pptx·html 안 그림(10-26). 한 번에 --vision-max 장(기본 60)까지.
             사용량이 들어서 이 플래그를 줄 때만 부른다. 결과 캐시 = 3_시스템/_index/ingest-vision/ · 글씨체 사전 = 3_시스템/handwriting/
 
 원칙:
@@ -17,7 +18,7 @@
   - 같은 sha256 = 색인 하나(`also` 에 다른 경로). 원본이 옮겨지면 해시로 다시 잇는다.
   - 생략·요약하지 않는다. 예외 = 표(xlsx·csv)는 표마다 TABLE_ROWS 행, 텍스트는 TEXT_LINES 줄까지(숫자 행은 검색 잡음 · 원천은 원본).
 """
-import argparse, hashlib, json, os, re, sys, time, zipfile, zlib
+import argparse, hashlib, io, json, os, re, sys, time, zipfile, zlib
 from datetime import date
 from urllib.parse import quote
 
@@ -30,7 +31,7 @@ for _s in (sys.stdout, sys.stderr):
 VAULT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(VAULT, "1_수집")
 OUT = os.path.join(SRC, "_색인")
-VERSION = "ingest 0.3"   # 판을 올리면 모든 색인을 다시 만든다(0.2 = 제목 줄 · 0.3 = OCR)
+VERSION = "ingest 0.4"   # 판을 올리면 모든 색인을 다시 만든다(0.2 = 제목 줄 · 0.3 = OCR · 0.4 = 기호 글꼴 · 문서 안 그림 OCR)
 SUFFIX = ".색인.md"
 BIG = 50 * 1024 * 1024          # pre-commit 이 git 에서 빼는 크기
 TABLE_ROWS = 200
@@ -157,6 +158,95 @@ def cap_tables(md):
     return "\n".join(out)
 
 
+# ───────── 기호 글꼴 — Symbol·Wingdings 글자는 U+F020~F0FF(사용자 영역)로 나온다(10-26 실사용: 수학 기호를 색인이 못 읽음) ─────────
+# 색인 17개에 2,200자(chap19 = SymbolMT 의 ∫ ∞ ∑ ≤ ⇒ …). 같은 코드가 글꼴마다 뜻이 달라서(0xE0 = Symbol ◊ · Wingdings →)
+# 글꼴 이름을 보고 고른다 — PDF = pdfium 글자별 글꼴 · Office = XML 의 글꼴. 글꼴을 모르면 그대로 둔다(추측 금지).
+PUA_SYM = re.compile("[-]")
+_SYM_LO = " !∀#∃%&∋()∗+,−./0123456789:;<=>?≅ΑΒΧΔΕΦΓΗΙϑΚΛΜΝΟΠΘΡΣΤΥςΩΞΨΖ[∴]⊥_‾αβχδεφγηιϕκλμνοπθρστυϖωξψζ{|}∼"
+_SYM_HI = ("€ϒ′≤⁄∞ƒ♣♦♥♠↔←↑→↓°±″≥×∝∂•÷≠≡≈…⏐⎯↵ℵℑℜ℘⊗⊕∅∩∪⊃⊇⊄⊂⊆∈∉∠∇®©™∏√⋅¬∧∨⇔⇐⇑⇒⇓"
+           "◊⟨®©™∑⎛⎜⎝⎡⎢⎣⎧⎨⎩⎪\0⟩∫⌠⎮⌡⎞⎟⎠⎤⎥⎦⎫⎬⎭")
+SYMBOL = {0xF020 + i: c for i, c in enumerate(_SYM_LO)} | {0xF0A0 + i: c for i, c in enumerate(_SYM_HI) if c != "\0"}
+assert len(_SYM_LO) == 95 and len(_SYM_HI) == 95
+WINGDINGS = {0xF046: "☞", 0xF04A: "☺", 0xF04C: "☹", 0xF06C: "●", 0xF06D: "❍", 0xF06E: "■", 0xF06F: "□", 0xF070: "◻",
+             0xF071: "❑", 0xF072: "❒", 0xF073: "⬧", 0xF074: "⧫", 0xF075: "◆", 0xF076: "❖", 0xF077: "⬥", 0xF09F: "•",
+             0xF0A1: "○", 0xF0A7: "▪", 0xF0A8: "◻", 0xF0FB: "✗", 0xF0FC: "✓", 0xF0FD: "☒", 0xF0FE: "☑"} | {
+             0xF0D7 + i: c for i, c in enumerate("◀➢▲▼◁▷△▽←→↑↓↖↗↙↘←→↑↓↖↗↙↘⇦⇨⇧⇩⬄⇳⬀⬁⬃⬂")}
+
+
+def sym_table(font):
+    f = (font or "").lower()
+    if "wingdings" in f and not re.search(r"wingdings\s*[23]", f):
+        return WINGDINGS
+    return SYMBOL if "symbol" in f else None
+
+
+def unpua(text, fonts):
+    """text 의 기호 글꼴 글자를 차례로 바꾼다. fonts = 그 글자들의 글꼴 이름 목록(같은 차례) 또는 글자 → 글꼴 dict."""
+    it = iter(fonts) if isinstance(fonts, list) else None
+
+    def sub(m):
+        c = m.group()
+        table = sym_table(next(it, None) if it is not None else fonts.get(c))
+        return (table or {}).get(ord(c), c)
+    return PUA_SYM.sub(sub, text)
+
+
+def pdf_pua_fonts(tp):
+    """PDF 쪽 글자 층에서 기호 글꼴 글자의 글꼴 이름(글자 차례). 서브셋 이름(CIDFont+F2)이면 글꼴 가족 이름(Wingdings)으로."""
+    import ctypes
+    import pypdfium2.raw as R
+    out = []
+    for k in range(tp.count_chars()):
+        if not 0xF020 <= R.FPDFText_GetUnicode(tp, k) <= 0xF0FF:
+            continue
+        buf = ctypes.create_string_buffer(256)
+        name = ""
+        if hasattr(R, "FPDFText_GetTextObject") and hasattr(R, "FPDFFont_GetFamilyName"):
+            o = R.FPDFText_GetTextObject(tp, k)
+            f = R.FPDFTextObj_GetFont(o) if o else None
+            if f and R.FPDFFont_GetFamilyName(f, buf, 256):
+                name = buf.value.decode("utf-8", "replace")
+        if not name and R.FPDFText_GetFontInfo(tp, k, buf, 256, None):
+            name = buf.value.decode("utf-8", "replace")
+        out.append(name)
+    return out
+
+
+def office_pua_fonts(path):
+    """docx·pptx·xlsx XML 에서 기호 글꼴 글자 → 글꼴 이름(가장 많이 쓴 것). w:sym = Word «기호 삽입» · 글자 칸 = 그 칸의 글꼴."""
+    from collections import Counter, defaultdict
+    seen = defaultdict(Counter)
+    try:
+        z = zipfile.ZipFile(path)
+    except (zipfile.BadZipFile, OSError):
+        return {}
+    with z:
+        for n in z.namelist():
+            if not n.endswith(".xml"):
+                continue
+            x = z.read(n).decode("utf-8", "replace")
+            for m in re.finditer(r"<w:sym\b([^>]*)>", x):
+                font = re.search(r'w:font="([^"]+)"', m.group(1))
+                ch = re.search(r'w:char="([0-9A-Fa-f]{4})"', m.group(1))
+                if font and ch:
+                    c = int(ch.group(1), 16)
+                    seen[chr(c if c >= 0xF000 else c + 0xF000)][font.group(1)] += 1
+            if not PUA_SYM.search(x):
+                continue
+            for m in re.finditer(r"<(w|a):r\b.*?</\1:r>", x, re.S):
+                run = m.group()
+                body = "".join(re.findall(r"<(?:w|a):t\b[^>]*>([^<]*)<", run))
+                chars = set(PUA_SYM.findall(body))
+                if not chars:
+                    continue
+                font = re.search(r'<a:sym\b[^>]*typeface="([^"]+)"', run) or re.search(r'<w:rFonts\b[^>]*w:(?:ascii|hAnsi)="([^"]+)"', run) \
+                    or re.search(r'<a:latin\b[^>]*typeface="([^"]+)"', run)
+                if font:
+                    for c in chars:
+                        seen[c][font.group(1)] += 1
+    return {c: cnt.most_common(1)[0][0] for c, cnt in seen.items()}
+
+
 def link(origin, label, sub=""):
     """원본 링크. 이름에 위키링크를 깨는 글자가 있으면 마크다운 링크로."""
     if re.search(r"[\[\]#|^]", origin):
@@ -261,8 +351,8 @@ def ocr_cached(sha, keys, render):
     if todo:
         with tempfile.TemporaryDirectory(prefix="ingest-png-") as td:
             pngs = []
-            for k in todo:
-                p = os.path.join(td, f"{k}.png")
+            for i, k in enumerate(todo):
+                p = os.path.join(td, f"{i}.png")                # 열쇠(img:…)는 파일 이름이 될 수 없다
                 render(k, p)
                 pngs.append(p)
             got, why = ocr_images(pngs)
@@ -296,16 +386,16 @@ def fit(img):
 OCR_TAG = "_(OCR — 원본 글자가 아니라 그림에서 읽은 글자)_"
 
 
-# ───────── 그림 소화(키워드·손글씨) — 결과는 ingest_vision 캐시에서 읽기만. 부르기는 --vision 일 때만(Claude 사용량이 든다) ─────────
+# ───────── 그림 읽기(명사구·손글씨) — 결과는 ingest_vision 캐시에서 읽기만. 부르기는 --vision 일 때만(Claude 사용량이 든다) ─────────
 def vision_entries(sha):
-    """원본 sha256 의 그림 읽기 결과 {쪽 문자열|"0": 항목}. 없으면 빈 dict"""
+    """원본 sha256 의 그림 읽기 결과 {쪽 문자열|"0"|"img:…": 항목}. 없으면 빈 dict. 색인에 붙일 글이 없는 항목(명사구 전의 옛 판)은 뺀다."""
     p = os.path.join(VAULT, "3_시스템", "_index", "ingest-vision", f"{sha}.json")
     if not os.path.isfile(p):
         return {}, ""
     try:
         with open(p, encoding="utf-8") as f:
             d = json.load(f)
-        pages = d.get("pages") or {}
+        pages = {k: e for k, e in (d.get("pages") or {}).items() if vision_block(e)}
         model = next((e.get("model") for e in pages.values() if e.get("model")), "")
         return pages, model
     except (OSError, ValueError):
@@ -335,6 +425,68 @@ def pdf_empty_pages(path):
         pdf.close()
 
 
+FIG_MIN, FIG_MAX, FIG_PATHS = 0.05, 0.9, 40
+
+
+def pdf_figure_pages(path):
+    """글자 층이 있는데 그림이 든 쪽(= 그림 읽기 대상 · 10-26 «그림 내용까지 읽도록»).
+    그림 = 쪽 넓이의 5~90% 를 덮는 그림 개체 또는 선·도형 개체 40개 이상(벡터로 그린 그래프·회로).
+    90% 이상은 쪽 배경(슬라이드 틀)·스캔 쪽이라 뺀다 — 스캔 교재(그리피스 612쪽)를 통째로 읽지 않게."""
+    import pypdfium2 as pdfium
+    import pypdfium2.raw as R
+    pdf = pdfium.PdfDocument(path)
+    try:
+        out = []
+        for i in range(len(pdf)):
+            pg = pdf[i]
+            tp = pg.get_textpage()
+            has_text = len(re.sub(r"\s", "", clean_plain(tp.get_text_range()))) >= 20
+            tp.close()
+            if has_text:
+                w, h = pg.get_size()
+                paths, fig = 0, False
+                for o in pg.get_objects(max_depth=3):
+                    if o.type == R.FPDF_PAGEOBJ_IMAGE:
+                        l, b, r, t = o.get_bounds()
+                        fig |= FIG_MIN <= (r - l) * (t - b) / (w * h) < FIG_MAX
+                    elif o.type == R.FPDF_PAGEOBJ_PATH:
+                        paths += 1
+                    if fig or paths >= FIG_PATHS:
+                        out.append(i + 1)
+                        break
+            pg.close()
+        return out
+    finally:
+        pdf.close()
+
+
+VISION_MIN = 64                                         # 그림 읽기에 보낼 문서 안 그림의 짧은 변 하한(아이콘·글머리 그림 빼기)
+
+
+def embedded_images(path):
+    """docx·pptx·html 본문에 실린 그림 {img_key: bytes} — ocr_embedded 와 같은 열쇠. 압축 파일의 media 를 통째로 훑지 않는 까닭 =
+    슬라이드 틀(마스터)의 로고·배경도 거기 있어서 본문에 안 나오는 그림까지 읽게 된다."""
+    import base64, io
+    import markitdown
+    from PIL import Image
+    global _MD
+    if _MD is None:
+        _MD = markitdown.MarkItDown(enable_plugins=False)
+    out = {}
+    for m in IMG_MD.finditer(_MD.convert(path, keep_data_uris=True).text_content or ""):
+        d = re.match(r"data:[\w.+/-]+;base64,(.+)", m.group(2))
+        if not d:
+            continue
+        try:
+            b = base64.b64decode(d.group(1))
+            with Image.open(io.BytesIO(b)) as im:
+                if min(im.size) >= VISION_MIN:
+                    out[img_key(b)] = b
+        except Exception:                               # EMF·WMF 등 PIL 이 못 여는 것
+            pass
+    return out
+
+
 # ───────── 형식별 추출기 — (본문, 메타, 품질) ─────────
 def ex_pdf(path, origin, sha):
     import pypdfium2 as pdfium
@@ -345,7 +497,10 @@ def ex_pdf(path, origin, sha):
         for i in range(n):
             page = pdf[i]
             tp = page.get_textpage()
-            s = clean_plain(tp.get_text_range())
+            s = tp.get_text_range()
+            if PUA_SYM.search(s):
+                s = unpua(s, pdf_pua_fonts(tp))
+            s = clean_plain(s)
             tp.close()
             page.close()
             if len(re.sub(r"\s", "", s)) < 20:
@@ -377,7 +532,7 @@ def ex_pdf(path, origin, sha):
                 blank.append(i)
         if part is None:
             part = f"{head}\n\n{s}" if s else f"{head}\n\n_(글자 없음 — 그림 쪽)_"
-        if str(i) in vis:                                   # 그림 읽기(키워드·손글씨)는 쪽 아래에 덧붙인다
+        if str(i) in vis:                                   # 그림 읽기(명사구·손글씨)는 쪽 아래에 덧붙인다
             part += "\n\n" + vision_block(vis[str(i)])
         parts.append(part)
     pend = [p for p in empty if p not in ocred and p not in blank]     # OCR 을 못 돌린 쪽
@@ -423,20 +578,102 @@ def ex_image(path, origin, sha):
 
 _MD = None
 
+# 문서 안 그림(10-26 실사용 «강의자료를 보면 “GoogleShape142p17.jpg” 을 찾지 못했습니다»): markitdown 은 그림을 ![이름](이름.jpg) 로 남기는데
+# 그 파일은 볼트에 없어 옵시디언이 깨진 그림 상자를 그렸고, 그림 속 글자는 색인에 없었다(색인 18개 · 194곳).
+# → 그림을 문서에서 꺼내(keep_data_uris) 윈도우 OCR 로 읽은 글자를 그 자리에 넣는다. 그림 링크는 남기지 않는다.
+IMG_MD = re.compile(r"!\[([^\]\n]*)\]\(([^)\s]*)\)")
+JUNK_ALT = re.compile(r"(?i)^(?:EMB[0-9a-f]+|picture\s*\d*|image\s*\d*|그림\s*\d*|google\s*shape.*|graphic\s*\d*|object\s*\d*|개체\s*\d*|content placeholder\s*\d*|내용 개체 틀\s*\d*|\d+)$")
+IMG_MIN = 24                                            # 이보다 작은 그림(점·선·아이콘)은 읽지 않는다
+IMG_UP = 1800                                           # 작은 그림은 긴 변이 이만큼 되게(최대 3배) 키워 읽는다 — 슬라이드 그림 글자는 10px 안팎이라
+                                                        # 그대로는 «linc singlc» · 3배 = «line single bit decoder»(10-26 실측 · 3주차 회로도)
 
-def ex_markitdown(path, origin, ext):
+
+def img_key(b):
+    """문서 안 그림의 OCR 캐시 열쇠(원본 sha 캐시 안 · 쪽 번호와 안 겹치게 «img:») — 같은 그림은 한 번만 읽는다"""
+    return "img:" + hashlib.sha256(b).hexdigest()[:16]
+
+
+def ocr_embedded(md, sha):
+    """md 안 그림(data URI) → «_(그림 · OCR)_ 읽은 글자». 돌려줌 = (md, 읽은 그림 수, 못 읽은 까닭 | None, 엔진)."""
+    import base64, io
+    from PIL import Image
+    blobs = {}
+    for m in IMG_MD.finditer(md):
+        d = re.match(r"data:[\w.+/-]+;base64,(.+)", m.group(2))
+        if d:
+            try:
+                b = base64.b64decode(d.group(1))
+            except ValueError:
+                continue
+            blobs.setdefault(img_key(b), b)
+    ok = {}
+    for k, b in blobs.items():                          # PIL 이 못 여는 것(EMF·WMF 등)·작은 그림은 읽지 않는다
+        try:
+            with Image.open(io.BytesIO(b)) as im:
+                if min(im.size) >= IMG_MIN:
+                    ok[k] = b
+        except Exception:
+            pass
+
+    def render(k, out):
+        with Image.open(io.BytesIO(ok[k])) as im:
+            im.seek(0)
+            s = min(3.0, IMG_UP / max(im.size))
+            if s > 1:
+                im = im.convert("RGBA").resize((round(im.width * s), round(im.height * s)), Image.LANCZOS)
+            fit(im).save(out)
+    got, why, engine = ocr_cached(sha, list(ok), render) if ok else ({}, None, None)
+    vis, _ = vision_entries(sha)
+    seen = set()
+
+    def sub(m):
+        alt = m.group(1).strip()
+        alt = "" if JUNK_ALT.match(alt) or OFFICE_AUTO_ALT.match(f"![{alt}]") else neutralize(alt)
+        d = re.match(r"data:[\w.+/-]+;base64,(.+)", m.group(2))
+        lines, key = None, None
+        if d:
+            try:
+                key = img_key(base64.b64decode(d.group(1)))
+                lines = got.get(key)
+            except ValueError:
+                pass
+        head = f"_(그림{': ' + alt if alt else ''})_"
+        out = f"\n{head} _OCR:_\n" + clean_plain("\n".join(lines)) + "\n" if lines else head
+        if key in vis and key not in seen:              # 그림 읽기(무엇을 그렸나)는 같은 그림이 여러 번 나와도 처음 자리에만
+            seen.add(key)
+            vb = vision_block(vis[key])
+            out += ("\n\n" + vb + "\n") if vb else ""
+        return out
+    n = sum(1 for v in got.values() if v)
+    md = IMG_MD.sub(sub, md)
+    return md, n, why if ok and any(v is None for v in got.values()) else None, engine, len(seen)
+
+
+def ex_markitdown(path, origin, ext, sha):
     global _MD
     import markitdown
     if _MD is None:
         _MD = markitdown.MarkItDown(enable_plugins=False)
-    t = _MD.convert(path).text_content or ""
+    t = _MD.convert(path, keep_data_uris=True).text_content or ""
     if ext == ".pptx":
         t = re.sub(r"<!--\s*Slide number:\s*(\d+)\s*-->", lambda m: f"## 슬라이드 {m.group(1)}", t)
+    t = CTRL.sub("", t)
+    if PUA_SYM.search(t):
+        t = unpua(t, office_pua_fonts(path) if ext in (".docx", ".pptx", ".xlsx") else {})
+    t, n, why, engine, nv = ocr_embedded(t, sha)
     t = clean_md(t)
     if ext in (".xlsx", ".xls", ".csv"):
         t = cap_tables(t)
     ver = getattr(markitdown, "__version__", "?")
-    return t, {"extractor": f"{VERSION} · markitdown {ver}"}, ("ok" if t.strip() else "글자 없음")
+    q = "ok" if t.strip() else "글자 없음"
+    if n:
+        q += f" · 그림 OCR {n}장"
+    if nv:
+        q += f" · 그림 읽기 {nv}장"
+    if why:
+        q = f"부분 — 그림 OCR 대기 · {why}" if q.startswith("ok") else q + f" · 그림 OCR 대기 · {why}"
+    vmodel = vision_entries(sha)[1] if nv else ""
+    return t, {"extractor": f"{VERSION} · markitdown {ver}" + (f" + {engine}" if n else "") + (f" + {vmodel}" if vmodel else "")}, q
 
 
 def ex_text(path, origin, ext):
@@ -546,7 +783,7 @@ def extract(path, origin, sha):
     if ext in PDF:
         return "pdf", ex_pdf(path, origin, sha)
     if ext in MARKITDOWN:
-        return ext[1:], ex_markitdown(path, origin, ext)
+        return ext[1:], ex_markitdown(path, origin, ext, sha)
     if ext in HWP:
         return ext[1:], ex_hwp(path, origin, ext)
     if ext in TEXT:
@@ -638,16 +875,62 @@ def build(sha, origins, sizes, mtimes, old_fm):
     return text, fmt, q, time.time() - t0
 
 
-def vision_pass(groups, only, sizes, mtimes, workers):
-    """그림 쪽(글자 층 20자 미만)·그림 파일 중 아직 안 읽었거나 낡은 것을 Claude 로 읽고, 그 색인만 다시 만든다.
-    그림은 먼저 이 스레드에서 다 그린다(pdfium 은 스레드 안전하지 않다) → claude -p 를 workers 개씩 동시에."""
-    import threading
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+def figure_box(pg):
+    """쪽의 그림 개체(쪽 넓이 5~90%)를 모두 덮는 상자 (left, bottom, right, top). 없으면 None — 벡터 그림·글자 없는 쪽은 쪽 전체를 읽는다."""
+    import pypdfium2.raw as R
+    w, h = pg.get_size()
+    box = None
+    for o in pg.get_objects(max_depth=3):
+        if o.type == R.FPDF_PAGEOBJ_IMAGE:
+            l, b, r, t = o.get_bounds()
+            if FIG_MIN <= (r - l) * (t - b) / (w * h) < FIG_MAX:
+                box = (l, b, r, t) if box is None else (min(box[0], l), min(box[1], b), max(box[2], r), max(box[3], t))
+    return box
+
+
+def render_page(pdf, k, side, crop):
+    """쪽 k 를 긴 변 side 로 — crop 이면 그림 개체 상자만(글자는 글자 층·OCR 이 이미 색인에 있다)"""
+    pg = pdf[k - 1]
+    try:
+        w, h = pg.get_size()
+        box = figure_box(pg) if crop else None
+        if box:
+            l, b, r, t = box
+            return fit(pg.render(scale=side / max(r - l, t - b), crop=(l, b, w - r, h - t)).to_pil())
+        return fit(pg.render(scale=side / max(w, h)).to_pil())
+    finally:
+        pg.close()
+
+
+def vision_pass(groups, only, sizes, mtimes, workers, limit):
+    """그림을 Claude 로 읽어(무엇을 그렸나 = 명사구 · 손글씨가 있으면 전사) 읽은 원본의 색인만 다시 만든다. 대상(아직 안 읽었거나 낡은 것):
+    PDF 글자 없는 쪽 · PDF 그림 든 쪽(그림 개체 상자만 잘라서) · 그림 파일 · docx·pptx·html 안 그림. 한 번에 limit 장까지(남으면 다음 실행에).
+    같은 그림을 다른 원본에서 이미 읽었으면 다시 부르지 않고 옮겨 쓴다(강의마다 같은 그림).
+    그림은 먼저 이 스레드에서 다 그린다(pdfium 은 스레드 안전하지 않다) → V.BATCH 장씩 묶어 claude -p 를 workers 개씩 동시에.
+    손글씨가 있다고 나온 그림만 원래 해상도로 다시 그려 한 장씩 전사한다."""
+    from concurrent.futures import ThreadPoolExecutor
     import ingest_vision as V
     from PIL import Image
     import pypdfium2 as pdfium
     prof = V.profile()
-    jobs = []                                                   # (sha, 쪽|0, origin, png)
+    known = {}                                                  # img_key → 다른 원본에서 읽은 결과 · None = 이번 실행에서 읽는 중
+    if os.path.isdir(V.CACHE):
+        for fn in os.listdir(V.CACHE):
+            for k, e in V.load(fn[:-5])["pages"].items() if fn.endswith(".json") else ():
+                if k.startswith("img:") and not V.stale(e, prof[2]):
+                    known.setdefault(k, e)
+    caches = {}
+
+    def put(sha, k, entry):                                     # 한 장씩 저장 — 중간에 끊겨도 다음에 이어 읽는다
+        c = caches.setdefault(sha, V.load(sha))
+        c["pages"][str(k)] = entry
+        V.save(sha, c)
+
+    def small(im):
+        im.seek(0)
+        return V.png(fit(im), V.SIDE)
+
+    jobs, later, copied, left = [], [], 0, 0                    # job = (sha, 쪽|0|img:…, origin, 작은 png, 큰 그림 출처)
     for sha, origins in sorted(groups.items(), key=lambda kv: min(kv[1], key=canonical_key)):
         origins = sorted(origins, key=canonical_key)
         if only is not None and not any(o == x or o.startswith(x.rstrip("/") + "/") for x in only for o in origins):
@@ -656,69 +939,156 @@ def vision_pass(groups, only, sizes, mtimes, workers):
         path = os.path.join(VAULT, *origin.split("/"))
         ext = os.path.splitext(path)[1].lower()
         pages = V.load(sha)["pages"]
+        room = lambda: limit - len(jobs)
         try:
             if ext in PDF:
-                keys = [k for k in pdf_empty_pages(path) if V.stale(pages.get(str(k)), prof[2])]
+                keys = [(k, False) for k in pdf_empty_pages(path) if V.stale(pages.get(str(k)), prof[2])]
+                keys += [(k, True) for k in pdf_figure_pages(path) if V.stale(pages.get(str(k)), prof[2])]
+                left += max(0, len(keys) - room())
+                keys = keys[:max(0, room())]
                 if keys:
                     pdf = pdfium.PdfDocument(path)
                     try:
-                        for k in keys:
-                            pg = pdf[k - 1]
-                            w, h = pg.get_size()
-                            jobs.append((sha, k, origin, V.png_for_claude(fit(pg.render(scale=V.MAX_SIDE / max(w, h)).to_pil()))))
-                            pg.close()
+                        for k, crop in keys:
+                            jobs.append((sha, k, origin, V.png(render_page(pdf, k, V.SIDE, crop), V.SIDE), (path, k, crop)))
                     finally:
                         pdf.close()
             elif ext in IMAGE and ext != ".svg" and V.stale(pages.get("0"), prof[2]):
+                if room() <= 0:
+                    left += 1
+                    continue
                 with Image.open(path) as im:
-                    im.seek(0)
-                    jobs.append((sha, 0, origin, V.png_for_claude(fit(im))))
+                    jobs.append((sha, 0, origin, small(im), (path, None, False)))
+            elif ext in (".docx", ".pptx", ".html", ".htm"):
+                for k, b in embedded_images(path).items():
+                    if not V.stale(pages.get(k), prof[2]):
+                        continue
+                    if known.get(k):                            # 다른 원본에서 읽은 같은 그림
+                        put(sha, k, known[k])
+                        copied += 1
+                    elif k in known:                            # 이번 실행에서 다른 원본이 묻는 그림 — 읽은 뒤 옮겨 쓴다
+                        later.append((sha, k))
+                    elif room() > 0:
+                        with Image.open(io.BytesIO(b)) as im:
+                            jobs.append((sha, k, origin, small(im), b))
+                        known[k] = None
+                    else:
+                        left += 1
         except Exception as e:                                  # 원본 하나의 실패가 전체를 멈추지 않게
             print(f"그림 읽기 준비 실패: {origin} — {type(e).__name__}: {e}")
+    if copied:
+        print(f"그림 읽기: 다른 원본에서 읽은 같은 그림 {copied}장 옮겨 씀")
     if not jobs:
         print("그림 읽기: 새로 읽을 것 없음")
+        for sha in list(caches):
+            rebuild_index(sha, groups, sizes, mtimes, "그림 읽기")
         return
-    print(f"그림 읽기 {len(jobs)}장 · {V.MODEL} · 동시 {workers} · 글씨체 사전 {prof[2] or '없음'}")
-    lock, caches, tot = threading.Lock(), {}, {"in": 0, "out": 0, "ok": 0, "fail": 0}
+    why = V.subscription()                                      # 구독이 아니면 묻지 않는다(10-26) — 플러그인이 이 줄을 알림으로 띄운다
+    if why:
+        print(f"그림 읽기 멈춤(구독 아님): {why}")
+        for sha in list(caches):
+            rebuild_index(sha, groups, sizes, mtimes, "그림 읽기")
+        return
+    batches = [jobs[i:i + V.BATCH] for i in range(0, len(jobs), V.BATCH)]
+    print(f"그림 읽기 {len(jobs)}장({len(batches)}번 묻기) · {V.MODEL} · 동시 {workers}" + (f" · 남은 {left}장은 다음 실행에" if left else ""))
+    halt = []                                                   # V.Stop(구독 아님·사용량 한도) — 하나라도 나면 남은 그림은 묻지 않는다
+
+    def guard(fn, *a):
+        if halt:
+            return None
+        try:
+            return fn(*a)
+        except V.Stop as e:
+            halt.append(e)
+            return None
+    tot = {"in": 0, "out": 0, "ok": 0, "fail": 0, "hw": 0}
     today = date.today().isoformat()
+    where = lambda j: j[2] + (f" p.{j[1]}" if isinstance(j[1], int) and j[1] else f" {j[1]}" if j[1] else "")
 
-    def run(job):
-        sha, k, origin, png = job
-        t0 = time.time()
-        res, usage, err = V.call(png, f"{origin}" + (f" p.{k}" if k else ""), prof)
-        return job, res, usage, err, time.time() - t0
+    def count(usage):
+        tot["in"] += usage.get("in", 0)
+        tot["out"] += usage.get("out", 0)
+        if usage.get("rate_limit"):
+            print(f"  ⚠ 사용률 알림: {usage['rate_limit']}")
 
+    hw_jobs, skipped = [], 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
-        for fut in as_completed([ex.submit(run, j) for j in jobs]):
-            (sha, k, origin, _), res, usage, err, dt = fut.result()
-            where = origin + (f" p.{k}" if k else "")
-            if usage.get("rate_limit"):
-                print(f"  ⚠ 사용률 알림: {usage['rate_limit']}")
-            if err:
-                tot["fail"] += 1
-                print(f"  실패 {where} — {err}")
+        for batch, got in ex.map(lambda b: (b, guard(V.name_batch, [j[3] for j in b])), batches):
+            if got is None:                                     # 멈춘 뒤 = 묻지 않음(다음 실행에)
+                skipped += len(batch)
                 continue
-            u = usage.get("usage") or {}
-            tin = u.get("input_tokens", 0) + u.get("cache_creation_input_tokens", 0) + u.get("cache_read_input_tokens", 0)
-            tot["in"] += tin
-            tot["out"] += u.get("output_tokens", 0)
-            tot["ok"] += 1
-            res.update(model=V.MODEL, profile=prof[2], at=today, tokens={"in": tin, "out": u.get("output_tokens", 0)})
-            with lock:
-                c = caches.setdefault(sha, V.load(sha))
-                c["pages"][str(k)] = res
-                V.save(sha, c)                                  # 한 장씩 저장 — 중간에 끊겨도 다음에 이어 읽는다
-            hw = f" · 손글씨 {len(res['handwriting'])}자" if res["handwriting"] else ""
-            print(f"  {where} [{res['kind']} · 키워드 {len(res['keywords'])}{hw} · {tin}+{u.get('output_tokens', 0)}tok · {dt:.0f}s]")
-    print(f"그림 읽기 끝: 성공 {tot['ok']} · 실패 {tot['fail']} · 토큰 입력 {tot['in']:,} + 출력 {tot['out']:,}")
-    for sha in caches:                                          # 읽은 원본의 색인만 다시 만든다
-        origins = sorted(groups[sha], key=canonical_key)
-        target = index_path(origins[0])
-        text, fmt, q, _ = build(sha, origins, sizes, mtimes, read_fm(target) if os.path.isfile(target) else None)
-        os.makedirs(os.path.dirname(target), exist_ok=True)
-        with open(target, "w", encoding="utf-8", newline="\n") as f:
-            f.write(text)
-        print(f"색인 갱신(그림 읽기) {origins[0]}  [{q}]")
+            res, usage, err = got
+            count(usage)
+            if err:
+                tot["fail"] += len(batch)
+                print(f"  실패 {len(batch)}장({where(batch[0])} …) — {err}")
+                continue
+            share = {"in": round(usage.get("in", 0) / len(batch)), "out": round(usage.get("out", 0) / len(batch))}
+            for j, r in zip(batch, res):
+                entry = {"n": r["n"], "handwriting": "", "model": V.MODEL, "profile": prof[2], "at": today, "tokens": dict(share)}
+                if r["hw"]:
+                    hw_jobs.append((j, entry))
+                    continue
+                tot["ok"] += 1
+                put(j[0], j[1], entry)
+                print(f"  {where(j)} — {r['n']}")
+    if hw_jobs and halt:                                        # 명사구만 저장하면 손글씨를 다시 안 읽는다 — 통째로 다음 실행에
+        skipped += len(hw_jobs)
+    elif hw_jobs:                                               # 손글씨 = 원래 해상도로 한 장씩
+        def hi(src):
+            if isinstance(src, bytes):
+                with Image.open(io.BytesIO(src)) as im:
+                    im.seek(0)
+                    return V.png(fit(im), V.HW_SIDE)
+            path, k, crop = src
+            if k is None:
+                with Image.open(path) as im:
+                    im.seek(0)
+                    return V.png(fit(im), V.HW_SIDE)
+            pdf = pdfium.PdfDocument(path)
+            try:
+                return V.png(render_page(pdf, k, V.HW_SIDE, crop), V.HW_SIDE)
+            finally:
+                pdf.close()
+        his = [(j, e, hi(j[4])) for j, e in hw_jobs]
+        with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+            for j, e, got in ex.map(lambda x: (x[0], x[1], guard(V.transcribe, x[2], prof)), his):
+                if got is None:
+                    skipped += 1
+                    continue
+                text, usage, err = got
+                count(usage)
+                if err:                                         # 저장하지 않는다 — 다음 실행에 다시(손글씨 없이 저장하면 다시 안 읽는다)
+                    tot["fail"] += 1
+                    print(f"  손글씨 실패 {where(j)} — {err}")
+                    continue
+                e["handwriting"] = text
+                e["tokens"].update(hw_in=usage.get("in", 0), hw_out=usage.get("out", 0))
+                tot["ok"] += 1
+                tot["hw"] += 1
+                put(j[0], j[1], e)
+                print(f"  {where(j)} — {e['n']} · 손글씨 {len(text)}자")
+    for sha, k in later:                                        # 같은 그림을 기다리던 원본에 옮겨 쓴다
+        got = next((c["pages"][k] for c in caches.values() if k in c["pages"]), None)
+        if got:
+            put(sha, k, got)
+    if halt:
+        print(f"그림 읽기 멈춤({halt[0].kind}): {halt[0].why}")
+    left += skipped
+    print(f"그림 읽기 끝: 성공 {tot['ok']} · 실패 {tot['fail']} · 손글씨 {tot['hw']} · 토큰 입력 {tot['in']:,} + 출력 {tot['out']:,}"
+          + (f" · 남은 {left}장" if left else ""))
+    for sha in list(caches):                                    # 읽은 원본의 색인만 다시 만든다
+        rebuild_index(sha, groups, sizes, mtimes, "그림 읽기")
+
+
+def rebuild_index(sha, groups, sizes, mtimes, why):
+    origins = sorted(groups[sha], key=canonical_key)
+    target = index_path(origins[0])
+    text, fmt, q, _ = build(sha, origins, sizes, mtimes, read_fm(target) if os.path.isfile(target) else None)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    with open(target, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    print(f"색인 갱신({why}) {origins[0]}  [{q}]")
 
 
 def main():
@@ -727,8 +1097,9 @@ def main():
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--dry", action="store_true")
     ap.add_argument("--prune", action="store_true")
-    ap.add_argument("--vision", action="store_true", help="그림 쪽·그림 파일을 Claude 로 읽는다(키워드·손글씨 · 사용량이 든다)")
+    ap.add_argument("--vision", action="store_true", help="그림(그림 쪽·그림 든 쪽·그림 파일·문서 안 그림)을 Claude 로 읽는다(무엇을 그렸나 명사구·손글씨 · 사용량이 든다)")
     ap.add_argument("--vision-workers", type=int, default=3, help="동시에 부르는 claude -p 수")
+    ap.add_argument("--vision-max", type=int, default=60, help="한 번에 읽는 그림 수 상한(남은 것은 다음 실행에 — 큰 원본 하나가 사용량을 한꺼번에 쓰지 않게)")
     a = ap.parse_args()
 
     only = None
@@ -793,7 +1164,7 @@ def main():
         print(f"{kind} {origins[0]}  [{fmt} · {q} · {dt:.1f}s]")
 
     if a.vision and not a.dry:
-        vision_pass(groups, only, sizes, mtimes, a.vision_workers)
+        vision_pass(groups, only, sizes, mtimes, a.vision_workers, a.vision_max)
 
     orphans = [p for sha, lst in by_sha.items() if sha not in groups for p, _ in lst]
     if only is None and orphans:
