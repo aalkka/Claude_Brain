@@ -379,6 +379,8 @@
 .brain-source-page.is-side-memo .brain-source-bar-up,
 .brain-source-page.is-side-memo .brain-source-bar-text { display: none !important; }
 .brain-source-bar .brain-source-bar-btn.is-on { color: var(--interactive-accent); }
+.view-action.brain-source-imgread { width: auto; display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; font-size: var(--font-ui-smaller); }
+.view-action.brain-source-imgread.is-busy { opacity: 0.6; pointer-events: none; }
 
 .bs-ribbon {
   --bs-accent: #185abd;
