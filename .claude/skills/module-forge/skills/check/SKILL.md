@@ -34,7 +34,8 @@ py -3 "${CLAUDE_PLUGIN_ROOT}/scripts/check.py" <모듈명>
 | 7 | `dependencies` 순환(DFS)·미존재 | 단방향 의존 강제 |
 | 8 | `writes_config` 비어있지 않음 | **I3** 코어 config 불가침(A6 = config 모듈별 격리) |
 | 9 | 스크립트가 코어파일 참조 (`3_시스템/config.json`·`hooks/`·`search.py`·`.claude/settings.json`·`CLAUDE.md`·`.gitignore`) | **I1** 코어 무수정 |
-| 10 | 산출물 폴더 규약 위반 — `2_지식/notes/` 선언(코어 지식 전용) · `modules/` 루트 독점 · **타모듈 폴더 침범** | 모든 모듈이 `2_지식/modules/<모듈명>/`로 동일 형식 |
+| 10 | 산출물 폴더 규약 위반 — 역할 `notes` 자리 선언(코어 지식 전용) · `modules/` 루트 독점 · **타모듈 폴더 침범** | 모든 모듈이 `2_지식/modules/<모듈명>/`로 동일 형식 |
+| 11 | `contributes` 행위·건강 선언 — 행위 id 가 `<모듈>.` 로 시작 안 함 · 코어·다른 모듈·같은 모듈과 id 겹침 · `risk` 가 read·write·send·usage 밖 · `builtin` · 명령줄이 문자열 목록 아님 · 대본 없음 · `args` 에 없는 자리표 | 코어 `brain.py` 가 읽는 계약(ADR-019) — 겹치면 먼저 읽은 것만 쓰여 조용히 사라진다 |
 
 **warn — 통과하되 알림**
 | 검사 | 뜻 |
@@ -45,6 +46,8 @@ py -3 "${CLAUDE_PLUGIN_ROOT}/scripts/check.py" <모듈명>
 | 스크립트 경로가 `touches` 밖 | 선언 밖 쓰기 의심 |
 | 무관 basename 중복 | 이 모듈과 무관한 기존 중복(볼트 청소 권고) |
 | `schema` 상회 | `module.json`이 이 검사기보다 새 스키마 → 검사기 갱신 필요(미지원 필드 무시 중) |
+| 행위·doctor 가 모듈 밖 대본 | 모듈을 빼거나 옮기면 깨짐 → 모듈 안 `scripts/` 로 |
+| 행위 `name` 없음 | 목록·옵시디언에 id 가 그대로 보임 |
 
 **infos** — 네임스페이스 열거(네이티브 `/<모듈>:<스킬>`가 이미 충돌차단 → 정보만) · 루트 SKILL.md의 plain 등록 · 훅 보유 시 런타임 한계 고지.
 

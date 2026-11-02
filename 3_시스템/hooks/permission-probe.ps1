@@ -1,7 +1,7 @@
-﻿# PermissionRequest 프로브 (2026-08-22, 코어 게이트 개정 6).
+﻿# PermissionRequest 프로브 (2026-08-22, ADR-006 개정 6).
 # 계약에 있으나 이 환경에서 발화하는지 미확인이라 '판정만' 한다 — 아무것도 막지 않고
 # 아무것도 출력하지 않는다(출력하면 모델 컨텍스트에 상시 비용이 붙는다).
-# 목적: 코어 게이트 미결 1 '승인 프롬프트 관측 불가'를 푸는지 본다. 오탐률을 사용자 보고
+# 목적: ADR-006 미결 1 '승인 프롬프트 관측 불가'를 푸는지 본다. 오탐률을 사용자 보고
 # 없이 계측할 수 있게 되면 이 프로브를 계측기로 승격하고, 발화가 없으면 제거한다.
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

@@ -11,14 +11,19 @@
   overflow: auto;
 }
 .brain-source-pdf-tools { position: absolute; z-index: 30; top: 8px; right: 18px; display: flex; gap: 4px; padding: 4px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; box-shadow: var(--shadow-s); }
-.brain-source-pdf-tools button { height: 26px; padding: 0 10px; font-size: var(--font-ui-small); }
+.brain-source-pdf-tools button { height: 26px; padding: 0 6px; font-size: var(--font-ui-small); }
+.brain-source-pdf-tools button svg, .brain-source-annot-pop button svg, .bs-annot-edit button svg, .brain-source-note button svg, .brain-source-autosave-ic svg { width: 14px; height: 14px; }
+.brain-source-autosave-ic { display: inline-flex; }
+.brain-source-doc-new svg { width: 18px; height: 18px; }
+.brain-source-bar .brain-source-bar-btn.is-busy { pointer-events: none; }
+.brain-source-bar .brain-source-bar-btn.is-busy svg, .view-action.brain-source-imgread.is-busy svg { animation: bs-spin 1.4s linear infinite; }
+@keyframes bs-spin { to { transform: rotate(360deg); } }
 .brain-source-pdf-tools button.is-on { background: var(--interactive-accent); color: var(--text-on-accent); }
 .brain-source-pdf-tools .brain-source-pdf-swatch { width: 18px; padding: 0; border-radius: 50%; }
 .brain-source-annot-pop { align-items: center; }
 .brain-source-annot-pop .brain-source-pdf-swatch { width: 18px; height: 18px; min-width: 0; padding: 0; border-radius: 50%; border: 1px solid var(--background-modifier-border); box-shadow: none; }
 .brain-source-annot-pop .brain-source-pdf-swatch.is-on { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
 .bs-annot-edit { align-items: center; }
-.bs-annot-edit .bs-annot-edit-name { padding: 0 6px; font-size: var(--font-ui-small); color: var(--text-muted); }
 .bs-annot-edit .brain-source-pdf-swatch { width: 20px; height: 20px; padding: 0; border-radius: 50%; border: 1px solid var(--background-modifier-border); box-shadow: none; }
 .bs-annot-edit .brain-source-pdf-swatch.is-on { outline: 2px solid var(--interactive-accent); outline-offset: 1px; }
 .bs-pdf-pen .pdf-viewer-container .page { cursor: crosshair; }
@@ -94,7 +99,7 @@
 }
 .brain-source-bar .brain-source-bar-btn {
   height: 22px;
-  padding: 0 8px;
+  padding: 0 6px;
   font-size: var(--font-ui-smaller);
   box-shadow: none;
 }
@@ -379,8 +384,13 @@
 .brain-source-page.is-side-memo .brain-source-bar-up,
 .brain-source-page.is-side-memo .brain-source-bar-text { display: none !important; }
 .brain-source-bar .brain-source-bar-btn.is-on { color: var(--interactive-accent); }
-.view-action.brain-source-imgread { width: auto; display: inline-flex; align-items: center; gap: 4px; padding: 0 6px; font-size: var(--font-ui-smaller); }
 .view-action.brain-source-imgread.is-busy { opacity: 0.6; pointer-events: none; }
+.textLayer span.bs-pdf-space { font-size: 1px; line-height: 1; pointer-events: none; }
+.bs-hwlayer { position: absolute; inset: 0; container-type: size; isolation: isolate; pointer-events: none; overflow: hidden; line-height: 1; font-family: sans-serif; user-select: text; -webkit-user-select: text; }
+.bs-hwlayer > span, .bs-hwlayer > br { position: absolute; white-space: pre; color: transparent; transform-origin: 0 0; cursor: text; pointer-events: auto; }
+.bs-hwlayer ::selection { background: rgba(0, 100, 255, 0.25); color: transparent; }
+.bs-hwlayer > .bs-hw-end { position: absolute; inset: 0; z-index: -1; pointer-events: none; cursor: default; user-select: none; -webkit-user-select: none; }
+.bs-hwlayer.is-selecting > .bs-hw-end { pointer-events: auto; }
 
 .bs-ribbon {
   --bs-accent: #185abd;

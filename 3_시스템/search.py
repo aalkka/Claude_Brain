@@ -24,7 +24,7 @@ CLI:
   3. `python search.py --rebuild`  ← 차원 다르면 필수. 인덱스에 모델명 각인 →
      config 모델 ≠ 인덱스 모델이면 --reindex도 자동 전체 재빌드(차원혼합 방지 가드).
   e5 계열=쿼리 "query: "/문서 "passage: " 프리픽스 자동, bge 계열=프리픽스 생략(is_bge).
-채택 근거: 빌더 환경(6GB)은 e5-small 하이브리드로 측정 충분 → 상향 불요(그에겐 DEFERRED).
+채택 근거: 빌더(제작자 6GB)는 e5-small 하이브리드로 측정 충분 → 상향 불요(그에겐 DEFERRED).
   배포 사용자는 setup-interview 슬롯8이 하드웨어 감지→티어 자동선택. bge-m3는 상시 지원 옵션.
   전문·복원조건 = 3_시스템/_eval/results-hybrid.md.
 ═══════════════════════════════════════════════════════════════════════
@@ -51,6 +51,8 @@ for _s in (sys.stdout, sys.stderr):
         pass
 
 VAULT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import roles  # noqa: E402 — 자리는 역할로 묻는다(볼트 개혁 R6)
 INDEX_DIR = os.path.join(VAULT, "3_시스템", "_index")
 INDEX_PATH = os.path.join(INDEX_DIR, "embeddings.json")
 CONFIG_PATH = os.path.join(VAULT, "3_시스템", "config.json")
@@ -60,10 +62,11 @@ TARGET_GLOBS = [
     "3_시스템/_ref/**/*.md",
     "3_시스템/_claude-memory/**/*.md",
     "1_수집/**/*.md",   # 원본 색인(_색인/, ingest.py)·원본 메모(사람). 10-14 ADR-013.
-    "3_시스템/_index/pdf-cache/**/*.md",  # 원본이 볼트에 없는 옛 PDF 정제본만 남김(물성전자) — 색인과 겹친 기물실 10개는 pdf-cache-retired/ 로 옮김(10-14).
+    "3_시스템/_index/pdf-cache/**/*.md",  # 원본이 볼트에 없는 옛 PDF 정제본만 남김— 색인과 겹친 10개는 pdf-cache-retired/ 로 옮김(10-14).
 ]
 # 승격 원문(_promoted) = 2_지식 노트와 같은 글 → 중복 적중 방지로 제외.
-EXCLUDE_PREFIX = ("1_수집/_inbox/_promoted/",)
+# MOC = 노트 설명 모음 → 노트 자신과 겹쳐 흔한 낱말로 올라온다(B10 · 11-02). 지도는 moc.py.
+EXCLUDE_PREFIX = ("1_수집/_inbox/_promoted/", "2_지식/MOC.md")
 WINDOW = 40           # 헤딩 없는/긴 섹션 창 크기(줄)
 MAX_CHUNKS = 120      # 노트당 청크 상한(거대 _변환본 비용 바운드)
 MAX_CHUNKS_INDEX = 2000   # 원본 색인은 찾기가 목적 — 120 이면 긴 PDF 뒷부분(쪽당 1청크)이 검색에서 빠진다
@@ -525,7 +528,7 @@ def neighbors(path, k=None, dup=None, tau=None):
     1단계 = 글로벌 μ 빼고 재정규화)이 원뿔을 펴 진짜 이웃을 노이즈 위로 분리 →
     센터 후엔 절대임계 유효. 규칙: top1 무조건 유지(고립방지 레일) + 2~k위는
     centered-cos>=tau. neighbors 전용(검색 vector_scores는 raw 유지 — 무영향).
-    실측(손라벨 골든): raw-floor 대비 평지형 스퍼리어스(행정공지·계획류 등) 추가 제거.
+    실측(손라벨 골든): raw-floor 대비 평지형 스퍼리어스(기말공지·방학공부 등) 추가 제거.
     """
     ck, cdup, ctau = graph_cfg()
     if k is None: k = ck
@@ -557,14 +560,14 @@ def neighbors(path, k=None, dup=None, tau=None):
 # ════════ B1 writer: 의미이웃 → Obsidian 위키링크 관리블록 ════════
 # 스코프 = Claude소유 지식노트만(1_수집 사용자저작·설계노트·기계파생 제외).
 WRITER_GLOBS = [
-    "2_지식/notes/**/*.md",
-    "2_지식/modules/**/*.md",   # 모듈 산출물(2026-07-27 신설) — 교차링크가 차별점이라 이웃블록 필수
-    "2_지식/sessions/**/*.md",
+    *[p + "/**/*.md" for p in roles.group("note_areas")],   # 지식 노트 자리 전부(R9 뒤 노트·학교·프로젝트·생활)
+    roles.path("modules") + "/**/*.md",   # 모듈 산출물(2026-07-27 신설) — 교차링크가 차별점이라 이웃블록 필수
+    roles.path("sessions") + "/**/*.md",
     "3_시스템/_ref/**/*.md",
 ]
 # 링크 대상서 제외(기계파생 중복본 — 지식은 통찰노트에 있음). 그래프 오염 방지.
 LINK_TARGET_EXCLUDE = ("3_시스템/_index/pdf-cache/", "3_시스템/_claude-memory/", "1_수집/_색인/",
-                       "2_지식/notes/설계노트.md", "2_지식/notes/사용자설명서.md")
+                       *roles.find_notes("설계노트", "사용자설명서").values())   # 시스템 문서는 이름으로(R6)
 # 검색은 되나 B1 위키링크 대상서 제외: pdf캐시·개인메모리(gitignore=배포 미포함→dangling 방지)·시스템문서(지식그래프 오염 방지)
 # 블록 매치 = 3세대 공용 패턴(_BLOCK_ALT). 마이그레이션 시 구→신 무중복 교체.
 LINK_BLOCK_RE = re.compile(_BLOCK_ALT, re.S)

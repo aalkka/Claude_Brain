@@ -10,8 +10,10 @@
 block: ①'_'접두(로더 스킵) ②모듈명↔코어스킬 동명 ③노트 basename 중복 ④1_수집 침범(I3)
        ⑤예약훅(I2) ⑥모듈간 touches 동일경로 ⑦deps 순환·미존재 ⑧코어 config 키 선언(I3)
        ⑨스크립트의 1_수집 접근·코어파일 참조(I1) ⑩산출물 폴더 규약(notes/ 금지·타모듈 침범)
+       ⑪contributes 행위·건강 선언(id 접두 '<모듈>.'·겹침·risk·builtin·대본 없음·모르는 자리표 — ADR-019)
 warn : module.json 부재 · surfaces 드리프트 · touches 포함관계(인접)
        · 스크립트 하드코딩 경로가 touches 밖 · 무관 basename 중복 · schema 버전 상회
+       · 행위·doctor 가 모듈 밖 대본을 부름 · 행위 name 없음
 infos: 네임스페이스 열거(네이티브 `/<모듈>:<스킬>`가 이미 충돌차단 → 정보만)
 
 forward-compat: module.json의 **모르는 키는 무시**한다(P4 확장 필드 선반영 안전).
@@ -22,7 +24,7 @@ forward-compat: module.json의 **모르는 키는 무시**한다(P4 확장 필�
        touches 준수 검증은 **모듈 스크립트(결정론 코드)** 범위만.
 
 부산물: 3_시스템/_index/modules.json 레지스트리 재생성(gitignore=파생·재생성).
-진실원본 = 2_지식/notes/외부뇌-개발지원-모듈.md §A4-3 · P3②. Stop훅 basename 로직 재활용.
+진실원본 = [[외부뇌-개발지원-모듈]] §A4-3 · P3②. Stop훅 basename 로직 재활용.
 """
 import sys, os, json, glob, re
 
@@ -52,11 +54,19 @@ CORE_PATHS = (                                                    # mf:allow-pat
 MODULE_SCHEMA = 1  # module.json 스키마 버전(미래 필드 추가 시 증가 — forward-compat 앵커)
 # 산출물 폴더 규약(2026-07-27): 모듈 지식산출물은 modules/<모듈명>/, notes/는 코어 지식 전용.
 MODULES_ROOT = "2_지식/modules"  # mf:allow-path
-NOTES_ROOT = "2_지식/notes"      # mf:allow-path
+sys.path.insert(0, os.path.join(VAULT, "3_시스템"))
+import roles  # noqa: E402 — 자리는 역할로(볼트 개혁 R6)
+NOTE_AREAS = roles.group("note_areas")  # 코어 지식 노트 자리 전부(R9 뒤 노트·학교·프로젝트·생활)
 # 오탐 억제(정직히 명시): 리터럴 스캔은 '언급'과 '접근'을 구분 못 한다 →
 #   ⓐ 주석 줄 제외 ⓑ 글로브(*) 포함 = 선언/패턴이지 대상 아님 ⓒ 명시 escape.
 ALLOW_LINE = "mf:allow-path"        # 해당 줄만 제외
 ALLOW_FILE = "mf:allow-path-file"   # 파일 전체 제외(테스트 픽스처 등)
+# contributes(행위·건강) — 코어 brain.py 와 같은 계약(ADR-019). 코어 행위 목록은 겹침 검사에만 읽는다.
+CORE_ACTIONS = os.path.join(VAULT, "3_시스템", "actions.json")
+ACTION_RISKS = ("read", "write", "send", "usage")
+RUN_BUILTINS = {"py", "by", "vault"}            # brain.py 가 채우는 자리표
+RUN_SCRIPT_EXTS = (".py", ".ps1")               # brain.py 가 볼트 루트 기준으로 푸는 대본
+PLACEHOLDER = re.compile(r"\{(\w+)\}")
 
 
 def load_json(path):
@@ -169,6 +179,11 @@ def scan_all():
     return mods, sorted(core)
 
 
+def core_action_ids():
+    d = load_json(CORE_ACTIONS) or {}
+    return {str(a.get("id")) for a in d.get("actions") or [] if isinstance(a, dict) and a.get("id")}
+
+
 def deps_of(info):
     """plugin.json dependencies → 이름 리스트(객체·문자열 양식 모두 허용)."""
     out = []
@@ -248,7 +263,7 @@ def check(module, mods, core):
         if os.path.isdir(d):
             blocks.append(f".claude/skills/{module}/에 .claude-plugin/plugin.json 없음 — 모듈이 아님(코어 plain 스킬).")
         else:
-            blocks.append(f".claude/skills/{module}/ 없음 — 먼저 스캐폴드(/module-forge:new).")
+            blocks.append(f".claude/skills/{module}/ 없음 — 모듈 이름을 확인한다.")
         return {"ok": False, "blocks": blocks, "warns": warns, "infos": infos}
 
     info = mods[module]
@@ -275,7 +290,7 @@ def check(module, mods, core):
     if mj is None:
         warns.append(
             f"module.json 없음 — 볼트 쓰기경계 미선언(touches/forbids/invocation/surfaces). "
-            f"경계계약 없는 모듈은 충돌검사 대부분이 무력(무음 통과). templates/module.json.tmpl로 생성 권장."
+            f"경계계약 없는 모듈은 충돌검사 대부분이 무력(무음 통과). module.json 을 두는 것을 권장."
         )
         mj = {}
 
@@ -352,7 +367,7 @@ def check(module, mods, core):
     # ── ⑩ 산출물 폴더 규약 (모든 모듈이 같은 형식을 갖도록 강제) ──
     own = MODULES_ROOT + "/" + module
     for t in touches:
-        if t == NOTES_ROOT or t.startswith(NOTES_ROOT + "/"):
+        if any(t == r or t.startswith(r + "/") for r in NOTE_AREAS):
             blocks.append(
                 f"산출물 위치 위반 — touches '{t}'. 모듈 지식산출물은 '{own}/'에 둔다"
                 f"(notes/는 코어 지식 전용). 모듈 설계노트는 touches에 넣지 않는다(귀속 규칙 — ADR-004)."
@@ -365,8 +380,76 @@ def check(module, mods, core):
             infos.append(
                 f"산출물 폴더 '{t}' — 프론트매터 **필수**(Stop훅 검사), MOC 등재 **면제**"
                 f"(모듈은 MOC에 설계노트 1줄로 대표 — 산출물마다 등재하면 MOC 폭증). "
-                f"파생·캐시는 '3_시스템/_index/{module}/'."
+                f"파생·캐시는 '3_시스템/_index/{module}/'."  # mf:allow-path — 안내문 속 경로(접근 아님)
             )
+
+    # ── ⑪ 행위·건강 선언 contributes (볼트 개혁 R4 · ADR-019 — 코어 brain.py 가 읽어 list·run·doctor) ──
+    con = mj.get("contributes")
+    if con is not None and not isinstance(con, dict):
+        blocks.append("contributes 는 객체여야 한다 — {\"actions\": [...], \"doctor\": [...]}.")
+        con = None
+    con = con or {}
+    mod_rel = norm(os.path.relpath(info["dir"], VAULT))
+
+    def argv_problems(what, argv, names):
+        if not (isinstance(argv, list) and argv and all(isinstance(t, str) for t in argv)):
+            blocks.append(f"{what} — 명령줄이 문자열 목록이 아님.")
+            return
+        for t in argv:
+            for ph in PLACEHOLDER.findall(t):
+                if ph not in names | RUN_BUILTINS:
+                    blocks.append(f"{what} — 자리표 '{{{ph}}}' 가 args 에 없음(brain.py 가 글자 그대로 넘긴다).")
+            if t.startswith("{") or not t.endswith(RUN_SCRIPT_EXTS):
+                continue
+            p = norm(t)
+            if not os.path.isfile(os.path.join(VAULT, p)):
+                blocks.append(f"{what} — 대본 없음 '{p}'(볼트 루트 기준 경로).")
+            elif not under_any(p, [mod_rel]):
+                warns.append(f"{what} — 모듈 밖 대본 '{p}'. 모듈을 빼거나 옮기면 깨진다(모듈 안 scripts/ 로).")
+
+    acts = con.get("actions") or []
+    if not isinstance(acts, list):
+        blocks.append("contributes.actions 는 목록이어야 한다.")
+        acts = []
+    core_ids, other_ids, mine = core_action_ids(), {}, []
+    for o, oinfo in mods.items():
+        oc = (oinfo.get("module") or {}).get("contributes")
+        if o != module and isinstance(oc, dict) and isinstance(oc.get("actions"), list):
+            for a in oc["actions"]:
+                if isinstance(a, dict) and a.get("id"):
+                    other_ids[str(a["id"])] = o
+    for a in acts:
+        if not isinstance(a, dict) or not a.get("id"):
+            blocks.append("contributes.actions 에 id 없는 행위.")
+            continue
+        aid = str(a["id"])
+        if not aid.startswith(module + "."):
+            blocks.append(f"행위 id '{aid}' — '{module}.' 로 시작해야 한다(코어·다른 모듈 행위와 안 겹치게).")
+        if aid in core_ids or aid in other_ids or aid in mine:
+            who = "코어" if aid in core_ids else other_ids.get(aid, "같은 모듈")
+            blocks.append(f"행위 id 겹침 '{aid}' — {who}와. brain.py 는 먼저 읽은 것만 쓴다.")
+        mine.append(aid)
+        if a.get("risk") not in ACTION_RISKS:
+            blocks.append(f"행위 '{aid}' risk '{a.get('risk')}' — {'·'.join(ACTION_RISKS)} 중 하나.")
+        if a.get("builtin"):
+            blocks.append(f"행위 '{aid}' builtin — 코어 전용. 모듈은 run(명령줄)으로.")
+        names = set()
+        for g in (a.get("args") or []) + ([a["rest"]] if isinstance(a.get("rest"), dict) else []):
+            n = g.get("name") if isinstance(g, dict) else None
+            if not (isinstance(n, str) and re.match(r"^[A-Za-z_]\w*$", n)):
+                blocks.append(f"행위 '{aid}' 인자 이름이 영문 식별자가 아님: {str(g)[:60]}")
+            else:
+                names.add(n)
+        argv_problems(f"행위 '{aid}' run", a.get("run"), names)
+        if not a.get("name"):
+            warns.append(f"행위 '{aid}' name 없음 — 목록·옵시디언에 id 가 그대로 보인다.")
+    if "doctor" in con:
+        argv_problems("contributes.doctor", con["doctor"], set())
+    later = sorted(set(con) - {"actions", "doctor"})
+    if later:
+        infos.append(f"contributes.{', '.join(later)} — 아직 읽는 곳 없음(바탕 플러그인 R5 부터) · 무시됨.")
+    if mine:
+        infos.append(f"행위 {len(mine)}개: {', '.join(mine)} (brain.py list · run).")
 
     # ── 네임스페이스 (info — 네이티브 `/<모듈>:<스킬>`가 이미 충돌차단) ──
     if info["actual"]["skills"]:

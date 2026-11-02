@@ -8,7 +8,7 @@ description: 신규 설치 개인최적화. 첫 실행 시 또는 "/재보정" �
 0. **네이티브 메모리 리다이렉트(옵션R) — 설치 직후 우선 실행(다른 슬롯보다 먼저).** Claude Code 자동 메모리를 볼트 안으로 돌려 인간가독·git·검색에 포함(설계노트 §6). 배포엔 이 설정이 없으므로(settings.local.json=gitignore) 반드시 여기서 세팅.
    - 볼트 절대경로 확인(예: `C:\Claude_Brain`). `.claude/settings.local.json`에 (기존 permissions 보존하며) 병합: `"autoMemoryDirectory": "<볼트절대경로>\\3_시스템\\_claude-memory"` (Windows 경로는 `\\` 이스케이프).
    - Claude Code **재시작** → 워크스페이스 트러스트 다이얼로그 수락 → `/memory`로 경로가 볼트 `_claude-memory`인지 확인. "테스트 기억: R검증OK" 후 그 폴더에 파일 생기는지 확인.
-   - **실패 시 폴백**: `"autoMemoryEnabled": false`(볼트 스킬이 메모리 전담). 기존 기본위치(`~/.claude/…`)에 이미 네이티브 메모리가 쌓였으면 그 내용을 볼트 `_claude-memory` 또는 `2_지식/notes/`로 수동 이관.
+   - **실패 시 폴백**: `"autoMemoryEnabled": false`(볼트 스킬이 메모리 전담). 기존 기본위치(`~/.claude/…`)에 이미 네이티브 메모리가 쌓였으면 그 내용을 볼트 `_claude-memory` 또는 역할 `notes` 자리(`py -3 3_시스템/roles.py path notes`)로 수동 이관.
 1. 정체성: 호칭·언어·존댓말 여부 → CLAUDE.md §0 {{}} 치환.
 2. 커뮤니케이션: 간결/상세·톤·피할 것(맞장구·근거없는단정 등) → §0.
    **예시 캘리브레이션(필수):** 같은 질문에 대한 답변 샘플 A(간결 3줄)/B(상세 단락)를 실제로 보여주고 고르게 함 — 선언 선호("상세히 좋아요")는 부정확, 보고 고른 것이 진짜 선호.

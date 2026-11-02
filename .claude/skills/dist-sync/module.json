@@ -17,5 +17,8 @@
     ],
     "hooks": [],
     "mcp": []
+  },
+  "contributes": {
+    "doctor": ["{py}", ".claude/skills/dist-sync/scripts/doctor.py"]
   }
 }

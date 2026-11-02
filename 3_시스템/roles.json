@@ -1,0 +1,83 @@
+{
+ "_설명": "역할 → 볼트 안 자리(볼트 개혁 R6 · 2026-10-30). 코드·훅·스킬은 자리를 글자로 박지 않고 역할 이름으로 묻는다(`3_시스템/roles.py` · 훅은 이 파일을 바로 읽음). R9 구조 이전 = 폴더를 fileops 로 옮기고 이 파일만 고친다(migration 파일이 함께). 주제(과목·프로젝트) 목록은 개인 칸 `2_지식/주제.md`.",
+ "schema": 1,
+ "roles": {
+  "work": "0_작업",
+  "sources": "1_수집",
+  "school": "1_수집/배움",
+  "school_notice": "1_수집/배움/학교공지",
+  "inbox": "1_수집/_inbox",
+  "source_index": "1_수집/_색인",
+  "knowledge": "2_지식",
+  "notes": "2_지식/분야",
+  "sessions": "2_지식/기록",
+  "decisions": "2_지식/일/외부뇌/결정",
+  "canvas": "2_지식/분야",
+  "modules": "2_지식/modules",
+  "schedule": "2_지식/일정",
+  "moc": "2_지식/MOC.md",
+  "recent": "2_지식/recent.md",
+  "open_loops": "2_지식/open-loops.md",
+  "profile": "2_지식/profile.md",
+  "ledger_view": "2_지식/장부.md",
+  "topics": "2_지식/주제.md",
+  "retention": "2_지식/보존.md",
+  "system": "3_시스템",
+  "learn_notes": "2_지식/배움",
+  "doing_notes": "2_지식/일",
+  "life_notes": "2_지식/생활",
+  "field_notes": "2_지식/분야"
+ },
+ "props": {
+  "_설명": "층마다 노트 속성 표(키 순서 · ADR-027) — 옵시디언 새 노트 표(brain-base props.ts)·새 노트 채우기(props-sync.py)가 함께 읽는다 · 규약 글 = conventions.md · 값보다 표(값을 모르면 키만)",
+  "knowledge": ["title", "created", "updated", "tags", "주제", "aliases", "links", "status", "source"],
+  "work": ["title", "created", "updated", "tags", "주제", "마감", "단계", "의도", "aliases", "source"]
+ },
+ "groups": {
+  "_설명": "역할 묶음 — 같은 목록을 여러 곳이 쓴다 · note_areas = 지식 노트가 사는 자리 전부(R9 뒤 노트·학교·프로젝트·생활로 갈림 — 코드는 «notes 하나»가 아니라 이 묶음을 묻는다) · content = 개인 내용 칸(배포판·업데이터가 건드리지 않음)",
+  "moc_notes": [
+   "learn_notes",
+   "doing_notes",
+   "life_notes",
+   "field_notes",
+   "modules"
+  ],
+  "knowledge_notes": [
+   "learn_notes",
+   "doing_notes",
+   "life_notes",
+   "field_notes",
+   "sessions",
+   "modules"
+  ],
+  "note_areas": [
+   "learn_notes",
+   "doing_notes",
+   "life_notes",
+   "field_notes"
+  ],
+  "content": [
+   "learn_notes",
+   "doing_notes",
+   "life_notes",
+   "field_notes",
+   "sessions",
+   "modules"
+  ]
+ },
+ "topic_roots": [
+  "1_수집/배움",
+  "1_수집/일",
+  "1_수집/생활",
+  "1_수집/분야",
+  "0_작업/배움",
+  "0_작업/일",
+  "0_작업/생활",
+  "0_작업/분야",
+  "2_지식/배움",
+  "2_지식/일",
+  "2_지식/생활",
+  "2_지식/분야"
+ ],
+ "_topic_roots": "이 자리 바로 아래 폴더 이름 = 주제(정식 이름 또는 별칭 · 설계안 §19.2 · R9 이전 뒤 · 원본 학교 자리는 R9-b 가 배움으로)"
+}

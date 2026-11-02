@@ -5,8 +5,8 @@
   py test_check.py            → 전 케이스 실행. 실패 있으면 exit 1.
 
 각 케이스 = 픽스처 모듈을 실제로 생성 → check() 판정이 기대와 일치하는지 대조 → 삭제.
-"산출물 존재 ≠ 게이트 통과" — 가드레일이 '실제로 막는지'를 픽스처로
-증명한다. 정리는 finally 보장(잔재 0).
+"산출물 존재 ≠ 게이트 통과"([[완료판단-산출물존재vs게이트통과-패턴]]) — 가드레일이
+'실제로 막는지'를 픽스처로 증명한다. 정리는 finally 보장(잔재 0).
 
 이 파일의 볼트 경로 문자열은 전부 **픽스처 데이터**(실제 쓰기 아님) → 스캔 제외: mf:allow-path-file
 """
@@ -88,7 +88,7 @@ def build():
     mk("mf-t-nomodjson", None)
     mk("mf-t-config", mod(["3_시스템/_index/mf-t-config/"], writes_config=["embed_model"]))
     # 산출물 폴더 규약: notes/ 금지 · 타모듈 폴더 침범 금지 · 자기 폴더는 정상(infos)
-    mk("mf-t-notes", mod(["2_지식/notes/mf-t-notes/"]))
+    mk("mf-t-notes", mod([C.NOTE_AREAS[0] + "/mf-t-notes/"]))  # 옛 2_지식/notes 는 R9 로 사라졌다 — 역할에서 묻는다
     mk("mf-t-othermod", mod(["2_지식/modules/mf-t-nobody/"]))  # 남의 폴더(실모듈 무간섭)
     mk("mf-t-goodout", mod(["2_지식/modules/mf-t-goodout/", "3_시스템/_index/mf-t-goodout/"]))
     mk("mf-t-corefile", mod(["3_시스템/_index/mf-t-corefile/"]),
@@ -96,6 +96,29 @@ def build():
     # forward-compat: 모르는 키·미래 스키마는 검사기를 깨지 않는다(P4 확장 선반영 안전)
     mk("mf-t-future", mod(["3_시스템/_index/mf-t-future/"],
                           extra={"schema": 99, "runtime_ports": [8080], "router": {"expose": False}}))
+    # ⑪ contributes 행위·건강(ADR-019 — 코어 brain.py 계약)
+    def act(m, **k):
+        a = {"id": f"{m}.go", "name": "시험", "risk": "read", "run": ["{py}", f".claude/skills/{m}/scripts/a.py"]}
+        a.update(k)
+        return a
+
+    def con(m, c, scripts=True):
+        mk(m, mod([f"3_시스템/_index/{m}/"], extra={"contributes": c}),
+           scripts={"a.py": 'print("ok")\n'} if scripts else None)
+
+    con("mf-t-act-ok", {"actions": [act("mf-t-act-ok", args=[{"name": "q"}],
+                                        run=["{py}", ".claude/skills/mf-t-act-ok/scripts/a.py", "{q}", "{by}"])],
+                        "doctor": ["{py}", ".claude/skills/mf-t-act-ok/scripts/a.py"]})
+    con("mf-t-act-prefix", {"actions": [act("mf-t-act-prefix", id="go")]})
+    con("mf-t-act-dup", {"actions": [act("mf-t-act-dup"), act("mf-t-act-dup")]})
+    con("mf-t-act-risk", {"actions": [act("mf-t-act-risk", risk="delete")]})
+    con("mf-t-act-builtin", {"actions": [act("mf-t-act-builtin", builtin="inbox")]})
+    con("mf-t-act-noscript", {"actions": [act("mf-t-act-noscript")]}, scripts=False)
+    con("mf-t-act-ph", {"actions": [act("mf-t-act-ph", run=["{py}", ".claude/skills/mf-t-act-ph/scripts/a.py", "{q}"])]})
+    con("mf-t-act-out", {"actions": [act("mf-t-act-out", run=["{py}", "3_시스템/search.py"])]})
+    con("mf-t-act-doc", {"doctor": "py a.py"})
+    con("mf-t-act-later", {"menus": [{"where": "file"}], "settings": {}})
+    mk("mf-t-act-type", mod(["3_시스템/_index/mf-t-act-type/"], extra={"contributes": ["search"]}))
     # 노트 basename 중복(Stop훅 스코프 = 3_시스템/_ref/** 사용 — MOC 요구 대상 아님)
     for sub in ("mf-t-dupA", "mf-t-dupB"):
         p = os.path.join(REF, sub)
@@ -126,6 +149,17 @@ CASES = [
     ("mf-t-nomodjson", True,  "module.json 없음",   "warns"),
     ("mf-t-future",    True,  "schema 99",          "warns"),
     ("mf-t-does-not-exist", False, "없음",          "blocks"),
+    ("mf-t-act-ok",       True,  "행위 1개",          "infos"),
+    ("mf-t-act-prefix",   False, "로 시작해야",        "blocks"),
+    ("mf-t-act-dup",      False, "행위 id 겹침",       "blocks"),
+    ("mf-t-act-risk",     False, "risk 'delete'",     "blocks"),
+    ("mf-t-act-builtin",  False, "코어 전용",          "blocks"),
+    ("mf-t-act-noscript", False, "대본 없음",          "blocks"),
+    ("mf-t-act-ph",       False, "자리표 '{q}'",       "blocks"),
+    ("mf-t-act-out",      True,  "모듈 밖 대본",       "warns"),
+    ("mf-t-act-doc",      False, "contributes.doctor", "blocks"),
+    ("mf-t-act-later",    True,  "아직 읽는 곳 없음",   "infos"),
+    ("mf-t-act-type",     False, "contributes 는 객체", "blocks"),
 ]
 
 
@@ -154,7 +188,7 @@ def run():
         rows.append((f"exit:{name}", "PASS" if passed else "FAIL", p.returncode, want_code, "exit code", ""))
 
     # 실모듈 회귀(정상 통과 유지)
-    for name in ("module-forge",):
+    for name in ("module-forge", "study-helper", "dist-sync"):
         if name in mods:
             r = C.check(name, mods, core)
             passed = r["ok"]

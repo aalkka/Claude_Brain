@@ -69,8 +69,8 @@ description: Obsidian 캔버스(.canvas)를 만들거나 고친다. "캔버스 �
   "bands":  [{"id":"gA","label":"설계한 경로 — 발동 0건","color":"1"}],
   "nodes":  [
     {"id":"n1","band":"gA","col":0,"row":0,"text":"**organize**\n코어"},
-    {"id":"n2","band":"gA","col":1,"row":0,"file":"2_지식/notes/어떤노트.md"},
-    {"id":"n9","band":null,"col":-1,"row":0,"file":"2_지식/notes/참조.md"}
+    {"id":"n2","band":"gA","col":1,"row":0,"file":"2_지식/어떤노트.md"},
+    {"id":"n9","band":null,"col":-1,"row":0,"file":"2_지식/참조.md"}
   ],
   "groups": [{"id":"gCore","label":"코어","members":["n1"]}],
   "edges":  [{"from":"n1","to":"n2","label":"학습노트"}]
@@ -94,7 +94,7 @@ description: Obsidian 캔버스(.canvas)를 만들거나 고친다. "캔버스 �
 
 ## 7. 안 하는 것
 
-- **3rd-party 캔버스 플러그인** — 기각(2026-08-21). 엣지가 캔버스 파일명을 프론트매터 키로 만든다 + [[설계노트]] "플러그인 의존 0".
+- **3rd-party 캔버스 플러그인** — 기각(2026-08-21). 엣지가 캔버스 파일명을 프론트매터 키로 만든다.
 - **MOC·open-loops를 캔버스로 대체** — 기각. gist를 못 담고 T1 주입에서 순손실.
-- **훅으로 자동 생성·갱신** — 수요 없음으로 기각(2026-08-22). 붙일 때의 본보기는
+- **훅으로 자동 생성·갱신** — 수요 없음(2026-08-22 사용자 확정). 붙일 때의 본보기는
   `search.py --link-write`의 네 성질(소유 경계·멱등·색인 제외·SessionEnd 끝 fail-soft 디태치).

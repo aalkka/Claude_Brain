@@ -18,6 +18,10 @@ from collections import Counter
 
 KST = dt.timedelta(hours=9)
 VAULT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import roles  # noqa: E402 — 자리는 역할로 묻는다(볼트 개혁 R6)
+SESS = roles.path("sessions") + "/"
+MOC_DIRS = tuple(d + "/" for d in roles.group("moc_notes"))
 DENY = [("requested permissions to", r"permissions to (?:\w+ to )?(\S+)", "권한미승인"),
         ("doesn't want to proceed", None, "사용자거부")]
 FOLD = {"수정", "신규", "읽기", "조회", "실행"}
@@ -223,8 +227,8 @@ def render(st, path):
         " · 버전 " + ",".join(sorted(set(st["ver"]))) if st["ver"] else "",
         " · 스킬 " + ",".join(st["skills"]) if st["skills"] else ""))
     new = sorted({e[2] for e in ev if e[1] == "신규"})
-    moc = [p for p in new if re.match(r"2_지식/(notes|decisions|modules)/", p)]
-    sess = [p for p in new if p.startswith("2_지식/sessions/")]
+    moc = [p for p in new if p.startswith(MOC_DIRS)]
+    sess = [p for p in new if p.startswith(SESS)]
     core = sorted({e[2] for e in ev if e[1] in ("신규", "수정") and re.match(CORE_RX, e[2])})
     rw = [e for e in ev if e[1] == "재작성"]
     A("")
@@ -235,7 +239,7 @@ def render(st, path):
     if sess:
         A("- 세션노트 기존: " + ", ".join(sess))
     if core:
-        A("- ⚠ 코어 접촉(코어 게이트 대상): " + ", ".join(core))
+        A("- ⚠ 코어 접촉(ADR-006 게이트): " + ", ".join(core))
     tot = sum(int(e[2].split("tok")[0].replace(",", "")) for e in rw) if rw else 0
     A("- 실패 {} · 거부 {}{}".format(
         sum(1 for e in ev if e[1] == "실패"), sum(1 for e in ev if e[1] == "거부"),
@@ -263,7 +267,7 @@ TITLE_RX = re.compile(rb'"customTitle":"((?:[^"\\]|\\.)*)"')
 
 
 def session_title(tdir, sh, st):
-    """알림에 붙일 세션 제목. id 만으로는 기록할지 고를 수 없다(사용자 지적 2026-10-03).
+    """알림에 붙일 세션 제목. id 만으로는 기록할지 고를 수 없다(사용자 2026-10-03).
 
     1순위 = 트랜스크립트의 마지막 `custom-title`(데스크탑 사이드바 제목과 같다).
     없으면(실측 40세션 중 5) 첫 발화 앞부분. 미완료 세션(≤5)에만 불리므로 전량 읽어도 싸다.
@@ -304,7 +308,7 @@ def scan_pending(outdir, cur_short, tdir):
     except Exception:
         pass
     # 다른 세션이 뒤늦게 쓴 세션노트(프론트매터 `session: <8자>`)도 기록이다.
-    for f in glob.glob(os.path.join(VAULT, "2_지식", "sessions", "*.md")):
+    for f in glob.glob(os.path.join(roles.abs("sessions"), "*.md")):
         try:
             with open(f, encoding="utf-8") as fh:
                 mm = re.search(r"^session:\s*([0-9a-f]{8})", fh.read(1500), re.M)
@@ -340,7 +344,7 @@ def scan_pending(outdir, cur_short, tdir):
         done = False
         for e in ev:
             k, p = e[1], e[2]
-            if k == "신규" and p.startswith("2_지식/sessions/"):
+            if k == "신규" and p.startswith(SESS):
                 done = True
                 break
             if k in ("신규", "수정") and (p.endswith("recent.md") or p.endswith("open-loops.md")):

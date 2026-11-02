@@ -1,28 +1,37 @@
 """그림 읽기 — 그림이 무엇을 그렸는지 명사구 하나(+ 손글씨가 있으면 전사)를 Claude 로 얻는다. ingest.py --vision 이 부른다.
 
 층: ①글자 = 윈도우 OCR(ingest.py, 무료·즉시) ②무엇을 그렸나 = 명사구 30자 안 ③손글씨 = 있을 때만 전사(claude -p · 구독 · 키 불필요).
-로컬 손글씨 OCR 은 쓰지 않는다 — 제작자 실측(PaddleOCR 파인튜닝 손글씨 판독 45~49%).
+로컬 손글씨 OCR 은 쓰지 않는다 — 제작자 볼트 실측(PaddleOCR 파인튜닝 글자 판독 45~49%).
 
-토큰 줄이기(10-26 «색인에 드는 토큰을 획기적으로» · 형식 = 명사구 — 실제 결과 넷을 보고 고름):
+토큰 줄이기(사용자 10-26 «색인에 드는 토큰을 획기적으로» · 형식 = 명사구 — 실제 결과를 보고 고름):
   - 그림을 SIDE(512px)로 줄여 BATCH 장씩 한 번에 묻는다 — 512 와 768 의 결과가 같았다(표본 9장).
     호출마다 붙는 고정분(claude -p 숨은 머리 약 650토큰 + 안내)을 장수로 나눈다.
   - 캐시 쓰기 끔(DISABLE_PROMPT_CACHING) — 한 번 쓰고 버리는 입력이라 1시간 캐시 쓰기(입력값 2배)만 손해(같은 묶음 34% 차이).
   - --effort low · 출력 = 명사구와 손글씨 여부만. 손글씨가 있다고 나온 그림만 원래 해상도(HW_SIDE)로 한 장씩 다시 읽어 전사한다.
   - 실측(표본 9장 · sonnet 5.5 · 명사구·문장·낱말을 다 받은 시험): 장당 입력 342 + 출력 118 · 이전(1568px · 한 장씩 · 긴 JSON) 2,690 + 440.
     haiku 5.5 는 생각 토큰(1,265)이 붙어 같은 묶음이 3배 비쌌다 → sonnet.
+  - 생각 끔(--settings alwaysThinkingEnabled=false · 11-02 사용자 «글자 선택에 드는 토큰 최소화») — 옮겨 적기에 생각은 값어치가 없다.
+    수식 쪽 출력 4,515 → 1,791(글 길이 같음) · MAX_THINKING_TOKENS=0 은 듣지 않았다(4,471).
+  - PDF 손글씨 = 전사와 판서 위치를 한 번에(read_boxes): 번호 그림 한 장으로 덩이별 전사. 쪽당 입력 8,002 + 출력 1,383(전사 + locate) → 3,843 + 688(표본 2쪽).
+    1092px 는 입력이 2,700 으로 더 줄지만 기각: 덩이 나눔이 바뀌고(4쪽 43 → 48) 전사 일치 0.91 → 0.84 · 출력이 3,249 까지 뛴다.
 
-호출 = 제작자 실측 조합(호출당 원시 85,953 → 2,156토큰) + 볼트 밖 cwd · --setting-sources user · --no-session-persistence · --disable-slash-commands
+호출 = 볼트 밖 cwd · --setting-sources user · --no-session-persistence · --disable-slash-commands
   (볼트 훅·CLAUDE.md·세션 기록이 끼지 않게 — 훅은 볼트 .claude/settings.json 에만). 그림은 메시지에 base64 로 바로 붙인다.
+  claude = 설치된 것 중 가장 새 판(claude_bin.py) · 모델 = 별칭 sonnet(10-30 사용자 «새 모델이 나와도 옛 판을 쓰지 않게»).
 
 글씨체 사전 = 3_시스템/handwriting/profile.md + samples.json(표본 그림 → 정답) — 손글씨 전사 호출에만 붙는다.
-결과 = 3_시스템/_index/ingest-vision/<sha256>.json {pages: {쪽|0|img:…: {n, handwriting, model, profile, at, tokens}}}
+결과 = 3_시스템/_index/ingest-vision/<sha256>.json {pages: {쪽|0|img:…: {n, handwriting, model, profile, at, tokens, pos?}}}
+  pos = PDF 쪽 판서 위치 {v: 2, aspect, items: [[x1, y1, x2, y2, 낱말, 줄끝], …](쪽 비율)} — brain-source 끌어 고르기 층(11-02 ·
+        ingest.py vision_pass · hwlayout.py · read_boxes = 전사와 한 번에). v 가 2 가 아니면 다음 «그림 읽기» 가 그 쪽을 다시 읽는다
 """
 import base64, hashlib, io, json, os, re, subprocess, sys, tempfile, time
+
+import claude_bin
 
 VAULT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(VAULT, "3_시스템", "_index", "ingest-vision")
 HW = os.path.join(VAULT, "3_시스템", "handwriting")
-MODEL = os.environ.get("INGEST_VISION_MODEL", "claude-sonnet-5-5")
+MODEL = os.environ.get("INGEST_VISION_MODEL", "sonnet")   # 별칭 — 가장 새 claude 가 지금 판으로 푼다
 SIDE = 512                 # 무엇을 그렸나 — 긴 변
 HW_SIDE = 1568             # 손글씨 전사 — Claude 그림 권장 긴 변(넘으면 서버가 줄인다)
 BATCH = 10                 # 한 번에 묻는 그림 수
@@ -35,6 +44,13 @@ ASK = """학습 자료 그림 {n}장의 검색 색인. 그림마다 JSON 원소 
 
 HW_ASK = """이 그림의 손글씨를 쓰인 그대로 옮긴다(고치지 않는다·지어내지 않는다). 줄바꿈 유지. 수식은 글자로(예: ∮E·dA = Q/ε0, x^2, a_n).
 못 읽는 글자는 [?]. 인쇄 글자는 빼고 손글씨만. 전사한 글만 출력한다(설명·코드 울타리 금지)."""
+
+# 판서 전사 + 위치(11-02 · PDF 쪽만): 잉크 «글 덩이»에 번호를 그린 그림(hwlayout.marked) 한 장 → 번호마다 그 안의 글.
+# 위치는 잉크에서 · 글은 읽는 쪽이 정한다(너비만으로 짝지으면 그림 꼬리표가 옆 문장에 붙었다). 그림 안 글씨(꼬리표)는 색인에만 남기고 덧씌우지 않는다.
+BOX_SYSTEM = "번호와 글만 출력한다."
+BOX_ASK = """그림의 파란 상자마다 빨간 번호가 붙어 있다. 상자마다 그 안의 손글씨를 쓰인 그대로 옮긴다(고치지 않는다·지어내지 않는다). 파란 상자·빨간 번호는 옮기지 않는다.
+수식은 글자로(예: ∮E·dA = Q/ε0, x^2, a_n). 못 읽는 글자는 [?]. 한 줄에 «번호<TAB>글» 하나씩, 번호 순서대로 모두.
+상자가 글줄이 아니라 그림·선·화살표면 «번호<TAB>#그림 안 글씨들»(글씨가 없으면 «번호<TAB>#»). 설명 금지."""
 
 
 def profile():
@@ -74,7 +90,8 @@ def _img(b):
 
 
 class Stop(Exception):
-    """그림 읽기를 멈출 까닭(10-26 «구독 아닐 때 멈추고 · 사용량이 없어 못 읽으면 한도 알림»). kind = "구독 아님" | "사용량 한도" """
+    """그림 읽기를 멈출 까닭(사용자 10-26 «구독 아닐 때 멈추고 · 사용량이 없어 못 읽으면 한도 알림»). kind = "구독 아님" | "사용량 한도" | "로그인 안 됨"
+    로그인 안 됨 = 플러그인이 로그인 창을 띄우고, 창이 닫히면 다시 읽는다(사용자 11-02)."""
 
     def __init__(self, kind, why):
         super().__init__(f"{kind}: {why}")
@@ -82,8 +99,11 @@ class Stop(Exception):
 
 
 # 이것들이 있으면 claude -p 가 구독 대신 API 키·다른 경로(게이트웨이·Bedrock·Vertex)로 나간다. ANTHROPIC_AUTH_TOKEN 은
-# `claude auth status` 에 드러나지 않아(10-26 실측) 직접 본다 — 사용자 환경변수 하나로 모든 claude 가 다른 경로로 나간 제작자 볼트 사고와 같은 꼴.
+# `claude auth status` 에 드러나지 않아(10-26 실측) 직접 본다 — 10-02 사고(사용자 환경변수 → 모든 claude 가 게이트웨이로)와 같은 꼴.
 PAID_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY")
+NO_LOGIN = "claude 로그인 안 됨"
+# claude -p 가 로그인이 없거나 풀렸을 때 내는 말(2.1.287 실행 파일 글자 · 11-02) — 확인을 지나쳐 호출 중에 풀린 경우
+LOGIN_ERR = r"(?i)run /login|not logged in|oauth token (?:revoked|has expired)|login expired|invalid api key|authentication_error|^401$"
 
 
 def subscription():
@@ -106,12 +126,12 @@ def subscription():
         return "환경변수 " + ", ".join(bad)
     try:
         with tempfile.TemporaryDirectory(prefix="ingest-vision-") as cwd:
-            r = subprocess.run(["claude", "auth", "status", "--json"], cwd=cwd, capture_output=True, timeout=60)
+            r = subprocess.run([claude_bin.newest(), "auth", "status", "--json"], cwd=cwd, capture_output=True, timeout=60)
         d = json.loads(r.stdout.decode("utf-8", "replace"))
     except (OSError, ValueError, subprocess.TimeoutExpired) as e:
         return f"로그인 상태 확인 실패({type(e).__name__})"
     if not d.get("loggedIn"):
-        return "claude 로그인 안 됨"
+        return NO_LOGIN
     if d.get("authMethod") != "claude.ai" or d.get("apiProvider") != "firstParty" or d.get("apiKeySource") or not d.get("subscriptionType"):
         return f"구독 로그인이 아님(authMethod={d.get('authMethod')} · apiProvider={d.get('apiProvider')} · apiKeySource={d.get('apiKeySource')})"
     return ""
@@ -122,14 +142,16 @@ def _reset(info):
     return time.strftime("%m-%d %H:%M", time.localtime(t)) if isinstance(t, (int, float)) and t > 0 else "알 수 없음"
 
 
-def _run(content, system=SYSTEM):
-    """claude -p 한 번 → (응답 글, 사용량 {in, out, cost, rate_limit?}, 오류 글 | "").
+def _run(content, system=SYSTEM, cache=False):
+    """claude -p 한 번 → (응답 글, 사용량 {in, out, cost, parts, rate_limit?}, 오류 글 | "").
+    cache=True = 프롬프트 캐시를 켠다 — 같은 내용을 되풀이할 때만 이득. 10-29 실측: Claude Code 가 사용자 글 끝까지 캐시에 쓰고
+    (쓰기 2배) 다음 호출은 앞부분만 읽어, 본문이 다른 호출을 잇달아도 손해다(공지 추출 첫 호출 $0.0096 → $0.0163). 기본 = 끔.
     구독이 아닌 길로 나갔거나(init 의 apiKeySource) 사용량 한도에 막히면 Stop 을 던진다 — 부른 쪽은 남은 그림을 묻지 않는다."""
-    cmd = ["claude", "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+    cmd = [claude_bin.newest(), "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
            "--model", MODEL, "--effort", "low", "--tools", "", "--system-prompt", system, "--strict-mcp-config",
-           "--setting-sources", "user", "--no-session-persistence", "--disable-slash-commands"]
+           "--setting-sources", "user", "--settings", '{"alwaysThinkingEnabled":false}', "--no-session-persistence", "--disable-slash-commands"]
     payload = (json.dumps({"type": "user", "message": {"role": "user", "content": content}}, ensure_ascii=False) + "\n").encode("utf-8")
-    env = dict(os.environ, DISABLE_PROMPT_CACHING="1")
+    env = dict(os.environ) if cache else dict(os.environ, DISABLE_PROMPT_CACHING="1")
     with tempfile.TemporaryDirectory(prefix="ingest-vision-") as cwd:     # 볼트 밖에서 — 볼트 훅·CLAUDE.md 가 끼지 않게
         try:
             r = subprocess.run(cmd, cwd=cwd, input=payload, capture_output=True, timeout=TIMEOUT, env=env)
@@ -149,7 +171,9 @@ def _run(content, system=SYSTEM):
             text = d.get("result") or ""
             u = d.get("usage") or {}
             usage.update({"in": u.get("input_tokens", 0) + u.get("cache_creation_input_tokens", 0) + u.get("cache_read_input_tokens", 0),
-                          "out": u.get("output_tokens", 0), "cost": d.get("total_cost_usd")})
+                          "out": u.get("output_tokens", 0), "cost": d.get("total_cost_usd"),
+                          "parts": {"new": u.get("input_tokens", 0), "cache_write": u.get("cache_creation_input_tokens", 0),
+                                    "cache_read": u.get("cache_read_input_tokens", 0)}})
             if d.get("is_error"):
                 err = str(d.get("api_error_status") or d.get("result") or "is_error")
         elif d.get("type") == "rate_limit_event":
@@ -160,6 +184,8 @@ def _run(content, system=SYSTEM):
                 usage["rate_limit"] = json.dumps(info or d, ensure_ascii=False)[:200]
     if source not in (None, "none"):                            # 호출 전 확인을 지나쳤어도 — 다음 그림부터는 묻지 않는다
         raise Stop("구독 아님", f"apiKeySource={source}")
+    if (err or not text) and re.search(LOGIN_ERR, "\n".join([err, text, r.stderr.decode("utf-8", "replace")[-500:]]), re.M):
+        raise Stop("로그인 안 됨", (err if err and err != "401" else text or err)[:120])
     if limit is not None or (err and re.search(r"(?i)429|usage limit|rate.?limit|limit reached|hit your limit|한도", err)):
         info = limit or {}
         raise Stop("사용량 한도", f"{info.get('rateLimitType') or '한도'} · 다시 가능 {_reset(info)}" + ("" if limit else f" · {err[:120]}"))
@@ -211,6 +237,34 @@ def transcribe(png_hi, prof):
     return t, usage, err
 
 
+def read_boxes(png_marked, prof, n):
+    """번호 그린 쪽 그림 → (덩이 n 개마다 글 | None(그림·답 없음), 색인에 넣을 전사 전체, 사용량, 오류 글). 글씨체 사전이 있으면 앞에 붙인다."""
+    text, samples, _ = prof
+    content = [{"type": "text", "text": BOX_ASK}]
+    if text or samples:
+        content.append({"type": "text", "text": "글씨체 사전(이 사람 글씨 버릇):\n" + (text or "(규칙 없음)")})
+        for b, t in samples:
+            content += [_img(b), {"type": "text", "text": "위 표본의 정답:\n" + t}]
+    content += [{"type": "text", "text": "그림:"}, _img(png_marked)]
+    out, usage, err = _run(content, BOX_SYSTEM)
+    got, lines, seen = [None] * n, [], False
+    for ln in out.splitlines():
+        m = re.match(r"^\s*(\d+)\s*[\t:.)]?\s*(.*?)\s*$", ln)
+        if not m or not 1 <= int(m.group(1)) <= n:
+            continue
+        seen = True
+        t = m.group(2)
+        if t.startswith("#") or t == "-":                       # 그림 — 안 글씨는 색인에만
+            t = t.lstrip("#-").strip()
+        elif t:
+            got[int(m.group(1)) - 1] = t
+        if t:
+            lines.append(t)
+    if not err and n and not seen:
+        err = "번호 답 없음: " + out[:120]
+    return got, "\n".join(lines), usage, err
+
+
 def load(sha):
     p = os.path.join(CACHE, f"{sha}.json")
     if os.path.isfile(p):
@@ -228,9 +282,16 @@ def save(sha, data):
         json.dump(data, f, ensure_ascii=False, indent=1)
 
 
+def _family(m):
+    """claude-sonnet-5-5 · sonnet → sonnet (모르면 그대로)"""
+    f = re.search(r"opus|sonnet|haiku|fable", str(m or ""))
+    return f.group(0) if f else str(m or "")
+
+
 def stale(entry, prof_ver):
-    """다시 읽어야 하나: 없음 · 모델이 바뀜 · 명사구가 없는 옛 판(10-26 전 = 키워드·긴 설명) · 손글씨가 있었는데 글씨체 사전 판이 바뀜"""
-    if not entry or entry.get("model") != MODEL or "n" not in entry:
+    """다시 읽어야 하나: 없음 · 모델 갈래가 바뀜 · 명사구가 없는 옛 판(10-26 전 = 키워드·긴 설명) · 손글씨가 있었는데 글씨체 사전 판이 바뀜.
+    갈래로 견준다 — 별칭으로 바꾼 10-30 전 결과(claude-sonnet-5-5)와 새 판이 나와도 다시 읽지 않는다(사용량이 저절로 들지 않게)."""
+    if not entry or _family(entry.get("model")) != _family(MODEL) or "n" not in entry:
         return True
     return bool(entry.get("handwriting")) and entry.get("profile", "") != prof_ver
 

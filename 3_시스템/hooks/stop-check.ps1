@@ -1,4 +1,4 @@
-﻿# 외부뇌 Stop 훅 — notes/·decisions/ 프론트매터 + MOC 등재 결정론 검증
+﻿# 외부뇌 Stop 훅 — 지식·결정 노트의 프론트매터 + MOC 등재 결정론 검증
 # 뿌리②(규약 발동이 모델 의존 → 죽은 규약) 시정: MOC 등록·프론트매터를
 # 규약(모델 준수)이 아니라 훅으로 강제한다. 위반 시 종료를 차단하고 모델에 되먹인다.
 # 계약(공식): stdout에 {"decision":"block","reason":...} + exit 0 (설계노트 §7·§12.6).
@@ -20,17 +20,19 @@ $log   = Join-Path $idx 'hooks.log'
 if (-not (Test-Path $moc)) { exit 0 }   # MOC 없으면(초기 상태) 검사 스킵
 $mocText = Get-Content $moc -Raw -Encoding UTF8
 
-# 대상: notes/·decisions/·modules/ (재귀 — 하위폴더 포함). sessions/·_ref/·_접두 하위폴더는 MOC 대상 아님.
+# 대상: 역할 묶음 moc_notes (재귀 — 하위폴더 포함). 세션로그·_ref·_접두 하위폴더는 MOC 대상 아님.
 # modules/ = 모듈 산출물 전용(2026-07-27 신설). 프론트매터는 요구하되 **MOC 등재는 면제** —
 # 모듈은 MOC에 '설계노트 1줄'로 대표되고, 산출물마다 등재하면 MOC가 폭증한다(도그푸드 실측 마찰점).
-$dirs = @('2_지식\notes', '2_지식\decisions', '2_지식\modules')
-$mocExempt = @('2_지식\modules')
+# 자리는 역할로(볼트 개혁 R6 · 3_시스템/roles.json groups.moc_notes) — 못 읽으면 검사 건너뜀(도구 부재 = 통과)
+try { $rj = [System.IO.File]::ReadAllText((Join-Path $vault '3_시스템\roles.json'), [System.Text.Encoding]::UTF8) | ConvertFrom-Json } catch { exit 0 }
+$dirs = @($rj.groups.moc_notes | ForEach-Object { $rj.roles.$_ -replace '/', '\' })
+$mocExempt = @($rj.roles.modules -replace '/', '\')
 $noFm = @(); $noMoc = @(); $badLinks = @()
 foreach ($d in $dirs) {
     $p = Join-Path $vault $d
     if (-not (Test-Path $p)) { continue }
     foreach ($f in Get-ChildItem -Path $p -Filter *.md -File -Recurse) {
-        # _접두 하위폴더(예 <프로젝트>/_ref)는 MOC 비대상 — top-level _ref와 동일(프로젝트 incident 등).
+        # _접두 하위폴더(예 프로젝트/_ref)는 MOC 비대상 — top-level _ref와 동일(프로젝트 incident 등).
         # '2_지식'의 '_'는 앞이 '2'라 '\_' 패턴에 안 걸림(오작동 없음).
         if ($f.DirectoryName.Substring($vault.Length) -match '\\_') { continue }
         $name = [System.IO.Path]::GetFileNameWithoutExtension($f.Name)
@@ -79,7 +81,19 @@ if ($noFm.Count -eq 0 -and $noMoc.Count -eq 0 -and $dupNames.Count -eq 0 -and $b
     # 그래서 커밋을 살아있는 턴 종료(Stop)로 옮긴다. torch 미로드 → 빠름(~수백ms).
     # 계약 준수: Stop stdout은 block JSON만 허용 → 모든 git 출력 억제. 변경 없으면 무커밋(diff 가드).
     # author 분리: 1_수집(사용자저작) ↔ 나머지(Claude). $LASTEXITCODE는 파이프 무관하게 git값 유지.
+    # 죽은 잠금: 빈 .lock 이 남으면 아래 git 이 조용히 실패해 자동 커밋이 며칠씩 멈췄다(08-02 62시간 · 09-19 사흘 · 09-28 40시간).
+    # 지우지 않고 옮긴다(되돌릴 수 있다). 살아 있는 git 과 겹치지 않게 10분 넘은 빈 잠금 + 도는 git 없음일 때만.
+    foreach ($ln in 'index.lock', 'AUTO_MERGE.lock') {
+        $lk = Join-Path $vault ".git\$ln"
+        if (-not (Test-Path $lk)) { continue }
+        $li = Get-Item $lk
+        if ($li.Length -eq 0 -and ((Get-Date) - $li.LastWriteTime).TotalMinutes -ge 10 -and -not (Get-Process git -ErrorAction SilentlyContinue)) {
+            Move-Item $lk "$lk.stale-$(Get-Date -Format 'yyyyMMddHHmmss')" -ErrorAction SilentlyContinue
+            Add-Content -Path $log -Encoding UTF8 -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') stop-check 죽은 잠금 격리: $ln" -ErrorAction SilentlyContinue
+        }
+    }
     git -C $vault add -A -- ':!1_수집' 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { Add-Content -Path $log -Encoding UTF8 -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Stop git add 실패 — 자동 커밋 안 됨(잠금 확인)" -ErrorAction SilentlyContinue }
     git -C $vault diff --cached --quiet 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { git -C $vault commit -m "session: $(Get-Date -Format 'yyyy-MM-dd')" --author="Claude <claude@local>" 2>&1 | Out-Null }
     git -C $vault add 1_수집 2>&1 | Out-Null
@@ -88,6 +102,29 @@ if ($noFm.Count -eq 0 -and $noMoc.Count -eq 0 -and $dupNames.Count -eq 0 -and $b
     # 커밋 후에도 스테이지 잔존 = pre-commit(3_시스템/hooks/pre-commit) 차단(secret/frontmatter) → 무성 좌초 가시화.
     git -C $vault diff --cached --quiet 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) { Add-Content -Path $log -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') Stop commit BLOCKED by pre-commit - staged remain" -ErrorAction SilentlyContinue }
+    # 받은함 = 정거장(사용자 11-03 · 실측 2건: 11-02 실험6·9주차 보고서가 받은함 경로를 그대로 읽음 · ADR-028).
+    # 이 세션 도구 호출이 건드린 받은함 항목이 남아 있으면 항목당 세션 한 번 되먹인다. 커밋 뒤에 둔다 — 남은 항목이 자동 커밋을 막지 않게.
+    # 받은함이 비었으면 세션 기록을 읽지 않는다 · 역할·세션 기록이 없으면 통과.
+    $ibRole = $rj.roles.inbox
+    $ibNames = @(if ($ibRole) { Get-ChildItem -LiteralPath (Join-Path $vault ($ibRole -replace '/', '\')) -Force | Where-Object { $_.Name -notmatch '^[._]' } | ForEach-Object { $_.Name } })
+    if ($ibNames.Count -and $inp.session_id -and $inp.transcript_path -and (Test-Path -LiteralPath $inp.transcript_path)) {
+        $ibLeaf = ($ibRole -split '/')[-1]
+        $nudged = Join-Path $idx '.inbox-nudged'
+        $seen = @(Get-Content -LiteralPath $nudged -Encoding UTF8)
+        $left = @()
+        foreach ($l in [System.IO.File]::ReadLines($inp.transcript_path)) {
+            if (-not $l.Contains('"tool_use"')) { continue }
+            foreach ($n in $ibNames) {
+                if ($left -notcontains $n -and $seen -notcontains "$($inp.session_id)`t$n" -and ($l.Contains("$ibLeaf/$n") -or $l.Contains("$ibLeaf\\$n"))) { $left += $n }
+            }
+        }
+        if ($left.Count) {
+            if (-not (Test-Path $idx)) { New-Item -ItemType Directory $idx -Force | Out-Null }
+            foreach ($n in $left) { Add-Content -LiteralPath $nudged -Encoding UTF8 -Value "$($inp.session_id)`t$n" -ErrorAction SilentlyContinue }
+            $reason = '받은함 항목을 확인하고 그대로 둠: ' + ($left -join ', ') + ' → 필요한 곳으로 옮겨 받은함을 비운다(py -3 3_시스템/inbox.py --take <이름> <자리> · --do <이름>). 작업에 쓰는 재료면 작업 폴더로 옮긴 뒤 그 경로를 쓴다. 애매하면 사용자에게 묻는다.'
+            Write-Output (@{ decision = 'block'; reason = $reason } | ConvertTo-Json -Compress)
+        }
+    }
     exit 0
 }
 
@@ -109,19 +146,14 @@ if ($count -ge 2) {
 }
 Set-Content -Path $guard -Value "$sigHash|$($count + 1)" -Encoding ASCII -ErrorAction SilentlyContinue
 
+# 걸린 종류의 조치만 알린다. 위반이 하나여도 조치 다섯을 모두 읽히지 않는다.
 $parts = @()
-if ($noMoc.Count) { $parts += 'MOC.md 미등재: ' + ($noMoc -join ', ') }
-if ($noFm.Count)  { $parts += "프론트매터 누락(선두 '---' 없음): " + ($noFm -join ', ') }
-if ($dupNames.Count) { $parts += '중복 파일명(위키링크 [[name]] 모호): ' + ($dupNames -join ', ') }
-if ($badLinks.Count) { $parts += 'links 프론트매터 깨짐(무따옴표 위키링크=YAML 파싱오류): ' + ($badLinks -join ', ') }
-if ($mathAdj.Count) { $parts += '블록수식 연속(Obsidian서 수식이 날것 노출 — 깨짐): ' + ($mathAdj -join ', ') }
-$reason = "규약 위반 — 종료 전 조치 필요.`n" + ($parts -join "`n") +
-    "`n조치: 각 노트를 2_지식/MOC.md의 알맞은 섹션(## 지식/## 결정)에 [[파일명]]으로 등재하고, " +
-    "누락 노트엔 프론트매터(3_시스템/conventions.md 스키마)를 추가하고, " +
-    "중복 파일명은 하나를 고유 basename으로 개명하고, " +
-    "깨진 links는 따옴표 배열(links: [`"[[노트명]]`"])로 고치세요. " +
-    '연속된 $$…$$ 블록 사이에는 빈 줄을 넣으세요(괄호 안 숫자=위반 건수). ' +
-    "(세션로그·_ref·_접두 하위폴더는 MOC 대상 아님 — 조용히 생략하지 말고 이 목록을 처리)"
+if ($noMoc.Count) { $parts += 'MOC.md 미등재: ' + ($noMoc -join ', ') + " → 2_지식/MOC.md의 그 영역(##)·주제(###) 칸에 [[파일명]] 150자 이하 한 줄로 등재(세션로그·_ref·_접두 하위폴더는 대상 아님)" }
+if ($noFm.Count)  { $parts += "프론트매터 누락(선두 '---' 없음): " + ($noFm -join ', ') + ' → 3_시스템/conventions.md 스키마로 추가' }
+if ($dupNames.Count) { $parts += '중복 파일명(위키링크 [[name]] 모호): ' + ($dupNames -join ', ') + ' → 하나를 고유 basename으로 개명' }
+if ($badLinks.Count) { $parts += 'links 프론트매터 깨짐(무따옴표 위키링크=YAML 파싱오류): ' + ($badLinks -join ', ') + " → 따옴표 배열(links: [`"[[노트명]]`"])로" }
+if ($mathAdj.Count) { $parts += '블록수식 연속(Obsidian서 수식이 날것 노출 — 깨짐): ' + ($mathAdj -join ', ') + ' → 연속된 $$…$$ 사이에 빈 줄(괄호 안 숫자=위반 건수)' }
+$reason = "규약 위반 — 종료 전 조치 필요.`n" + ($parts -join "`n")
 
 $out = @{ decision = 'block'; reason = $reason } | ConvertTo-Json -Compress
 Write-Output $out

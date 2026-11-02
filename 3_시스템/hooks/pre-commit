@@ -3,8 +3,12 @@
 # 스펙: 제작가이드 §15-1
 
 fail=0
+# 0. 속성 자동 칸 — 커밋에 든 노트의 updated = 파일 수정 날짜(props-sync.py · 사용자 10-30 · 고친 파일은 다시 git add).
+#    실패해도 커밋은 막지 않는다(파이썬이 없거나 대본이 깨져도 아래 검사는 그대로).
+py -3 3_시스템/props-sync.py --staged >/dev/null 2>&1 || true
 # C1: quotepath=false → 한글 경로 옥탈인용 방지(안 하면 [ -f "$f" ] 실패 → 전 볼트 스킵 = 게이트 무력화).
-staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM)
+# R 포함: 이름을 바꾸며 민감 표시·키가 든 노트가 검사를 건너뛰었다(11-02 `자격-카드.md` · 격리 재현).
+staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACMR)
 
 IFS='
 '   # 공백 포함 파일명 안전(개행만 구분자)

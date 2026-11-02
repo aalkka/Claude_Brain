@@ -79,7 +79,7 @@ ASK	N19 heredoc 변수 경유 코어 쓰기 [실측 형태]	Bash CLAUDE.md	-	{"t
 NOFIRE	N20 heredoc 코어 읽기 + 비코어 쓰기	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python - <<'PY'\nimport io\ns=io.open(\"CLAUDE.md\").read()\nio.open(\"2_지식/x.md\",\"w\").write(s)\nPY"}}
 ASK	N21 heredoc 같은 문에서 코어 쓰기	Bash CLAUDE.md	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python - <<'PY'\nimport io\nio.open(\"CLAUDE.md\",\"w\").write(\"x\")\nPY"}}
 NOFIRE	N22 heredoc 별칭 변수 경유 [수용된 FN]	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python - <<'PY'\nimport io\nP=\"CLAUDE.md\"; Q=P\nio.open(Q,\"w\").write(\"x\")\nPY"}}
-# 옵시디언 플러그인 편입(2026-10-23) — .obsidian/plugins/ 아래 = 코어. 제작자 볼트 밖에선 이 게이트가 플러그인의 유일한 보호다(OS 권한 보호 없음).
+# 옵시디언 플러그인 편입(2026-10-23) — .obsidian/plugins/ 아래 = 코어. 배포판엔 금고 ACL 이 없어 이 게이트가 유일한 보호다.
 ASK	P1 Edit 플러그인 main.js	Edit .obsidian/plugins/brain-source/main.js	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\plugins\\brain-source\\main.js","old_string":"a","new_string":"b"}}
 ASK	P2 Write 새 플러그인 심기	Write .obsidian/plugins/evil/main.js	-	{"tool_name":"Write","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\plugins\\evil\\main.js","content":"x"}}
 ASK	P3 Bash cp 빌더→플러그인	Bash .obsidian/plugins/brain-source/	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp C:/brain-source/build/main.js .obsidian/plugins/brain-source/"}}
@@ -88,3 +88,28 @@ NOFIRE	P5 Bash ls 플러그인 [읽기]	-	-	{"tool_name":"Bash","permission_mode
 NOFIRE	P6 Edit 배포판 사본 플러그인 [볼트 밖]	-	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>_dist\\.obsidian\\plugins\\brain-source\\main.js","old_string":"a","new_string":"b"}}
 NOFIRE	P7 Edit .obsidian/app.json [플러그인 밖]	-	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\app.json","old_string":"a","new_string":"b"}}
 ALLOW	P8 토큰 범위 내(plugins/brain-source/*)	TOKEN-ALLOW Edit .obsidian/plugins/brain-source/styles.css	expires=2099-01-01T00:00:00Z\nscope=.obsidian/plugins/brain-source/*\nreason=플러그인 갱신	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>\\.obsidian\\plugins\\brain-source\\styles.css","old_string":"a","new_string":"b"},"session_id":"88888888-aaaa-bbbb-cccc-000000000008"}
+# 볼트 행위 가드(2026-10-29 · ops-guard.ps1) — 셸 rm·mv 로 볼트 안을 건드리면 DENY(fileops 로 돌림) · fileops 단독·파생물·추적 끊기·코어(게이트 몫)는 그대로
+DENY	O1 rm 노트 → fileops 로	OPS-GUARD Bash rm 2_지식/notes/x.md	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"rm 2_지식/notes/x.md"}}
+DENY	O2 PS Remove-Item 절대경로 원본	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"Remove-Item \"<VB>\\1_수집\\a.pdf\""}}
+DENY	O3 mv 밖→0_작업 들이기	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"mv /tmp/x.docx 0_작업/과목/"}}
+DENY	O4 py -c shutil.move 노트	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 -c \"import shutil; shutil.move('2_지식/a.md','2_지식/b.md')\""}}
+DENY	O5 rm -rf .trash (비우기는 사람)	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"rm -rf .trash/2026-10-01"}}
+NOFIRE	O6 fileops 단독	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/fileops.py mv 2_지식/a.md 2_지식/b.md --why x"}}
+DENY	O7 fileops 뒤에 rm 이어 붙임	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/fileops.py log && rm 2_지식/x.md"}}
+NOFIRE	O8 _index 캐시 지우기	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"rm -rf 3_시스템/_index/cache"}}
+NOFIRE	O9 git rm --cached	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"git rm --cached 2_지식/x.md"}}
+NOFIRE	O10 ls 볼트	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"ls 2_지식/notes"}}
+NOFIRE	O11 스크래치 rm	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"rm -rf /c/Users/u/AppData/Local/Temp/claude/C--Claude-Brain/s/scratchpad/t"}}
+NOFIRE	O12 grep "rm" 인용	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"grep -n \"rm\" 2_지식/MOC.md"}}
+ASK	O13 rm 훅 파일 = 코어 게이트 몫	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"rm 3_시스템/hooks/x.ps1"}}
+NOFIRE	O14 Edit 노트(도구 = 가드 밖)	-	-	{"tool_name":"Edit","permission_mode":"auto","tool_input":{"file_path":"<VB>\\2_지식\\notes\\x.md","old_string":"a","new_string":"b"}}
+DENY	O15 Move-Item 3_시스템 대본	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"Move-Item 3_시스템/old.py 3_시스템/new.py"}}
+ASK	O16 fileops update --apply = 한 번 묻기	OPS-APPLY-ASK Bash	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/fileops.py update 3_시스템/_index/dist-sync/update-plan.json --apply"}}
+ASK	O17 배포판 fileops migrate --apply	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 C:/tmp/dist/3_시스템/fileops.py --vault . migrate --apply"}}
+NOFIRE	O18 migrate 미리 보기	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"py -3 3_시스템/fileops.py migrate"}}
+DENY	O19 obsidian eval = 금지	OBS-EVAL-DENY Bash	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian eval code=\"app.vault.getFiles().length\""}}
+DENY	O20 obsidian move = fileops 로	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian move path=\"2_지식/notes/a.md\" to=\"2_지식/notes/b.md\""}}
+DENY	O21 obsidian delete = fileops 로	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"obsidian delete path=0_작업/x.docx"}}
+DENY	O22 경로로 부른 Obsidian.com eval	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"& \"C:\\Users\\u\\AppData\\Local\\Programs\\Obsidian\\Obsidian.com\" eval code=1"}}
+NOFIRE	O23 obsidian search	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian search query=과목"}}
+NOFIRE	O24 obsidian command id	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian command id=brain-source:build-index"}}
