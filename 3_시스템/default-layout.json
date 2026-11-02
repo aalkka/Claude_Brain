@@ -1,0 +1,116 @@
+{
+ "schema": 1,
+ "left": {
+  "type": "split",
+  "direction": "horizontal",
+  "width": 321.5,
+  "children": [
+   {
+    "type": "tabs",
+    "children": [
+     {
+      "type": "leaf",
+      "state": {
+       "type": "brain-base-tree",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "brain-base-topics",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "search",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "bookmarks",
+       "state": {}
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "right": {
+  "type": "split",
+  "direction": "horizontal",
+  "width": 569.5,
+  "collapsed": true,
+  "children": [
+   {
+    "type": "tabs",
+    "currentTab": 1,
+    "children": [
+     {
+      "type": "leaf",
+      "state": {
+       "type": "brain-base-topic",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "brain-base-chat",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "outline",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "backlink",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "outgoing-link",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "tag",
+       "state": {}
+      }
+     },
+     {
+      "type": "leaf",
+      "state": {
+       "type": "all-properties",
+       "state": {}
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "ribbonHidden": {
+  "brain-base": false,
+  "graph": false,
+  "switcher": false,
+  "templates": true,
+  "command-palette": true,
+  "canvas": true,
+  "bases": true,
+  "brain-calendar": false
+ }
+}

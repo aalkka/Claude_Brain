@@ -84,13 +84,29 @@ def topics(vault=None):
 RETENTION = {"작업산출물": 0, "작업멈춤": 7, "받은함": 7, "휴지통": 30, "웹대기칸": 90}  # 보존.md 가 없거나 칸이 빠졌을 때(설계안 §4 값)
 
 
-def _retention_row(key, vault=None):
+def _retention_block(vault=None):
     try:
         text = open(abs("retention", vault=vault), encoding="utf-8").read()
         m = re.search(r"```json\s*\n(.*?)\n```", text, re.S)
-        return json.loads(m.group(1))["칸"][key] if m else None
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
+        return json.loads(m.group(1)) if m else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def _retention_row(key, vault=None):
+    return (_retention_block(vault).get("칸") or {}).get(key)
+
+
+def semester_ends(vault=None):
+    """보존 일정표 «학기끝» → {학기 번호: «MM-DD»} · 표가 없으면 1학기 06-30 · 2학기 12-31."""
+    return _retention_block(vault).get("학기끝") or {"1": "06-30", "2": "12-31"}
+
+
+def semester_end(term, vault=None):
+    """학기 «2026-2» → 그 학기 끝 날짜 «2026-12-31» · 모르는 꼴 = None."""
+    m = re.fullmatch(r"(\d{4})-(\d+)", str(term or "").strip())
+    end = semester_ends(vault).get(m.group(2)) if m else None
+    return "%s-%s" % (m.group(1), end) if end else None
 
 
 def retention(key, vault=None):

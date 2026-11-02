@@ -108,7 +108,7 @@ CORE = [
     # 작업 폴더 원칙 — 끝남 판정·제출본 대조·정리 계획(2026-10-31) · 근거 표·정리 규칙(보편화 2026-11-02)
     "3_시스템/work.py", "3_시스템/work.json",  # mf:allow-path
     # 따라가기 — 옵시디언 밖에서 옮기거나 지운 파일 뒤처리(설계안 §19.3 · 2026-11-03)
-    "3_시스템/follow.py", "3_시스템/outside.py",  # mf:allow-path
+    "3_시스템/follow.py", "3_시스템/outside.py", "3_시스템/default-layout.json",  # mf:allow-path
     # 코어 훅·행위가 부르는 대본(2026-11-03 반영 때 층 분류) — 표 고침·MOC·어긋남·기록·주간·일정·변환 · 대화창 규약 글
     "3_시스템/mdtable.py", "3_시스템/moc.py", "3_시스템/drift.py", "3_시스템/record.py", "3_시스템/weekly.py",  # mf:allow-path
     "3_시스템/skillstat.py", "3_시스템/schedule.py", "3_시스템/docpdf.py", "3_시스템/vault-chat/*",  # mf:allow-path
