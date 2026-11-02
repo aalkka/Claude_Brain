@@ -6,7 +6,7 @@ CLI:
   python tokens.py                     최근 20세션 요약표
   python tokens.py --n 46              최근 N세션
   python tokens.py --all               전량
-  python tokens.py --session 1dace65b  단일 세션 상세(턴별 누적 출력 곡선)
+  python tokens.py --session a1b2c3d4  단일 세션 상세(턴별 누적 출력 곡선)
   python tokens.py --raw out.json      원자료를 파일로 저장(요약만 stdout)
 
 설계 제약(전부 실측에 근거한다)

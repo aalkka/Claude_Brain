@@ -36,4 +36,10 @@ __pycache__/
 # 예외 = 배포판이 직접 만든 Obsidian 플러그인 Brain Source(모듈이 아님). 설정 data.json 은 사용자 것이라 제외.
 .obsidian/plugins/*
 !.obsidian/plugins/brain-source/
+!.obsidian/plugins/brain-base/
+!.obsidian/plugins/brain-calendar/
+.obsidian/plugins/brain-base/data.json
+.obsidian/plugins/brain-calendar/data.json
 .obsidian/plugins/brain-source/data.json
+# 휴지통 — fileops·옵시디언이 지운 것을 30일 둔다(되살리기용).
+.trash/

@@ -51,6 +51,9 @@ Copy-Item $Hook $sandHook -Force
 # 판정부를 분리한 구성이면 함께 옮긴다(머리 파일이 $PSScriptRoot 기준으로 찾는다).
 $decideSrc = Join-Path (Split-Path $Hook -Parent) 'core-gate-decide.ps1'
 if (Test-Path $decideSrc) { Copy-Item $decideSrc (Join-Path $sandHooks 'core-gate-decide.ps1') -Force }
+# 볼트 행위 가드 판정부(2026-10-29)도 같은 자리에서 찾는다.
+$guardSrc = Join-Path (Split-Path $Hook -Parent) 'ops-guard.ps1'
+if (Test-Path $guardSrc) { Copy-Item $guardSrc (Join-Path $sandHooks 'ops-guard.ps1') -Force }
 $sandBase = $null
 if ($Baseline) { $sandBase = Join-Path $sandHooks 'baseline.ps1'; Copy-Item $Baseline $sandBase -Force }
 # 훅은 자기 위치에서 볼트를 유추하는데 여기서는 샌드박스에 있으므로, 판정 루트만

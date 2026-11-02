@@ -1,3 +1,8 @@
 {
-  "alwaysUpdateLinks": true
+  "alwaysUpdateLinks": true,
+  "trashOption": "local",
+  "promptDelete": false,
+  "userIgnoreFilters": [
+    "3_\uc2dc\uc2a4\ud15c/"
+  ]
 }

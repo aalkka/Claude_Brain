@@ -34,6 +34,31 @@ $p = $probe -replace '\\"', '"' -replace '\\\\', '/' -replace '\\', '/'
 # .obsidian/plugins/ = 옵시디언 안에서 실제로 도는 플러그인(2026-10-23 편입). 배포판엔 다른 보호(ACL)가 없다 —
 # brain-source 만이 아니라 폴더 전체를 건다: 옆에 새 플러그인을 심으면 brain-source 만 지켜도 소용없다.
 $core = 'CLAUDE\.md|3_시스템/hooks/[^\s",;|&''<>)]*|3_시스템/search\.py|3_시스템/conventions\.md|\.claude/settings\.json|3_시스템/_index/\.core-token|\.obsidian/plugins/[^\s",;|&''<>)]*'
+
+# ── 2.5 볼트 행위 가드(2026-10-29) — 셸이 볼트 안을 지우기·옮기기·이름 바꾸기 하면 판정부(ops-guard.ps1)로.
+#      값싼 1차 = 동사와 볼트 자리가 함께 있을 때만(평소 비용 = 정규식 하나 · 동사가 없으면 바로 끝).
+#      _index·__pycache__ 는 기계 파생물이라 볼트 자리로 치지 않는다. .trash 는 친다(비우기 = 사람 몫).
+#      셸 동사는 인용부호 밖에서만 센다 — 인라인 코드의 글자 «rm» 이 걸렸다(10-29 첫 가동 오탐). 파이썬 호출은 코드 안이 본업이라 전체에서.
+if ($tool -in 'Bash','PowerShell' -and
+    (([regex]::Replace($p, "'[^']*'|""[^""]*""", ' Q ')) -match '(^|[\s;&|({])(rm|mv|rmdir|unlink|del|Remove-Item|Move-Item|Rename-Item)(?=\s)' -or
+     $p -match 'os\.(remove|unlink|rename|rmdir)\(|shutil\.(rmtree|move)\(|IO\.(File|Directory)\]::(Delete|Move)\(') -and
+    $p -match '(0_작업|1_수집|2_지식|\.trash|3_시스템/(?!_index/|__pycache__))') {
+    $og = Join-Path $PSScriptRoot 'ops-guard.ps1'
+    if (Test-Path $og) { . $og }
+}
+# 옵시디언 공식 CLI(10-29 결정 Q4): eval = 금지 · move·rename·delete = fileops 로(장부). 경로·따옴표 뒤의 이름도 잡는다.
+if ($tool -in 'Bash','PowerShell' -and $p -match '(^|[\s;&|(/"''])obsidian(\.com|\.exe)?["'']?\s+(eval|move|rename|delete)\b') {
+    $opsMode = 'obsidian'
+    $og = Join-Path $PSScriptRoot 'ops-guard.ps1'
+    if (Test-Path $og) { . $og }
+}
+# 업데이트·이전 «적용» = 코어·구조를 한 명령으로 바꾼다 → 한 번 묻는다(파일마다 묻던 승인 피로 대신 · dist-sync P1).
+if ($tool -in 'Bash','PowerShell' -and $p -match 'fileops\.py[^;&|]*\s(update|migrate)\s[^;&|]*--apply') {
+    $opsMode = 'apply'
+    $og = Join-Path $PSScriptRoot 'ops-guard.ps1'
+    if (Test-Path $og) { . $og }
+}
+
 # 값싼 1차 검사를 먼저 한다. 대부분의 호출은 코어와 무관하고, 아래 절대경로 순회는
 # 선택적 접두 + non-greedy 라 백트래킹이 붙는다 — 1차를 빼면 비코어 경로가
 # 220ms→296ms 로 늘어난다(2026-08-17 실측). 상시 비용은 여기서 결정된다.

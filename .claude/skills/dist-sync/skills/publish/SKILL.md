@@ -4,8 +4,8 @@ description: 이 볼트의 코어 변경을 배포판에 반영한다. "배포�
 ---
 # /dist-sync:publish — 이 볼트를 배포판으로
 
-**P0 = 진단뿐이다. 파일을 하나도 고치지 않는다.** 적용은 P1 이후다.
-근거·미결 → 제작자 볼트의 dist-sync 설계 노트(배포판 미포함).
+진단 → 문구 작성 → 옮기기 → 검증 → 커밋까지 하고, push 만 별도 승인을 받는다.
+근거·미결 → [[외부뇌-dist-sync-모듈]] · ADR-012.
 
 ## 이 방향이 어려운 이유
 
@@ -59,7 +59,7 @@ git add <파일1> <파일2>   # ⛔ git add -u / git add . 금지
 
 ## 하지 않는 것
 
-- **개인 층을 배포판으로 옮기지 않는다** — `1_수집/**` · `2_지식/notes·sessions·decisions/**`(설계노트·사용자설명서 제외) · `_index/` · `_claude-memory/`.
+- **개인 층을 배포판으로 옮기지 않는다** — `1_수집/**` · 역할 `notes`·`sessions`·`decisions`·`modules`·`canvas` 자리(설계노트·사용자설명서 제외 · 목록 = `dist-diff.py` `PERSONAL`) · `_index/` · `_claude-memory/`.
 - **일괄 치환하지 않는다.** 후보는 스크립트, 문구는 사람·Claude.
 - **`git add -u`·`git add .` 를 쓰지 않는다.**
 - **사용자가 보류한 미커밋 변경을 건드리지 않는다.**

@@ -38,16 +38,18 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 
 ## 업데이트 — 새 배포판이 나왔을 때
 
+> **2026-11 판은 폴더 체계가 바뀌었다** — `notes` → `분야` · `sessions` → `기록` · `decisions` → `일/외부뇌/결정` · `1_수집/학교` → `배움`. 업데이터(`dist-sync:update`)가 이전 파일(`3_시스템/migrations/`)로 옮기고, 링크를 고치고, 되돌릴 수 있다.
+
 > **먼저 읽을 것.** 업데이트는 «내 볼트에 배포판의 **코어만** 덮어쓰고, 내가 쓴 것은 건드리지 않는 일»이다. `git pull`로 하면 안 된다 — 배포판이 추적하는 파일 중 `recent.md`·`open-loops.md`·`MOC.md`·`profile.md`·`CLAUDE.md`·`3_시스템/config.json` 여섯은 **설치 후 내가 매일 쓰는 파일**이라 충돌이 나고 업데이트가 멈춘다.
 
 ### 파일은 네 층이다 (이 표가 전부다)
 
 | 층 | 무엇 | 업데이트 때 |
 |---|---|---|
-| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · `ingest.py` · `ingest_vision.py` · `3_시스템/_ref/**` · `3_시스템/_eval/**` · `.obsidian/plugins/brain-source/`(설정 `data.json` 제외) | **덮어쓴다** |
-| **씨앗** | `2_지식/recent.md` · `open-loops.md` · `MOC.md` · `profile.md` · `3_시스템/config.json` · `2_지식/notes/설계노트.md` · `사용자설명서.md` | **덮어쓰지 않는다.** 위쪽 머리말(사용법 안내)만 새것으로 바꾸고 그 아래 내가 쓴 항목은 그대로 둔다 |
+| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · 코어 대본(`fileops`·`brain`·`roles`·`follow` 등) · `ingest.py` · `ingest_vision.py` · `3_시스템/_ref/**` · `3_시스템/_eval/**` · `.obsidian/plugins/brain-source/`(설정 `data.json` 제외) | **덮어쓴다** |
+| **씨앗** | `2_지식/recent.md` · `open-loops.md` · `MOC.md` · `profile.md` · `3_시스템/config.json` · `2_지식/주제.md` · `보존.md` · `2_지식/일/외부뇌/설계노트.md` · `사용자설명서.md` | **덮어쓰지 않는다.** 위쪽 머리말(사용법 안내)만 새것으로 바꾸고 그 아래 내가 쓴 항목은 그대로 둔다 |
 | **`CLAUDE.md`** | — | **§0(내 호칭·말투)만 남기고 나머지를 새것으로.** 한 파일에 섞여 있어 자동 복사 불가 |
-| **개인** | `1_수집/**` · `2_지식/notes·sessions·decisions·modules/**` · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` · `.obsidian/plugins/*/data.json` | **열지도 않는다** |
+| **개인** | `1_수집/**` · `2_지식/배움·일·생활·분야·기록·일정·modules/**` · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` · `.obsidian/plugins/*/data.json` | **열지도 않는다** |
 
 ---
 
@@ -151,7 +153,7 @@ git show dist/main:2_지식/recent.md
 git status --short
 ```
 
-여기에 `1_수집/`·`2_지식/notes/`·`sessions/`·`decisions/`·`_index/`·`_claude-memory/` 경로가 **하나라도 보이면 잘못된 것이다.** 즉시 멈추고 `git reset --hard backup-before-update`로 되돌린다.
+여기에 `1_수집/`·`2_지식/`의 영역·`기록/`·`_index/`·`_claude-memory/` 경로가 **하나라도 보이면 잘못된 것이다.** 즉시 멈추고 `git reset --hard backup-before-update`로 되돌린다.
 
 문제없으면:
 
@@ -242,12 +244,12 @@ git reset --hard backup-before-update
 1단계에서 만든 지점으로 전부 돌아간다. 그 뒤 처음부터 다시 하거나, 그냥 두고 써도 된다 — **업데이트는 선택이고, 안 해도 기존 볼트는 그대로 돌아간다.**
 
 ## 더 읽기
-- **[사용자설명서](2_지식/notes/사용자설명서.md)** — 설치 후 어떻게 쓰나(간단). 일상 사용·스킬·구조.
-- **[설계노트](2_지식/notes/설계노트.md)** — 왜 이렇게 만들었나(상세). 아키텍처·검색·설계 원칙·재구축 명세(§12).
+- **[사용자설명서](2_지식/일/외부뇌/사용자설명서.md)** — 설치 후 어떻게 쓰나(간단). 일상 사용·스킬·구조.
+- **[설계노트](2_지식/일/외부뇌/설계노트.md)** — 왜 이렇게 만들었나(상세). 아키텍처·검색·설계 원칙·재구축 명세(§12).
 
 ## 구조 (알 필요 있는 것만)
-- `1_수집/` = 내가 쓰는 곳 (시스템이 절대 수정 안 함)
-- `2_지식/` = 뇌가 쌓는 지식 (노트·세션·결정)
+- `1_수집/` = 받은 원본 (내용은 시스템이 고치지 않음 · 옮기고 지우면 시스템이 따라감)
+- `0_작업/` = 진행 중인 작업 · `2_지식/` = 뇌가 쌓는 지식 (목적별 영역 배움·일·생활·분야 · 기록 · 일정)
 - `3_시스템/` = 기계 (건드릴 필요 없음)
 - 민감 노트는 frontmatter `sensitive: true` → push 제외.
 

@@ -1,0 +1,76 @@
+/* 외부뇌 캘린더(0.2 · 11-02) — brain-base 홈·주제 패널과 같은 꼴: 묶음 = 그림 머리말 + 세로 안내선 아래 들여 쓴 줄 · 색은 상태(가까운 마감)에만
+   탭 너비 다 · 큰 달력(칸에 일정 제목) + 아래 고른 날 세부 | 오른쪽 간략 목록 · 좁으면 한 단 */
+.bc { padding: 0 !important; container-type: inline-size; }
+.bc-wrap { padding: 16px 24px 40px; }
+.bc-cols { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 28px; align-items: start; }
+@container (max-width: 760px) { .bc-cols { grid-template-columns: minmax(0, 1fr); gap: 22px; } .bc-wrap { padding: 12px 10px 32px; } }
+.bc-main { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.bc-spacer { flex: 1; }
+.bc-btn { padding: 4px; }
+
+/* 큰 달력 */
+.bc-head { display: flex; align-items: center; gap: 2px; padding: 0 0 10px; }
+.bc-month { font-weight: var(--font-semibold); font-size: 1.25em; padding: 0 6px; white-space: nowrap; }
+.bc-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--background-modifier-border); border-left: 1px solid var(--background-modifier-border); }
+.bc-wd { padding: 6px 8px; font-size: var(--font-ui-smaller); color: var(--text-faint); border-right: 1px solid var(--background-modifier-border); border-bottom: 1px solid var(--background-modifier-border); }
+.bc-day { min-height: 96px; padding: 4px 4px 6px; display: flex; flex-direction: column; gap: 2px; cursor: pointer; overflow: hidden; border-right: 1px solid var(--background-modifier-border); border-bottom: 1px solid var(--background-modifier-border); }
+.bc-day:hover { background: var(--background-modifier-hover); }
+.bc-num { font-size: var(--font-ui-small); color: var(--text-normal); padding: 0 4px; font-variant-numeric: tabular-nums; }
+.bc-day.is-other .bc-num { color: var(--text-faint); }
+.bc-wd.is-red, .bc-day.is-red .bc-num { color: var(--color-red); }
+.bc-wd.is-blue, .bc-day.is-blue .bc-num { color: var(--color-blue); }
+.bc-day.is-other.is-red .bc-num, .bc-day.is-other.is-blue .bc-num { opacity: 0.5; }
+.bc-hol { font-size: var(--font-ui-smaller); line-height: 1.3; color: var(--color-red); padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bc-day.is-other .bc-hol { opacity: 0.5; }
+.bc-day.is-today .bc-num { color: var(--text-on-accent); background: var(--interactive-accent); border-radius: 10px; align-self: flex-start; padding: 0 7px; font-weight: var(--font-semibold); }
+.bc-day.is-sel { background: var(--background-modifier-hover); box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus); }
+.bc-ev { font-size: var(--font-ui-smaller); line-height: 1.35; padding: 1px 4px; border-radius: 4px; color: var(--text-muted); background: var(--background-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bc-ev.is-near { color: var(--text-warning); }
+.bc-ev.is-soon { color: var(--text-error); font-weight: var(--font-medium); }
+.bc-ev.is-done { color: var(--text-faint); text-decoration: line-through; background: transparent; }
+.bc-ev.bc-more { background: transparent; color: var(--text-faint); }
+@container (max-width: 760px) { .bc-day { min-height: 54px; } .bc-ev { display: none; } .bc-day:has(.bc-ev)::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); margin: 2px auto 0; } .bc-day:has(.bc-ev.is-soon)::after { background: var(--text-error); } }
+
+/* 묶음(세부 · 간략 공통) */
+.bc-side { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
+.bc-sec.is-past .bc-sec-name, .bc-sec.is-past .bc-sec-ic, .bc-sec.is-past .bc-time, .bc-sec.is-past .bc-text { color: var(--text-faint); }
+.bc-sec-head { display: flex; align-items: center; gap: 6px; padding: 0 6px 4px; font-size: var(--font-ui-small); font-weight: var(--font-medium); color: var(--text-normal); }
+.bc-detail .bc-sec-head { font-size: var(--font-ui-medium); }
+.bc-sec-ic { display: flex; flex: none; color: var(--text-muted); }
+.bc-sec-ic svg { width: 14px; height: 14px; }
+.bc-sec-sub { font-size: var(--font-ui-smaller); font-weight: normal; color: var(--text-accent); }
+.bc-sec-n { margin-left: auto; font-size: var(--font-ui-smaller); font-weight: normal; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.bc-sec-body { margin-left: 12px; padding-left: 4px; border-left: 1px solid var(--background-modifier-border); }
+.bc-empty { color: var(--text-faint); padding: 0 6px; }
+
+/* 세부 줄 */
+.bc-row { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 2px 6px; border-radius: var(--radius-s); cursor: pointer; }
+.bc-row:hover, .bc-brief:hover { background: var(--background-modifier-hover); }
+.bc-check { margin: 0 !important; flex: none; }
+.bc-time { flex: none; width: 6.6em; font-size: var(--font-ui-smaller); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.bc-row .bc-text { flex: 1; min-width: 0; font-size: var(--font-ui-small); color: var(--text-normal); overflow-wrap: anywhere; line-height: 1.4; }
+.bc-row.is-done .bc-text { color: var(--text-faint); text-decoration: line-through; }
+.bc-row.is-done .bc-time { color: var(--text-faint); }
+.bc-row.is-near .bc-time, .bc-brief.is-near .bc-time { color: var(--text-warning); }
+.bc-row.is-soon .bc-time, .bc-brief.is-soon .bc-time { color: var(--text-error); font-weight: var(--font-semibold); }
+.bc-add .bc-text, .bc-add-ic { color: var(--text-faint); }
+.bc-add-ic { display: flex; flex: none; }
+.bc-add-ic svg { width: 14px; height: 14px; }
+
+/* 간략 줄 — 한 줄 · 시각 + 제목 */
+.bc-brief { display: flex; align-items: baseline; gap: 6px; padding: 2px 6px; border-radius: var(--radius-s); cursor: pointer; }
+.bc-brief .bc-time { width: 3.4em; }
+.bc-brief .bc-text { flex: 1; min-width: 0; font-size: var(--font-ui-smaller); color: var(--text-normal); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 추가 줄 — 내용 · (시각 체크 → 24시간 시:분 ~ 시:분) · 주제 */
+.bc-form { display: flex; flex-direction: column; gap: 6px; padding: 6px; }
+.bc-in-text { width: 100%; }
+.bc-form-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bc-timed { display: flex; align-items: center; gap: 4px; font-size: var(--font-ui-small); color: var(--text-muted); cursor: pointer; }
+.bc-timed input { margin: 0; }
+.bc-times { display: flex; align-items: center; gap: 2px; }
+.bc-times.is-off { opacity: 0.4; }
+.bc-in-hm { width: auto; min-width: 3.6em; font-variant-numeric: tabular-nums; }
+.bc-colon, .bc-tilde { color: var(--text-faint); padding: 0 2px; }
+.bc-in-topic { max-width: 11em; }
+.bc-ok { color: var(--interactive-accent); }
