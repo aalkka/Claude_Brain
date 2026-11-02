@@ -12,16 +12,20 @@
      · 0_작업 파일의 쌍둥이가 1_수집 에 있으면 «제출·승격된 작업 파일» — 마지막 수정이 --days(30)일 지난 것만 후보
   ② 빈 파일(0바이트)  ③ 빈 폴더(역할 자리·주제 폴더·고정 하위 폴더는 뺌)
   ④ 받은함 `_promoted`(승격 노트가 원문 전체를 담음 — §13 B6)
-보고만(지우지 않음): ⑤ 받은함에 7일 넘게 머문 것(§13 B5) · ⑥ 휴지통 30일 넘은 것(비우기는 사람).
-안 함: 고아 첨부(링크 그래프 필요) · 웹 공지 마감+30일·대기·보관 칸(웹 수집 대본 몫) · 강의자료 학기 끝+1년(사용자 승인 목록).
+  ⑤ 강의자료·공지(학기 끝 + 보존 표의 날) · 웹 수집 보관 칸(학기 끝) · 고아 첨부(어느 노트도 이름을 안 씀)
+보고만(지우지 않음): 받은함에 7일 넘게 머문 것(§13 B5) · 휴지통 30일 넘은 것(비우기는 사람).
+안 함: 웹 공지 마감+30일·대기 칸(웹 수집 대본이 직접).
 """
 import argparse
 import datetime as dt
+import glob
 import hashlib
 import json
 import os
+import re
 import sys
 import time
+import urllib.parse
 from collections import defaultdict
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -122,13 +126,95 @@ def find(days):
                 stay.append({"path": rel(os.path.join(inbox, f)), "days": int(age)})
     old_trash = [{"item": d, "days": age, "files": n, "mb": round(sz / 1e6, 1)}
                  for d, age, n, sz in fileops.trash_items(fileops.Ctx(VAULT)) if age >= t_days]
+    today = dt.date.today()
     return {"dup": dup, "promoted_work": promoted_work, "promoted_work_young": young, "empty_files": empty_files,
-            "empty_dirs": empty_dirs, "promoted": promoted, "inbox_stay": stay, "trash_old": old_trash}
+            "empty_dirs": empty_dirs, "promoted": promoted, "inbox_stay": stay, "trash_old": old_trash,
+            "lecture_old": lecture_old(today), "archive_old": archive_old(today), "orphan_attach": orphan_attachments()}
+
+
+def lecture_old(today):
+    """보존 일정표 «강의자료» — 학기 끝 + 날이 지난 과목의 강의자료·공지 폴더(과제·제출·시험·족보는 무기한 · 후보일 뿐)."""
+    days = roles.retention("강의자료")
+    if days is None:
+        return []
+    out = []
+    for t in roles.topics():
+        end = roles.semester_end(t.get("학기"))
+        if not end or dt.date.fromisoformat(end) + dt.timedelta(days=days) >= today:
+            continue
+        for sub in ("강의자료", "공지"):
+            r = "%s/%s/%s" % (roles.path("school"), t["이름"], sub)
+            a = os.path.join(VAULT, *r.split("/"))
+            n = sum(len(fns) for _, _, fns in os.walk(a))
+            if n:
+                out.append({"src": r, "count": n, "end": end})
+    return out
+
+
+def archive_old(today):
+    """보존 일정표 «보관칸» — 웹 수집 보관 칸의 글 가운데 넣은 학기가 끝나고 날이 지난 것(글 · 첨부 · 색인 · 원시)."""
+    days = roles.retention("보관칸")
+    if days is None:
+        return []
+    ends = sorted(roles.semester_ends().values())
+    out = []
+    for sp in glob.glob(os.path.join(HERE, "_index", "collect", "*.json")):
+        try:
+            with open(sp, encoding="utf-8") as f:
+                items = json.load(f).get("items") or {}
+        except (OSError, ValueError):
+            continue
+        rid = os.path.splitext(os.path.basename(sp))[0]
+        for aid, it in items.items():
+            run = (it.get("archived_run") or it.get("run") or "")[:8]
+            if not it.get("archived") or not re.fullmatch(r"\d{8}", run):
+                continue
+            md = "%s-%s" % (run[4:6], run[6:8])
+            end = next(("%s-%s" % (run[:4], e) for e in ends if e >= md), "%d-%s" % (int(run[:4]) + 1, ends[0]))
+            if dt.date.fromisoformat(end) + dt.timedelta(days=days) >= today:
+                continue
+            r = it["archived"].replace("\\", "/")
+            stem = os.path.splitext(r)[0]
+            src = roles.path("sources")
+            for x in (r, stem, "%s/%s" % (roles.path("source_index"), stem[len(src) + 1:]), "%s/.web/%s/%s.html" % (src, rid, aid)):
+                a = os.path.join(HERE, "_index", "collect", "archive", *x.split("/"))
+                if os.path.exists(a):
+                    out.append({"src": "3_시스템/_index/collect/archive/" + x, "count": sum(len(fns) for _, _, fns in os.walk(a)) or None, "end": end})
+    return out
+
+
+ATTACH = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".pdf", ".mp3", ".m4a", ".wav", ".mp4", ".webm"}
+
+
+def orphan_attachments():
+    """보존 일정표 «정리후보»의 고아 첨부 — 지식 층·볼트 뿌리의 그림·PDF·소리 가운데 어느 노트·캔버스도 이름을 쓰지 않는 것. 이름 글자가 어디든 나오면 둔다(보수적)."""
+    cands = []
+    for dp, dns, fns in walk(roles.path("knowledge"), {roles.path("modules")}):
+        cands += [os.path.join(dp, f) for f in fns if os.path.splitext(f)[1].lower() in ATTACH]
+    cands += [os.path.join(VAULT, f) for f in os.listdir(VAULT) if os.path.isfile(os.path.join(VAULT, f)) and os.path.splitext(f)[1].lower() in ATTACH]
+    if not cands:
+        return []
+    ctx = fileops.Ctx(VAULT, dry=True)
+    text = []
+    for r in fileops.walk_vault(ctx, exts=(".md", ".canvas")):
+        try:
+            with open(ctx.abs(r), encoding="utf-8", errors="replace") as f:
+                text.append(f.read())
+        except OSError:
+            pass
+    text = "\n".join(text)
+    return [rel(a) for a in cands if os.path.basename(a) not in text and urllib.parse.quote(os.path.basename(a)) not in text and os.path.basename(a).replace(" ", "%20") not in text]
 
 
 def plan_of(c):
     src_root = roles.path("sources") + "/"
     ops = []
+    for x in c.get("lecture_old", []):
+        ops.append({"op": "rm", "src": x["src"], "count": x["count"], "why": "보존 일정표 강의자료 — 학기 끝 %s + 날 지남" % x["end"], "user_asked": True})
+    for x in c.get("archive_old", []):
+        ops.append({"op": "rm", "src": x["src"], "count": x["count"], "why": "보존 일정표 보관칸 — 학기 끝 %s 지남" % x["end"]})
+    for r in c.get("orphan_attach", []):
+        ops.append({"op": "rm", "src": r, "why": "고아 첨부 — 어느 노트·캔버스도 이름을 안 씀"})
     for x in c["dup"]:
         ops.append({"op": "rm", "src": x["src"], "why": "같은 내용 사본 — 남김: %s" % x["keep"], "user_asked": x["src"].startswith(src_root)})
     for x in c["promoted_work"]:
@@ -168,6 +254,7 @@ def main(argv=None):
     print("정리 후보 %d건 → %s" % (len(ops), rel(out)))
     print("  같은 내용 사본 %d · 제출·승격된 작업 파일 %d(%s 안 된 것 %d) · 빈 파일 %d · 빈 폴더 %d · 받은함 승격 끝 %d" % (
         len(c["dup"]), len(c["promoted_work"]), "무기한" if a.days == float("inf") else "%d일" % a.days, c["promoted_work_young"], len(c["empty_files"]), len(c["empty_dirs"]), len(c["promoted"])))
+    print("  강의자료 학기 끝 지남 %d · 보관 칸 학기 끝 지남 %d · 고아 첨부 %d" % (len(c["lecture_old"]), len(c["archive_old"]), len(c["orphan_attach"])))
     for o in ops[:20]:
         print("  - %s — %s" % (o["src"], o["why"]))
     if len(ops) > 20:
