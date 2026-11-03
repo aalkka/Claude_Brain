@@ -611,6 +611,10 @@ def build_known(A):
         data[blob] = raw[j + 1:j + 1 + size]
         i = j + 1 + size + 1
     table = {p: {key_of(p, data[b]): b[:16] for b in sorted(s)} for p, s in sorted(blobs.items())}
+    # 표는 줄지 않는다 — 이력을 고쳐 써서 옛 판이 이력에서 사라져도 그 판을 받은 사용자의 파일은 «안 고친 파일»이다(2026-11-03)
+    for p, vers in (load_known(A) or {}).items():
+        if core_zone(p):
+            table[p] = {**vers, **table.get(p, {})}
     write_text(os.path.join(A, KNOWN_REL), json.dumps({"schema": 1, "rev": revs[0].decode()[:12], "paths": table},
                                                       ensure_ascii=False, indent=0, sort_keys=True) + "\n")
     return len(table), sum(len(v) for v in table.values())
