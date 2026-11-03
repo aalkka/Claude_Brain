@@ -14,7 +14,7 @@
   py -3 3_시스템/fileops.py replace <새 파일> <자리> --why ..     덮어쓰기 — 옛것은 휴지통으로
   py -3 3_시스템/fileops.py mkdir <폴더> · archive <노트.md> --why ..
   py -3 3_시스템/fileops.py plan <계획.json> [--apply]          여러 행위를 한 묶음으로(기본 = 미리 보기)
-  py -3 3_시스템/fileops.py migrate [--apply] [--undo <이전 id>] 3_시스템/migrations/ 의 밀린 이전(업데이터가 부름)
+  py -3 3_시스템/fileops.py migrate [--apply] [--undo <이전 id>] [--from <이전 폴더>] 3_시스템/migrations/ 의 밀린 이전(업데이터가 부름)
   py -3 3_시스템/fileops.py update <계획.json> [--apply]        배포판 코어 바꾸기(업데이터 전용 · dist-diff --plan-out)
   py -3 3_시스템/fileops.py record rm|mv <원래> [<지금 자리>] [--trash system|none]   밖(옵시디언)에서 이미 한 일 적기
   py -3 3_시스템/fileops.py log [-n 20] [--grep 글자] · where <이름> · trash [--older 일수]
@@ -56,6 +56,7 @@ LEDGER_DIR = "3_시스템/ledger"
 OPS = LEDGER_DIR + "/ops.jsonl"
 MIGRATED = LEDGER_DIR + "/migrations.json"
 MIGRATIONS = "3_시스템/migrations"
+KNOWN_TABLE = ".claude/skills/dist-sync/known-hashes.json"   # 배포판이 실어 온 파일 목록을 겸한다(dist-diff --build-known)
 VIEW = "2_지식/장부.md"
 TRASH = ".trash"          # 옵시디언 «Obsidian 휴지통» 과 같은 폴더 — 점 폴더라 탐색기에 안 보인다
 VIEW_N = 100
@@ -119,6 +120,7 @@ class Ctx:
         self.batch = "b" + stamp(now())
         self.sid = os.environ.get("CLAUDE_CODE_SESSION_ID", "")[:8]
         self.events = []
+        self.quiet_refs = False     # 옮길 때마다 옛 경로를 알리지 않는다(이전이 끝에 한 번에 알린다)
 
     def abs(self, rel):
         return os.path.join(self.vault, *rel.split("/")) if rel else self.vault
@@ -719,7 +721,7 @@ def op_mv(ctx, src, dst, why, lenient=False, by_undo=None, core_ok=False):
     kind = "rename" if posixpath.dirname(rs) == posixpath.dirname(rd) else "mv"
     if ctx.dry:
         ch = rewrite_links(ctx, moves, dry=True)
-        refs, nref = code_refs(ctx, [rs])
+        refs, nref = ([], 0) if ctx.quiet_refs else code_refs(ctx, [rs])
         print("미리 보기 · %s %s → %s%s" % (LABEL[kind], rs, rd, " (파일 %d)" % info["n"] if isdir else ""))
         print("  링크 고칠 파일 %d(%d곳)%s" % (len(ch), sum(k for _, k in ch), " · 짝 메모 %d 함께" % len(memos) if memos else ""))
         if nref:
@@ -748,7 +750,7 @@ def op_mv(ctx, src, dst, why, lenient=False, by_undo=None, core_ok=False):
         raise Stop("옮긴 뒤 내용이 다르다(sha256): %s" % rd)
     rel_fix = fix_moved_relative(ctx, pairs, dry=False)
     ch = rewrite_links(ctx, moves, dry=False)
-    refs, nref = code_refs(ctx, [rs])
+    refs, nref = ([], 0) if ctx.quiet_refs else code_refs(ctx, [rs])
     ev = ctx.add(kind, src=rs, dst=rd, why=why, undo_of=by_undo, links=sum(k for _, k in ch),
                  linkfiles=[f for f, _ in ch][:20], made=[ctx.rel(m) for m in made], **info, **({"via": via} if via else {}))
     for o, n in memos:
@@ -1109,7 +1111,15 @@ def op_undo(ctx, key):
             continue
         op = e["op"]
         core = e.get("by") == "update"  # 업데이트가 바꾼 코어는 되돌릴 때도 코어 자리를 쓴다
-        if op in ("mv", "rename"):
+        if e.get("cfg"):                # 이전이 고친 옵시디언 설정 — 평소 행위가 안 닿는 자리라 여기서 직접 되돌린다
+            if op == "cp":
+                slot = trash_slot(ctx, e["dst"])
+                move(ctx.abs(e["dst"]), ctx.abs(slot))
+                r = ctx.add("rm", src=e["dst"], dst=slot, undo_of=e["id"])
+            else:
+                move(ctx.abs(e["dst"]), ctx.abs(e["src"]))
+                r = ctx.add("restore", src=e["dst"], dst=e["src"], of=e["id"], undo_of=e["id"])
+        elif op in ("mv", "rename"):
             r = op_mv(ctx, e["dst"], e["src"], "되돌리기 " + e["id"], by_undo=e["id"], core_ok=core)
             drop_made(ctx, e.get("made"))
         elif op == "rm":
@@ -1263,7 +1273,59 @@ def op_plan(ctx, path, apply):
     run_ops(ctx, ops, lenient=False)
 
 
-def op_migrate(ctx, apply, undo=None):
+def fix_obsidian_settings(ctx, moved, mid):
+    """이전이 옮긴 자리를 옵시디언 설정(책갈피·그래프·폴더 설정·열린 탭)에서도 고친다 — 옵시디언을 닫고 돌리므로 옵시디언이 스스로 못 고친다.
+    플러그인 data.json 은 사용자 것이라 열지 않는다(남은 옛 경로는 user_refs 가 알린다). 옛 판은 휴지통 · 이전 묶음과 함께 되돌린다."""
+    ob = ctx.abs(".obsidian")
+    if not moved or not os.path.isdir(ob):
+        return
+    for f in sorted(os.listdir(ob)):
+        a = os.path.join(ob, f)
+        if not f.endswith(".json") or not os.path.isfile(a):
+            continue
+        r = ".obsidian/" + f
+        try:
+            text, bom = read_text(a)
+        except (OSError, UnicodeDecodeError):
+            continue
+        out = text
+        for s, d in moved:      # 파일 이동이 폴더 이동보다 먼저 적혀 있다(이전 파일의 순서)
+            out = re.sub(r"(?<![\w/\-])" + re.escape(s) + r'(?=[/"\\)\s]|$)', lambda m, d=d: d, out)
+        if out == text:
+            continue
+        if ctx.dry:
+            print("  옵시디언 설정 고칠 것: %s" % r)
+            continue
+        slot = trash_slot(ctx, r)
+        move(a, ctx.abs(slot))
+        ctx.add("rm", src=r, dst=slot, why="이전 %s: 옛 경로" % mid, cfg=True, **describe(ctx.abs(slot)))
+        write_text(a, out, bom)
+        ctx.add("cp", src="migration:" + mid, dst=r, why="이전 %s: 새 경로" % mid, cfg=True, **describe(a))
+        print("  옵시디언 설정 고침: %s" % r)
+
+
+def user_refs(ctx, olds, table):
+    """사용자 쪽에 남은 옛 경로(기억·플러그인 설정·사용자가 만든 대본) — 배포판이 실어 온 파일은 뺀다(옛 경로를 적는 것이 본업인 이전 도구·시험 자료)."""
+    hits, _ = code_refs(ctx, olds, limit=10 ** 6)
+    ob = ctx.abs(".obsidian/plugins")
+    pats = set(olds) | {o.replace("/", "\\\\") for o in olds}
+    for name in (os.listdir(ob) if os.path.isdir(ob) else []):
+        a = os.path.join(ob, name, "data.json")
+        try:
+            with open(a, encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        if any(p in text for p in pats):
+            hits.append(".obsidian/plugins/%s/data.json:1" % name)
+    try:
+        known = load_json(table).get("paths", {})
+    except (OSError, ValueError):
+        known = {}
+    return [h for h in hits if h.rsplit(":", 1)[0] not in known]
+
+
+def op_migrate(ctx, apply, undo=None, from_dir=None):
     state_p = ctx.abs(MIGRATED)
     state = load_json(state_p) if os.path.exists(state_p) else {"applied": {}}
     if undo:
@@ -1275,7 +1337,9 @@ def op_migrate(ctx, apply, undo=None):
         save_json(state_p, state)
         print("이전 되돌림: %s" % undo)
         return
-    d = ctx.abs(MIGRATIONS)
+    if from_dir and apply:
+        raise Stop("--from 은 미리 보기 전용이다 — 적용은 업데이트로 들어온 이전 파일로")
+    d = from_dir or ctx.abs(MIGRATIONS)      # 업데이트 전 미리 보기 = 아직 볼트에 없는 이전 파일을 배포판에서 읽는다
     files = sorted(f for f in os.listdir(d) if f.endswith(".json")) if os.path.isdir(d) else []
     pending = [f for f in files if f[:-5] not in state["applied"]]
     if not pending:
@@ -1284,9 +1348,28 @@ def op_migrate(ctx, apply, undo=None):
     for f in pending:
         m = load_json(os.path.join(d, f))
         mid = f[:-5]
-        print("이전 %s — %s · %d건%s" % (mid, m.get("title", ""), len(m.get("ops", [])), "" if apply else " (미리 보기)"))
+        ops = m.get("ops", [])
+        print("이전 %s — %s · %d건%s" % (mid, m.get("title", ""), len(ops), "" if apply else " (미리 보기)"))
         sub = Ctx(ctx.vault, by="migration:" + mid, dry=not apply)
-        run_ops(sub, m.get("ops", []), lenient=True)
+        sub.quiet_refs = True
+        run_ops(sub, ops, lenient=True)
+        if apply:
+            moved = [(e["src"], e["dst"]) for e in sub.events if e["op"] in ("mv", "rename") and not e.get("parent")]
+        else:
+            moved = []
+            for o in ops:
+                if o.get("op") == "mv" and os.path.exists(ctx.abs(o["src"])):
+                    t = o["dst"] + "/" + posixpath.basename(o["src"]) if os.path.isdir(ctx.abs(o["dst"])) else o["dst"]
+                    moved.append((o["src"], t))
+        fix_obsidian_settings(sub, moved, mid)
+        table = os.path.join(os.path.abspath(from_dir), "..", "..", *KNOWN_TABLE.split("/")) if from_dir else ctx.abs(KNOWN_TABLE)
+        left = user_refs(sub, [s for s, _ in moved], table) if moved else []
+        if left:
+            print("  ⚠ 사용자 쪽에 옛 경로 %d곳(고치지 않음 · 개인 층이라 사람이 본다):" % len(left))
+            for h in left[:30]:
+                print("    " + h)
+            if len(left) > 30:
+                print("    … 외 %d곳" % (len(left) - 30))
         if apply:
             state["applied"][mid] = {"ts": now().isoformat(timespec="seconds"), "batch": sub.batch, "ops": len(sub.events)}
             save_json(state_p, state)
@@ -1296,11 +1379,12 @@ def op_migrate(ctx, apply, undo=None):
 
 
 def op_update(ctx, path, apply):
-    """dist-diff --plan-out 이 만든 계획: {"source", "version", "ops": [{"op": "put"|"remove", "rel", "src"}]}.
-    옛 판은 휴지통으로 — 업데이트 하나를 묶음 id 하나로 통째 되돌릴 수 있다."""
+    """dist-diff --plan-out 이 만든 계획: {"source", "version", "ops": [{"op": "put"|"remove", "rel", "src", "why"}], "conflicts": [...]}.
+    옛 판은 휴지통으로 — 업데이트 하나를 묶음 id 하나로 통째 되돌릴 수 있다. conflicts = 못 합친 파일 · 건드리지 않는다."""
     plan = load_json(path)
     ops = plan.get("ops", [])
     ver = plan.get("version", "")
+    conflicts = plan.get("conflicts", [])
     ctx.by = "update"
     print("업데이트 %s · %d건%s" % (ver, len(ops), "" if apply else " (미리 보기 — 실행 = --apply)"))
     for o in ops:
@@ -1310,7 +1394,9 @@ def op_update(ctx, path, apply):
     if not apply:
         for o in ops:
             have = os.path.exists(ctx.abs(o["rel"]))
-            print("  %s %s" % ("바꿈" if o["op"] == "put" and have else "넣음" if o["op"] == "put" else "뺌(휴지통)", o["rel"]))
+            print("  %s %s" % (o.get("why") or ("바꿈" if o["op"] == "put" and have else "넣음" if o["op"] == "put" else "뺌(휴지통)"), o["rel"]))
+        for c in conflicts:
+            print("  ⛔ 못 합침(그대로 둠) %s — %s" % (c["rel"], c.get("why", "")))
         return
     for o in ops:
         r, a = o["rel"], ctx.abs(o["rel"])
@@ -1329,6 +1415,8 @@ def op_update(ctx, path, apply):
             move(a, ctx.abs(slot))
             ctx.add("rm", src=r, dst=slot, why="업데이트 %s: 배포판에서 빠짐" % ver, **describe(ctx.abs(slot)))
     print("업데이트 적용 %d건 · 되돌리기 = undo %s" % (len(ctx.events), ctx.batch))
+    if conflicts:
+        print("⛔ 못 합쳐 그대로 둔 파일 %d개 — 하나씩 정해야 한다: %s" % (len(conflicts), " · ".join(c["rel"] for c in conflicts)))
 
 
 def save_json(p, obj):
@@ -1394,6 +1482,7 @@ def main(argv=None):
     p.add_argument("file"); p.add_argument("--apply", action="store_true")
     p = sp.add_parser("migrate", help="밀린 이전(3_시스템/migrations)")
     p.add_argument("--apply", action="store_true"); p.add_argument("--undo")
+    p.add_argument("--from", dest="from_dir", help="미리 보기 전용 — 아직 볼트에 없는 이전 파일을 배포판 폴더에서 읽는다")
     p = sp.add_parser("update", help="배포판 코어 바꾸기(업데이터 전용)")
     p.add_argument("file"); p.add_argument("--apply", action="store_true")
     p = sp.add_parser("record", help="밖(옵시디언)에서 이미 한 지우기·옮기기를 장부에 적기")
@@ -1433,7 +1522,7 @@ def main(argv=None):
         elif c == "plan":
             op_plan(ctx, a.file, a.apply)
         elif c == "migrate":
-            op_migrate(ctx, a.apply, a.undo)
+            op_migrate(ctx, a.apply, a.undo, a.from_dir)
         elif c == "update":
             op_update(ctx, a.file, a.apply)
         elif c == "record":

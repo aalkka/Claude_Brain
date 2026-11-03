@@ -7,15 +7,17 @@
 - **파생·캐시**: `3_시스템/_index/dist-sync/` (gitignore — 볼트·push 오염 0)
 - **스킬**: `/dist-sync:update`(받기) · `/dist-sync:publish`(보내기) (⚠ 신규 모듈은 **세션 재시작 후 활성**)
 
-## 지금 되는 것 — P0은 진단뿐이다
+## 지금 되는 것 — 미리 보기, 승인 1번, 적용
 
-파일을 **하나도 고치지 않는다.** 무엇이 다르고 무엇이 바뀔 것인지만 리포트로 낸다.
+진단과 계획은 볼트 내용을 고치지 않는다. 적용은 승인 뒤에 `fileops.py` 가 한다. 절차 = `skills/update/SKILL.md`.
 
 ```bash
 py -3 .claude/skills/dist-sync/scripts/dist-diff.py --a <원본볼트> --b <대상볼트> --mode update|publish
 ```
 
-적용(P1~)은 이 리포트가 근거를 준 뒤에 연다. 이유는 ADR-012 결정 3에 있다 — 사용자 볼트 상태를 모르는 채 적용 규칙을 쓰면 가정 위에 서게 된다.
+사용자가 고친 코어는 판 해시 표(`known-hashes.json` · publish 때 `--build-known`)로 가려서 덮어쓰지 않는다. 합치고, 못 합치면 그대로 두고 묻는다. 근거 = ADR-030.
+
+시험 = `py -3 3_시스템/_eval/update_sim.py --dist <배포판 worktree> --old <옛 판>` — 옛 판을 clone 한 가짜 사용자 볼트를 안내문의 명령 그대로 올린다.
 
 ## 왜 `git pull`이 아닌가
 

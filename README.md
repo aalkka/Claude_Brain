@@ -38,144 +38,33 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 
 ## 업데이트 — 새 배포판이 나왔을 때
 
-> **2026-11 판은 폴더 체계가 바뀌었다** — `notes` → `분야` · `sessions` → `기록` · `decisions` → `일/외부뇌/결정` · `1_수집/학교` → `배움`. 업데이터(`dist-sync:update`)가 이전 파일(`3_시스템/migrations/`)로 옮기고, 링크를 고치고, 되돌릴 수 있다.
+> **2026-11 판은 폴더 체계가 바뀌었다** — `notes` → `분야` · `sessions` → `기록` · `decisions` → `일/외부뇌/결정` · `1_수집/학교` → `배움`. 업데이터가 이전 파일(`3_시스템/migrations/`)로 옮기고, 링크와 옵시디언 설정(책갈피·그래프·열린 탭)을 고치고, 되돌릴 수 있다.
 
-> **먼저 읽을 것.** 업데이트는 «내 볼트에 배포판의 **코어만** 덮어쓰고, 내가 쓴 것은 건드리지 않는 일»이다. `git pull`로 하면 안 된다 — 배포판이 추적하는 파일 중 `recent.md`·`open-loops.md`·`MOC.md`·`profile.md`·`CLAUDE.md`·`3_시스템/config.json` 여섯은 **설치 후 내가 매일 쓰는 파일**이라 충돌이 나고 업데이트가 멈춘다.
+> **먼저 읽을 것.** 업데이트는 «내 볼트에 배포판의 코어를 들이고, 내가 쓰고 고친 것은 지키는 일»이다. `git pull`로 하면 안 된다 — 배포판이 추적하는 파일 중 `recent.md`·`open-loops.md`·`MOC.md`·`profile.md`·`CLAUDE.md`·`3_시스템/config.json` 여섯은 **설치 후 내가 매일 쓰는 파일**이라 충돌이 나고 업데이트가 멈춘다. `git checkout dist/main -- <경로>` 로 골라 받는 것도 안 된다 — 코어 대본끼리 서로 기대고 있어 빠진 파일이 있으면 찾기·기록이 멈춘다.
 
 ### 파일은 네 층이다 (이 표가 전부다)
 
 | 층 | 무엇 | 업데이트 때 |
 |---|---|---|
-| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · 코어 대본(`fileops`·`brain`·`roles`·`follow` 등) · `ingest.py` · `ingest_vision.py` · `3_시스템/_ref/**` · `3_시스템/_eval/**` · `.obsidian/plugins/brain-source/`(설정 `data.json` 제외) | **덮어쓴다** |
-| **씨앗** | `2_지식/recent.md` · `open-loops.md` · `MOC.md` · `profile.md` · `3_시스템/config.json` · `2_지식/주제.md` · `보존.md` · `2_지식/일/외부뇌/설계노트.md` · `사용자설명서.md` | **덮어쓰지 않는다.** 위쪽 머리말(사용법 안내)만 새것으로 바꾸고 그 아래 내가 쓴 항목은 그대로 둔다 |
-| **`CLAUDE.md`** | — | **§0(내 호칭·말투)만 남기고 나머지를 새것으로.** 한 파일에 섞여 있어 자동 복사 불가 |
-| **개인** | `1_수집/**` · `2_지식/배움·일·생활·분야·기록·일정·modules/**` · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` · `.obsidian/plugins/*/data.json` | **열지도 않는다** |
+| **코어** | `.claude/skills/**` · `.claude/settings.json` · `.claude/output-styles/**` · `3_시스템/hooks/**` · `3_시스템/search.py` · `session-stub.py` · `tokens.py` · `conventions.md` · 코어 대본(`fileops`·`brain`·`roles`·`follow` 등) · `ingest.py` · `ingest_vision.py` · `3_시스템/_ref/**` · `3_시스템/_eval/**` · `.gitignore` · `.gitattributes` · 동봉 플러그인(설정 `data.json` 제외) | **안 고친 파일은 새 판으로.** 내가 고친 파일은 내 수정과 합치고, 못 합치면 그대로 두고 묻는다. 옛 판은 휴지통(30일). 배포판이 뺀 파일은 안 고친 것만 휴지통으로. 내가 만든 파일은 손대지 않는다 |
+| **씨앗** | `2_지식/recent.md` · `open-loops.md` · `MOC.md` · `profile.md` · `3_시스템/config.json` · `2_지식/주제.md` · `보존.md` · `2_지식/일/외부뇌/설계노트.md` · `사용자설명서.md` | **덮어쓰지 않는다.** 뿌리 칸에 없는 것만 넣는다. 머리말(사용법 안내)을 새로 하고 싶으면 손으로 |
+| **`CLAUDE.md`** | — | **§0(내 호칭·말투)은 그대로, 나머지는 새것으로.** §0 밖에 내가 더한 줄이 있으면 합치고, 못 합치면 그대로 두고 묻는다 |
+| **개인** | `1_수집/**` · `2_지식` 의 나머지 · `3_시스템/_index/**` · `3_시스템/_claude-memory/**` · `.claude/settings.local.json` · `.obsidian/plugins/*/data.json` | **내용을 바꾸지 않는다.** 폴더 체계가 바뀔 때만 이전 파일대로 옮기고 경로 링크를 고친다 |
+
+내가 고쳤는지는 배포판에 실린 판 해시 표(`.claude/skills/dist-sync/known-hashes.json`)로 가른다. 과거 공개 판과 같으면 안 고친 파일이다. 줄바꿈 차이는 고친 것으로 치지 않는다.
 
 ---
 
-### A. 업데이터가 없는 버전 (`.claude/skills/dist-sync/` 폴더가 없으면 이쪽)
+### 순서 (어느 판에서 올라오든 같다)
 
-전부 git 명령이다. **순서대로** 실행한다. 경로에 한글이 있으므로 따옴표를 그대로 둔다.
-
-**1단계 — 지금 상태를 저장한다 (되돌릴 수 있게)**
+**1단계 — 지금 상태를 저장한다**
 
 ```bash
 cd <내볼트경로>
 git add -A && git commit -m "update 전 상태 저장" || echo "커밋할 변경 없음 — 그대로 진행"
-git branch backup-before-update
 ```
 
-`git branch`가 만드는 것은 되돌림 지점이다. 업데이트가 잘못되면 `git reset --hard backup-before-update`로 전부 되돌린다.
-
-**2단계 — 배포판을 원격으로 추가하고 받아온다 (내 파일은 아직 안 바뀐다)**
-
-```bash
-git remote add dist <설치할 때 clone 한 그 URL>
-git fetch dist
-```
-
-- 이미 있다는 오류(`remote dist already exists`)가 나면 정상이다. `git fetch dist`만 실행한다.
-- `origin`은 내 개인 백업 repo다. **건드리지 않는다.**
-
-**3단계 — 무엇이 바뀌는지 먼저 본다 (아직 아무것도 안 바뀐다)**
-
-```bash
-git diff --stat HEAD dist/main -- .claude/ "3_시스템/" CLAUDE.md
-```
-
-삭제 목록은 **반드시 «내가 설치한 시점»을 기준으로** 뽑는다. 그 시점 이후 배포판이 실제로 지운 것만 골라내기 위해서다.
-
-```bash
-BASE=$(git merge-base HEAD dist/main) && echo "설치 기준점: $BASE" && git diff --name-status $BASE dist/main -- .claude/ "3_시스템/" .obsidian/ | grep "^D"
-```
-
-아무것도 안 나오면 삭제분이 없는 것이다. 나온 것이 5단계에서 지울 목록이다.
-
-> ⛔ **`git diff --name-status HEAD dist/main | grep "^D"` 를 쓰면 안 된다.** 그 `D`는 «배포판이 지운 것»이 아니라 «배포판에 없는 내 파일»이고, 거기에는 **내가 직접 만든 노트·스킬이 전부 섞여 들어온다.** 실측(제작자 볼트): 올바른 기준으로 0건인데 `HEAD` 기준으로는 **51건**이 나왔다. 그대로 지웠다면 내 파일 51개가 사라진다.
->
-> `merge-base`가 아무것도 출력하지 않으면(공통 조상 없음 — shallow clone 등) **삭제 단계를 건너뛰고** 4·6단계만 한다. 없어진 파일이 남아 있어도 시스템은 돈다.
-
-**4단계 — 코어만 덮어쓴다**
-
-```bash
-git checkout dist/main -- .claude/skills .claude/settings.json .claude/output-styles
-git checkout dist/main -- "3_시스템/hooks" "3_시스템/search.py" "3_시스템/session-stub.py" "3_시스템/tokens.py" "3_시스템/conventions.md" "3_시스템/_ref" "3_시스템/_eval"
-git checkout dist/main -- "3_시스템/ingest.py" "3_시스템/ingest_vision.py" "3_시스템/handwriting/README.md" "2_지식/원본 목록.base"
-```
-
-- 배포판에 없는 경로를 적으면 `pathspec did not match` 오류가 난다. 그 경로만 빼고 다시 실행하면 된다.
-- **씨앗·개인 층 경로는 이 명령에 절대 넣지 않는다.**
-
-동봉 플러그인 Brain Source 는 파일만 바꾼다. 설정 `data.json` 은 건드리지 않는다. 첫 줄 = 번들을 줄바꿈 변환 없이 받는 규칙(`.gitattributes`)을 먼저 가져온다:
-
-```bash
-git checkout dist/main -- .gitattributes .gitignore
-git restore --source=dist/main --worktree -- .obsidian/plugins/brain-source
-```
-
-처음 받는 것이면 Obsidian 설정 → 커뮤니티 플러그인에서 Brain Source 를 켠다. 이미 켜져 있으면 «저장하지 않고 앱 다시 불러오기».
-
-**옛 Brain Sheet 가 있으면**(`.obsidian/plugins/brain-sheet/`) 배포판이 Brain Source 로 바꿨다 — `.sheet` 는 Brain Source 가 이어 맡는다. Obsidian 설정에서 **Brain Sheet 를 끄고** Brain Source 를 켠 뒤, 그 폴더에서 `data.json` 만 남기고 지운다. 끄지 않고 폴더만 지우면 켜짐 목록에 이름이 남는다(Brain Source 0.29.5 부터는 그래도 `.sheet` 를 맡는다).
-
-**5단계 — 없어진 파일을 지운다**
-
-3단계에서 `D`로 나온 것을 지운다. `git checkout`은 덮어쓰기만 하고 삭제는 하지 않으므로 이 단계가 필요하다. 초판에서 올라오는 경우 예시:
-
-```bash
-rm -rf .claude/skills/obsidian-markdown .claude/skills/session-close
-```
-
-⚠ **`.obsidian/plugins/` 아래는 이 단계에서 지우지 않는다.** 배포판에서 빠진 것일 뿐, 내가 계속 써도 되는 Obsidian 플러그인이다. 예외 = 옛 Brain Sheet(4단계 끝에서 정리).
-
-**6단계 — `CLAUDE.md`를 손으로 합친다 (자동 복사 금지)**
-
-```bash
-git show dist/main:CLAUDE.md > /tmp/CLAUDE-new.md
-```
-
-`/tmp/CLAUDE-new.md`(새것)와 내 `CLAUDE.md`를 나란히 열고, **내 `## §0 사용자` 절만 그대로 유지한 채 나머지를 새것으로 바꾼다.** §0에는 내 호칭·언어·톤이 들어 있고 그건 `setup-interview`가 채운 내 것이다.
-
-Claude에게 맡기려면 이렇게 말하면 된다: *"`/tmp/CLAUDE-new.md`가 새 배포판 규약이야. 내 CLAUDE.md의 §0만 그대로 두고 나머지를 새것에 맞춰 갱신해줘."*
-
-**7단계 — 씨앗 파일의 머리말만 갱신한다 (선택)**
-
-건너뛰어도 시스템은 돈다. 규약 안내문이 낡은 채로 남을 뿐이다. 하려면 파일마다:
-
-```bash
-git show dist/main:2_지식/recent.md
-```
-
-로 새 버전을 띄워 **맨 위 제목·인용구(사용법 안내)만** 내 파일에 옮겨 적는다. **그 아래 내가 쓴 줄은 한 줄도 건드리지 않는다.**
-
-**8단계 — 확인하고 커밋한다**
-
-```bash
-git status --short
-```
-
-여기에 `1_수집/`·`2_지식/`의 영역·`기록/`·`_index/`·`_claude-memory/` 경로가 **하나라도 보이면 잘못된 것이다.** 즉시 멈추고 `git reset --hard backup-before-update`로 되돌린다.
-
-문제없으면:
-
-```bash
-git add -A && git commit -m "update: 배포판 코어 반영"
-```
-
-**9단계 — 새 세션으로 다시 연다**
-
-스킬·훅 변경은 **세션을 다시 시작해야 적용된다.** `claude`를 껐다 켠다. 첫 세션에서 `claude plugin list`로 스킬이 보이는지 확인한다.
-
-되돌리려면 언제든:
-
-```bash
-git reset --hard backup-before-update
-```
-
----
-
-### B. 업데이터가 있는 버전 (`.claude/skills/dist-sync/` 폴더가 있으면 이쪽)
-
-**1단계 — 배포판을 받아온다** (A의 2단계와 같다. 내 파일은 안 바뀐다)
+**2단계 — 배포판을 내 볼트 옆 폴더에 펼친다 (내 파일은 안 바뀐다)**
 
 ```bash
 git remote add dist <설치할 때 clone 한 그 URL>
@@ -183,65 +72,64 @@ git fetch dist
 git worktree add ../brain-dist dist/main
 ```
 
-마지막 줄은 배포판을 **내 볼트 밖 옆 폴더**에 펼친다. 내 볼트는 그대로다.
+- 이미 있다는 오류(`remote dist already exists`)가 나면 정상이다. 나머지 줄만 실행한다.
+- `origin`은 내 개인 백업 repo다. **건드리지 않는다.**
 
-**2단계 — 되돌림 지점을 만든다** (A의 1단계와 같다)
+**3단계 — Claude 에게 맡긴다**
 
-```bash
-git add -A && git commit -m "update 전 상태 저장" || echo "커밋할 변경 없음"
-git branch backup-before-update
-```
+> *"`../brain-dist/.claude/skills/dist-sync/skills/update/SKILL.md` 절차대로 이 볼트를 업데이트해줘."*
 
-**3단계 — 진단을 돌린다 (파일을 고치지 않는다)**
+내 볼트의 업데이트 스킬이 «P0 = 진단뿐»이라고 말하면 옛 판이다. 위 파일이 맞다. 절차는 미리 보기 → 내 승인 1번 → 적용이고, 승인 전에는 아무것도 바뀌지 않는다.
 
-```bash
-py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --mode update --out "3_시스템/_index/dist-sync/update.md"
-```
+**4단계 — 미리 보기에서 이 넷을 먼저 본다**
 
-`3_시스템/_index/dist-sync/update.md`에 리포트가 생긴다. **배포판 쪽(`../brain-dist`) 스크립트를 돌린다** — 내 볼트의 스크립트는 옛 판이라 새 판의 규칙을 모른다. 또는 Claude에게 *"업데이트 있어?"* 라고만 해도 된다 — `dist-sync:update` 스킬이 위 명령을 대신 실행한다.
+- **못 합친 파일** — 내 수정과 배포판 변경이 같은 곳에 있다. 파일마다 그대로 둘지, 새 판으로 할지, Claude 가 합친 안을 볼지 고른다.
+- **내 수정과 합친 파일** — 내가 고친 기억이 맞는지.
+- **배포판이 뺀 파일** — 휴지통으로 간다(30일).
+- **이전** — 무엇이 어디로 가는지와, 고치지 않고 알리기만 하는 옛 경로(기억·플러그인 설정·내 대본).
 
-**4단계 — 리포트에서 이 셋을 먼저 본다**
+**5단계 — Obsidian 을 닫고 승인한다**
 
-- **「⛔ 대상 볼트에만 있는 파일」** — **지울 목록이 아니다.** 배포판이 제거한 것과 **내가 직접 만든 것**이 섞여 있고 진단은 둘을 구분하지 못한다. 실제로 지울 것은 A의 3단계 `merge-base` 명령으로 따로 뽑는다.
-- **「미분류」** — 층 규칙에 없는 파일이다. 판단이 설 때까지 옮기지 않는다.
-- **「코어 — 내용 다름」** — 여기에 **내가 직접 고친 파일이 섞여 있을 수 있다.** 덮어쓰면 내 수정이 사라진다. 고친 기억이 있으면 그 파일만 따로 빼둔다.
+켜 둔 Obsidian 은 플러그인 목록과 열린 탭을 자기 기억으로 다시 쓴다. 처음 들어오는 플러그인은 켜지 않으며, 켜도 지금 배치와 기본 탐색기를 바꾸지 않는다(새 탐색기는 Brain Base 설정 «기본 탐색기 대신 쓰기»).
 
-**5단계 — 동봉 플러그인 교체 (리포트에 «배포 플러그인 교체 계획»이 있을 때)**
-
-Obsidian 을 닫고 실행한다(켜 둔 Obsidian 은 플러그인 목록을 자기 기억으로 다시 쓴다):
-
-```bash
-py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --apply-plugins
-```
-
-Brain Source 폴더를 배포판과 같게 하고, 옛 Brain Sheet 파일을 지우고(설정 `data.json` 은 남김), 켜짐 목록에서 Brain Sheet 를 Brain Source 로 바꾼다. 다시 돌려도 같다.
-
-**6단계 — 나머지 적용은 A의 4~8단계 그대로**
-
-현재 버전의 업데이터는 플러그인 교체 말고는 **진단까지만** 한다(의도적이다 — 볼트마다 상태가 달라 자동 적용이 안전하다고 확인되기 전에는 열지 않는다). 리포트를 근거로 A의 4~8단계를 실행한다(4단계의 플러그인 줄은 5단계가 했으니 건너뛴다). Claude에게 맡기려면 리포트를 보여주며 이렇게 말한다:
-
-> *"이 리포트의 «코어» 층만 `git checkout dist/main -- <경로>`로 가져오고(플러그인 폴더는 빼고), 씨앗·개인 층은 건드리지 마. `CLAUDE.md`는 §0만 남기고 갱신해줘. 삭제 목록은 하나씩 확인받고 지워."*
-
-**7단계 — 뒷정리와 확인**
+**6단계 — 뒷정리**
 
 ```bash
 git worktree remove ../brain-dist
-git status --short
 ```
 
-`status`에 개인 층 경로가 보이면 잘못된 것이다. `git reset --hard backup-before-update`로 되돌린다.
+**7단계 — 새 세션으로 다시 연다.** 스킬·훅 변경은 **세션을 다시 시작해야 적용된다.** Claude 에게 찾기 색인 다시 만들기를 맡긴다(옮긴 자리를 찾기가 알게 · 몇 분 걸림).
 
-**8단계 — 새 세션으로 다시 연다.** (A의 9단계와 같다)
+손으로 하려면 3~5단계 대신 이렇게 한다.
+
+```bash
+py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --mode update --out "3_시스템/_index/dist-sync/update.md" --plan-out "3_시스템/_index/dist-sync/update-plan.json"
+py -3 ../brain-dist/3_시스템/fileops.py --vault . update "3_시스템/_index/dist-sync/update-plan.json"
+py -3 ../brain-dist/3_시스템/fileops.py --vault . migrate --from ../brain-dist/3_시스템/migrations
+```
+
+여기까지는 미리 보기다. `3_시스템/_index/dist-sync/update.md` 를 읽은 뒤 Obsidian 을 닫고 적용한다.
+
+```bash
+py -3 ../brain-dist/3_시스템/fileops.py --vault . update "3_시스템/_index/dist-sync/update-plan.json" --apply
+py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --apply-plugins
+py -3 3_시스템/fileops.py migrate --apply
+```
 
 ---
 
 ### 업데이트가 잘못됐을 때
 
+이전을 먼저, 그다음 업데이트를 되돌린다. 묶음 id 는 적용할 때 출력에 나온다.
+
 ```bash
-git reset --hard backup-before-update
+py -3 3_시스템/fileops.py migrate --undo 0001-목적별-다섯-영역
+py -3 ../brain-dist/3_시스템/fileops.py --vault . undo <묶음 id>
 ```
 
-1단계에서 만든 지점으로 전부 돌아간다. 그 뒤 처음부터 다시 하거나, 그냥 두고 써도 된다 — **업데이트는 선택이고, 안 해도 기존 볼트는 그대로 돌아간다.**
+⛔ **`git reset --hard` 로 되돌리지 않는다.** md 아닌 원본(PDF 등)은 git 밖이라 돌아오지 않고 노트만 돌아가서, 노트가 두 자리에 겹치고 원본 링크가 깨진다. 이전 뒤 `git status` 에 `2_지식`·`1_수집` 경로가 보이는 것은 **정상**이다. 플러그인 교체는 되돌리기 밖이다(설정은 그대로이고, 판만 새것).
+
+업데이트는 선택이다. 안 해도 기존 볼트는 그대로 돌아간다.
 
 ## 더 읽기
 - **[사용자설명서](2_지식/일/외부뇌/사용자설명서.md)** — 설치 후 어떻게 쓰나(간단). 일상 사용·스킬·구조.
