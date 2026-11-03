@@ -67,6 +67,8 @@ py -3 <배포판 worktree>/.claude/skills/dist-sync/scripts/dist-diff.py --build
 
 익명화 스캔을 **재실행**해서 리포트의 «배포판에 남은 개인 패턴»과 «올라갈 커밋의 작성자»가 둘 다 0건인지 확인한다(«익명화 후보»는 볼트 쪽 목록이고 60건에서 잘린다). 플러그인 CSS·번들도 이 안에 든다. 커밋을 고쳐 지웠으면 커밋마다 다시 잰다 — 나중 커밋에서 지워도 옛 커밋에 남으면 공개된다. 사람·Claude 의 눈으로 끝내지 않는다. 이 세션에서 grep 이 Claude 의 누락을 두 번 잡았다.
 
+번들 플러그인은 받는 쪽 줄바꿈까지 잰다. `git clone -c core.autocrlf=true --branch dist-sync --single-branch file://<볼트> <임시 폴더>` 뒤 번들을 빌드와 `cmp` 한다. 다르면 그 폴더가 `.gitattributes` 의 binary 줄에 없는 것이다(2026-11-03 brain-base·brain-calendar 가 빠져 있었다).
+
 ### 7. push 는 별도 승인
 
 공개 저장소 전송이다. 커밋까지 하고 **멈춰서 확인을 받는다.**

@@ -262,3 +262,42 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-panel-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 4px 6px; }
 .bb-panel-k { font-size: var(--font-ui-small); color: var(--text-muted); }
 .bb-panel-md { max-height: 68vh; overflow-y: auto; user-select: text; font-size: var(--font-ui-small); padding-inline-start: 1.6em; } /* 할 일 체크 칸이 왼쪽으로 내밀려 잘리지 않게(11-02) */
+
+/* 튜토리얼(tutorial.ts · 화면 초안 B) — 어둡게만 하고 클릭은 막지 않는다 · 막은 창(모달) 밑, 테두리·카드는 위 */
+.bb-tt-hole { position: fixed; z-index: 40; pointer-events: none; border-radius: 6px; box-shadow: 0 0 0 200vmax rgba(0, 0, 0, 0.42); }
+.bb-tt-ring { position: fixed; z-index: 66; pointer-events: none; border-radius: 6px; outline: 2px solid var(--interactive-accent); }
+.bb-tt-card { position: fixed; z-index: 67; width: 300px; padding: 12px 14px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28); font-size: var(--font-ui-medium); line-height: 1.5; }
+.bb-tt-why { margin-top: 6px; color: var(--text-muted); font-size: var(--font-ui-small); }
+.bb-tt-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: var(--font-ui-smaller); color: var(--text-faint); }
+.bb-tt-foot button { font-size: var(--font-ui-smaller); padding: 2px 10px; height: auto; }
+.bb-tt-sp { flex: 1; }
+.bb-tt-link { color: var(--text-faint); cursor: pointer; text-decoration: none; }
+.bb-tt-link:hover { color: var(--text-normal); }
+.bb-tt-list { display: flex; flex-direction: column; gap: 2px; }
+.bb-tt-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: var(--font-ui-small); }
+.bb-tt-row:hover { background: var(--background-modifier-hover); }
+.bb-tt-row.is-static { cursor: default; color: var(--text-faint); }
+.bb-tt-row.is-done .bb-tt-name { color: var(--text-muted); }
+.bb-tt-ic { display: flex; color: var(--text-faint); }
+.bb-tt-ic svg { width: 14px; height: 14px; }
+.bb-tt-row.is-done .bb-tt-ic { color: var(--text-success); }
+.bb-tt-name { flex: 1; }
+.bb-tt-time { font-size: var(--font-ui-smaller); color: var(--text-faint); }
+.bb-tt-clean { margin-top: 6px; color: var(--text-muted); }
+
+/* 상자 고르기(box.ts · 화면 초안 B) — 덮개는 튜토리얼 막(40) 위 · 테두리·카드(66·67) 밑 */
+.bb-box-cover { position: fixed; inset: 0; z-index: 60; cursor: crosshair; background: rgba(0, 0, 0, 0.18); }
+.bb-box-hint { position: absolute; top: 52px; left: 50%; transform: translateX(-50%); padding: 3px 10px; font-size: var(--font-ui-small); background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); pointer-events: none; }
+.bb-box-sel { position: absolute; pointer-events: none; border: 1.5px dashed var(--interactive-accent); background: hsla(var(--interactive-accent-hsl), 0.1); border-radius: 2px; }
+.bb-box-tag { position: absolute; right: -1px; top: calc(100% + 4px); white-space: nowrap; font-size: 11px; line-height: 16px; padding: 0 6px; border-radius: 4px; background: var(--interactive-accent); color: var(--text-on-accent); }
+.bb-box-mark { position: fixed; z-index: 39; pointer-events: none; border: 1.5px dashed var(--interactive-accent); background: hsla(var(--interactive-accent-hsl), 0.1); border-radius: 2px; }
+.bb-box-shot .bb-tt-hole, .bb-box-shot .bb-tt-ring, .bb-box-shot .bb-tt-card, .bb-box-shot .bb-box-mark, .bb-box-shot .notice-container, .bb-box-shot .tooltip { display: none !important; }
+.bb-bar .bb-btn.is-on { color: var(--text-on-accent); background: var(--interactive-accent); }
+.bb-chip-shot { display: inline-flex; align-items: center; gap: 5px; padding-left: 2px; }
+.bb-chip-shot img { height: 26px; max-width: 80px; object-fit: cover; object-position: left top; border-radius: 3px; display: block; }
+.bb-chip-x { color: var(--text-faint); }
+.bb-user-img { display: block; max-width: 100%; margin-top: 4px; border: 1px solid var(--background-modifier-border); border-radius: 6px; }
+.bb-chip-flip { display: inline-flex; color: var(--text-muted); cursor: pointer; }
+.bb-chip-flip svg { width: 12px; height: 12px; }
+.bb-chip-flip:hover { color: var(--text-accent); }
+.bb-chip-small { font-size: var(--font-ui-smaller); color: var(--text-warning); }

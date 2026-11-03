@@ -201,7 +201,7 @@ def replay(old, events):
     """장부에 적힌 일 = 바깥이 아니다 → 사진을 그 뒤 모습으로 먼저 고친다."""
     for e in events:
         op, s, d = e.get("op"), e.get("src") or "", e.get("dst") or ""
-        if not s or not (op in ("mv", "rename", "rm") or (op == "cp" and e.get("moved"))):
+        if not s or not (op in ("mv", "rename", "rm", "out") or (op == "cp" and e.get("moved"))):
             continue
         low = s.lower()
         hit = [k for k in old if k.lower() == low or k.lower().startswith(low + "/")]
