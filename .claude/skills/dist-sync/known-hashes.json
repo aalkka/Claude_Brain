@@ -74,7 +74,8 @@
 "8f7e97c07dd7": "42c92e0d9a946a27",
 "a582b89d3810": "e7d851bf03162fac",
 "df39b0a50a57": "6c33d5b66177f232",
-"fa39f2997571": "9a3a1a13a8586a8d"
+"fa39f2997571": "9a3a1a13a8586a8d",
+"fce4ab3c9346": "343e7e2f7f3ca3bd"
 },
 ".claude/skills/dist-sync/scripts/doctor.py": {
 "b78ee88c3022": "e6457bfdbc634088"
@@ -449,6 +450,7 @@
 "e5c9dec4cc7c": "76394f17e6f7233d"
 },
 "3_시스템/hooks/idle-save.py": {
+"516d5db75671": "5530c110682e6a95",
 "bdbbb0c8654d": "b1477f8af4ac8dff",
 "c5c1852d9cac": "e337bfeb152462ce"
 },
@@ -715,6 +717,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "8512e13237b7",
+"rev": "232a558d4d60",
 "schema": 1
 }
