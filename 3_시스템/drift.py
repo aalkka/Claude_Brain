@@ -56,7 +56,10 @@ def read(p):
 
 def docs():
     """상시·지침 문서 — 모델이 믿고 따르는 글"""
-    out = [os.path.join(VAULT, "CLAUDE.md"), os.path.join(HERE, "conventions.md")]
+    out = [os.path.join(VAULT, "CLAUDE.md"), os.path.join(VAULT, "README.md"), os.path.join(HERE, "conventions.md")]
+    # 사람·Claude 가 믿는 시스템 문서 — 안 봐서 설명서 206줄이 «어긋남 0» 인 채 낡았다(11-03)
+    out += glob.glob(os.path.join(VAULT, "2_지식", "**", "설계노트.md"), recursive=True) + glob.glob(os.path.join(VAULT, "2_지식", "**", "사용자설명서.md"), recursive=True)
+    out += sorted(glob.glob(os.path.join(HERE, "tutorial", "*.md")) + glob.glob(os.path.join(HERE, "vault-chat", "*.md")))
     out += sorted(glob.glob(os.path.join(MEM, "*.md")))
     out += glob.glob(os.path.expanduser("~/.claude/scheduled-tasks/*/SKILL.md"))    # 무인 실행 지시문도 낡으면 그대로 따른다
     for p in glob.glob(os.path.join(VAULT, ".claude", "skills", "**", "*.md"), recursive=True):

@@ -117,17 +117,20 @@ CORE = [
     "3_시스템/hwlayout.py",  # mf:allow-path  — 손글씨 줄 상자(판서 끌어 고르기 · 2026-11-02)
     "3_시스템/handwriting/README.md",  # mf:allow-path
     # 볼트 행위(2026-10-29 · ADR-018) — 단일 실행자 · 배포판 이전(migration) 파일
-    "3_시스템/fileops.py", "3_시스템/migrations/*", "3_시스템/sendto-inbox.ps1",  # mf:allow-path
+    "3_시스템/fileops.py", "3_시스템/migrations/*",  # mf:allow-path
     # 행위 층(볼트 개혁 R4 · 2026-10-30) — 실행기 + 코어 행위 선언(장부 ledger/actions.jsonl 은 개인)
     "3_시스템/brain.py", "3_시스템/actions.json", "3_시스템/props-sync.py",  # mf:allow-path
     # 역할 → 자리(볼트 개혁 R6 · 2026-10-30) — 코드가 자리를 박지 않고 묻는 곳(주제 목록 2_지식/주제.md 는 씨앗)
     "3_시스템/roles.py", "3_시스템/roles.json",  # mf:allow-path
+    "3_시스템/tutorial/*",  # mf:allow-path  — 튜토리얼 대본·찾아보기(2026-11-03 · 씨앗인 사용자설명서와 달리 업데이트로 따라온다)
     # 주제 카드(R7) · 정리 후보(R8) · 구조 이전·받은함 자동 분류(R9) — 2026-10-30
     "3_시스템/topic.py", "3_시스템/cleanup.py", "3_시스템/restructure.py", "3_시스템/inbox.py",  # mf:allow-path
     # 작업 폴더 원칙 — 끝남 판정·제출본 대조·정리 계획(2026-10-31) · 근거 표·정리 규칙(보편화 2026-11-02)
     "3_시스템/work.py", "3_시스템/work.json",  # mf:allow-path
     # 따라가기 — 옵시디언 밖에서 옮기거나 지운 파일 뒤처리(설계안 §19.3 · 2026-11-03)
     "3_시스템/follow.py", "3_시스템/outside.py", "3_시스템/default-layout.json",  # mf:allow-path
+    # 받는 문 — 볼트 밖 → 받은함(ADR-031 · 2026-11-03)
+    "3_시스템/door.py",  # mf:allow-path
     # 코어 훅·행위가 부르는 대본(2026-11-03 반영 때 층 분류) — 표 고침·MOC·어긋남·기록·주간·일정·변환 · 대화창 규약 글
     "3_시스템/mdtable.py", "3_시스템/moc.py", "3_시스템/drift.py", "3_시스템/record.py", "3_시스템/weekly.py",  # mf:allow-path
     "3_시스템/skillstat.py", "3_시스템/schedule.py", "3_시스템/docpdf.py", "3_시스템/vault-chat/*",  # mf:allow-path
@@ -408,7 +411,9 @@ def report(A, B, mode, plan=None):
             w("- `%s:%d` — `%s`" % (rel, i, txt))
         w("")
         # 후보 목록은 볼트 쪽을 60건까지만 보여 준다 — 배포판에 실제로 남은 것은 여기서 전수로 잰다(2026-11-03 플러그인 CSS 주석의 호칭을 놓침)
-        left = scan_leaks(fb, local) if local else []
+        # walk 는 개인 폴더에 안 들어가 그 안의 씨앗(설계노트·사용자설명서)을 못 본다 — 실리는 것은 추적 파일 전부다(2026-11-03 개인 프로젝트 이름을 놓침)
+        tracked = [p.decode("utf-8", "replace") for p in (git_out(B, "ls-files", "-z") or b"").split(b"\0") if p]
+        left = scan_leaks({r: os.path.join(B, r) for r in tracked} if tracked else fb, local) if local else []
         w("## 배포판에 남은 개인 패턴 — %d건" % len(left))
         w("")
         for rel, i, label, txt in left:

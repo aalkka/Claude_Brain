@@ -84,7 +84,8 @@ CANVAS = re.compile(r'("file"\s*:\s*")([^"]+)(")')
 SCHEME = re.compile(r"^[A-Za-z][\w+.-]*:")
 
 LABEL = {"mv": "옮김", "rename": "이름 바꿈", "rm": "지움(휴지통)", "restore": "되살림", "cp": "들임",
-         "mkdir": "폴더 만듦", "rmdir": "빈 폴더 치움", "archive": "보관 표시", "unarchive": "보관 풂", "purge": "영구 삭제"}
+         "mkdir": "폴더 만듦", "rmdir": "빈 폴더 치움", "archive": "보관 표시", "unarchive": "보관 풂", "purge": "영구 삭제",
+         "out": "볼트 밖으로"}
 
 
 class Stop(Exception):
@@ -324,14 +325,33 @@ def move(a_s, a_d):
         raise Stop("%s — 옮기지 않았다 · 끝내거나 닫고 다시: %s" % (held_note(a_s) or "다른 프로그램이 쥐고 있다(Word·한글·옵시디언 미리 보기 등)", a_s))
     except OSError as e:
         if (getattr(e, "winerror", None) == 17 or e.errno == errno.EXDEV) and not os.path.isdir(a_s):   # 다른 드라이브 — 파일만(하나라 반쪽이 없다)
-            shutil.move(a_s, a_d)
+            shutil.copy2(a_s, a_d)
+            try:
+                os.remove(a_s)
+            except OSError:         # 원래 것을 못 지우면 사본을 치운다 — 양쪽에 남기지 않는다
+                os.remove(a_d)
+                undo_made()
+                raise Stop("%s — 옮기지 않았다 · 끝내거나 닫고 다시: %s" % (held_note(a_s) or "다른 프로그램이 쥐고 있다", a_s))
             return made
         undo_made()
         raise Stop("옮기지 못함(%s): %s → %s" % (e.strerror or type(e).__name__, a_s, a_d))
     return made
 
 
+move_file = move  # op_cp 의 인자 move 가 이 이름을 가린다
+
+
 _OBS = None
+
+
+def obsidian_running():
+    """옵시디언이 떠 있나 — CLI 는 첫 명령이 앱을 켜므로(금고 §15) 묻기 전에 프로세스부터 본다. 못 재면 안 떠 있다고 본다(자체 엔진)."""
+    try:
+        r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq Obsidian.exe", "/NH"], capture_output=True, timeout=5,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        return b"obsidian" in r.stdout.lower()
+    except (OSError, subprocess.SubprocessError):
+        return False
 
 
 def obsidian_cli(ctx):
@@ -343,7 +363,7 @@ def obsidian_cli(ctx):
     if _OBS is None:
         _OBS = False
         exe = shutil.which("obsidian")
-        if exe and os.environ.get("FILEOPS_NO_OBSIDIAN") != "1":
+        if exe and os.environ.get("FILEOPS_NO_OBSIDIAN") != "1" and obsidian_running():
             try:
                 out = subprocess.run([exe, "vault"], capture_output=True, timeout=5).stdout.decode("utf-8", "replace")
                 m = re.search(r"^path\t(.+)$", out, re.M)
@@ -941,7 +961,13 @@ def op_cp(ctx, src, dst, why, dup_ok=False, by_undo=None, src_label=None, move=F
     os.makedirs(os.path.dirname(a_d), exist_ok=True)
     h = sha256(a_s)
     if move:
-        shutil.move(a_s, a_d)
+        try:
+            move_file(a_s, a_d)     # 이름 바꾸기 한 번 — 잠긴 파일에서 사본을 남기지 않는다(11-03 받는 문 시험)
+        except Stop:
+            for d in made:
+                if os.path.isdir(d) and not os.listdir(d):
+                    os.rmdir(d)
+            raise
     else:
         shutil.copy2(a_s, a_d)
     info = describe(a_d)
