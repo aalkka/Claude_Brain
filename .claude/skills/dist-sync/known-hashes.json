@@ -1,0 +1,682 @@
+{
+"paths": {
+".claude/output-styles/lean.md": {
+"8fdab50d7f49": "bc442190aee0ad40"
+},
+".claude/settings.json": {
+"3ee6713575f4": "74369bce1bcc9d66",
+"674772349c4f": "4826db4e63f0943e",
+"75da4d116f5c": "a1047350ac521285",
+"802e0fd910ce": "f7ee465953d32307",
+"8b58f343ddaa": "840277237c513bab",
+"92651199bf83": "cb711abfcac7f34e",
+"9f5be66f034b": "7af76ae5450d9aae",
+"c324f0bd62d5": "9f43a0c084092ae4",
+"d8b709bd53a0": "78873183b14aaaa3"
+},
+".claude/skills/VENDOR.txt": {
+"ab3b7e719656": "a45129c470e95d24"
+},
+".claude/skills/canvas/SKILL.md": {
+"0bca862cef17": "ced6992063d5e0b0",
+"70230f00886f": "753f7d3536996b4a",
+"de619e32902a": "f3326956613bce5d"
+},
+".claude/skills/canvas/scripts/canvas-build.py": {
+"925121a8c7a2": "f3873fccd6eec41f"
+},
+".claude/skills/canvas/scripts/canvas-check.py": {
+"60375b56dbb3": "a9fb3b3b064c7bec"
+},
+".claude/skills/deep-loop/SKILL.md": {
+"102763344f3d": "49c1a976174594f1",
+"b46cabdad0a8": "7e7f8a273999711f",
+"cb817b3049ae": "e76a8db4077fee5b",
+"d586a44df7ce": "9ca7ca36c85070a5"
+},
+".claude/skills/deep-loop/references/rationale.md": {
+"1769c059fe6d": "4ba760c2fe4a9320",
+"3516cc4176d8": "7ba501f61e649d7f",
+"9c3283033f0a": "6a7c321d2d26155d"
+},
+".claude/skills/deep-loop/scripts/launch-audit.py": {
+"c04c10253b3d": "56cef84bfb8fb32b"
+},
+".claude/skills/deep-loop/scripts/verify-citations.sh": {
+"cd7c7e1290a5": "439a1057990a38e4"
+},
+".claude/skills/defuddle/LICENSE": {
+"64c64d48361e": "da1355173f28f352"
+},
+".claude/skills/defuddle/SKILL.md": {
+"10673a4dc70a": "82b94b5622f602bd",
+"3734f4845a0a": "c3fd1d96ce60da3d"
+},
+".claude/skills/dist-sync/.claude-plugin/plugin.json": {
+"8982d19e7aa6": "42803efd33ff68ae",
+"b7d8d711ef84": "816428bfea7432d4"
+},
+".claude/skills/dist-sync/README.md": {
+"075c2af054d5": "69d4b7a3d884a906",
+"77e74afd57bd": "69f9c0ae6f0b2817",
+"d56f6baca481": "2dc7207dbd5b4e02"
+},
+".claude/skills/dist-sync/module.json": {
+"10f8bf523d5c": "22a1e9e10f0cc2c3",
+"396ce5b2e4d5": "6fa62cdff2c2aea0",
+"d7189c38d662": "fd7ce028d99b551d"
+},
+".claude/skills/dist-sync/scripts/dist-diff.py": {
+"18421fabb136": "3d665993529d05a1",
+"5354177f4ee7": "785d1723d014c665",
+"80300757f0b1": "46cebe33a82e961b",
+"8f7e97c07dd7": "42c92e0d9a946a27",
+"a582b89d3810": "e7d851bf03162fac",
+"df39b0a50a57": "6c33d5b66177f232",
+"fa39f2997571": "9a3a1a13a8586a8d"
+},
+".claude/skills/dist-sync/scripts/doctor.py": {
+"b78ee88c3022": "e6457bfdbc634088"
+},
+".claude/skills/dist-sync/skills/publish/SKILL.md": {
+"2b4af894f663": "644b8e53821ad2a4",
+"98683c724762": "038464d1d9a94cb4",
+"a03cea231509": "1d3e9f6e1df1791c",
+"ec3bbfe21d8a": "c2420238b81cf4ea"
+},
+".claude/skills/dist-sync/skills/update/SKILL.md": {
+"17cfb9f8b2a4": "82431770b0737e8a",
+"5a8cabbb97d0": "a238fdfc7cd2ae2a",
+"6ddcefa1fe88": "7229c8df15b8a041",
+"81eb4dcc0c2d": "23d7034c24865af2"
+},
+".claude/skills/inbox-sort/SKILL.md": {
+"073f545584fd": "4d9fe5dd33ac2bfd",
+"7268a2c5c5af": "dd75c482ded3b2e6",
+"7ff032471eeb": "a2d715044e91e666",
+"962cfaed9964": "710114c10b1ec0e7"
+},
+".claude/skills/module-forge/.claude-plugin/plugin.json": {
+"1fd2a7fa79df": "75d2bdf61b0fbdc8",
+"dd8adf435d92": "f997b2a739245f13"
+},
+".claude/skills/module-forge/SKILL.md": {
+"f3fe18f52a18": "0a1c45d03073ee7a"
+},
+".claude/skills/module-forge/module.json": {
+"4626ccdc4cba": "a2a0480c41f65940",
+"ad7efe74eec1": "71e7597d957e4aa0"
+},
+".claude/skills/module-forge/rules-lib.md": {
+"e6f2bda7ec4c": "76edbd8f0e0af950"
+},
+".claude/skills/module-forge/scripts/check.py": {
+"65c4902b7506": "a9fe91c3a6d140ac",
+"c9f5dcc127bd": "0b7cdfd12947582a"
+},
+".claude/skills/module-forge/scripts/test_check.py": {
+"593b80bcb718": "7e4a908a8b0d252b",
+"ff25b76b825f": "5da7a7554fafa58c"
+},
+".claude/skills/module-forge/skills/check/SKILL.md": {
+"3c2153428327": "325f96fbd9a29012",
+"d261de1eede9": "5b9ceb7e1a18910e"
+},
+".claude/skills/module-forge/skills/new/SKILL.md": {
+"bb384a9680f2": "a08070556709ae8b"
+},
+".claude/skills/module-forge/templates/README.md.tmpl": {
+"9d1681efe689": "a1bb4ca467761c5a"
+},
+".claude/skills/module-forge/templates/SKILL.md.tmpl": {
+"d22d532761d8": "77e6ce13e40b2060"
+},
+".claude/skills/module-forge/templates/module-note.md.tmpl": {
+"d9ff9aa5931a": "69beb6f4368661a8"
+},
+".claude/skills/module-forge/templates/module.json.tmpl": {
+"c35f7a58a7ac": "4d5386e8892c431c"
+},
+".claude/skills/module-forge/templates/plugin.json.tmpl": {
+"3e894881e36b": "4a7a372588ae6346"
+},
+".claude/skills/module-forge/templates/script-preflight.py.tmpl": {
+"8d48cbeae1b3": "a9641310da40e6b0"
+},
+".claude/skills/obsidian-markdown/LICENSE": {
+"64c64d48361e": "da1355173f28f352"
+},
+".claude/skills/obsidian-markdown/SKILL.md": {
+"7ad72e1f0a90": "d72f1694c4859e5c"
+},
+".claude/skills/obsidian-markdown/references/CALLOUTS.md": {
+"9912ec2e3f87": "c086824c64156d17"
+},
+".claude/skills/obsidian-markdown/references/EMBEDS.md": {
+"63b6205507e2": "daebe22f7aa0f723"
+},
+".claude/skills/obsidian-markdown/references/PROPERTIES.md": {
+"392953b5838c": "e46a63abadd7c182"
+},
+".claude/skills/pdf-ingest/SKILL.md": {
+"1b1e978324ec": "c92886acb4148af7",
+"5d5b9a3513e6": "c2ed547ca9982776",
+"65b2d7f9e40e": "50726ba8dff4f900",
+"6afc547772a1": "aac414e889c3303b",
+"a2851a96aad3": "ded937bb9dab580f",
+"d60821c0676b": "d12d5bebe0fcb143",
+"ed411a772462": "51d863715039892b"
+},
+".claude/skills/search/SKILL.md": {
+"85eb56032d12": "032093a439c89c5f",
+"b0de44aebf68": "959797c754fc1403",
+"e9e4d7deab3f": "f9ae1a3bd32d698f"
+},
+".claude/skills/session-close/SKILL.md": {
+"0498ec8726b3": "629dc1f61b26c792",
+"120558529d03": "18f4814719fcecf7",
+"60a99b2af463": "30f916e0af366084",
+"796586310994": "89357f7a745a00cb",
+"ab0f1c1fb406": "623f663aade9a747",
+"f4bfb03bcc5b": "e5565d413f7d77d4"
+},
+".claude/skills/session-record/SKILL.md": {
+"54916c6a5d2c": "90524f0d7114b834",
+"68841078166e": "d0a82e8d66c76ea7",
+"d925086a5816": "f83c56f33dc02fb8"
+},
+".claude/skills/setup-interview/SKILL.md": {
+"1c246b209275": "38e5f7756d0b4028",
+"26058fadcb04": "b5140865dce79bdf",
+"742154106af7": "4935e72b5b1b62c1",
+"8db3a06dfc6b": "1953f05e6a5bdaf1",
+"8f1b6ea3c9d6": "6fadf17b3568cbb8",
+"c725528ae540": "277a06644ad56ea3",
+"d16abcfe7778": "c477285319a474de",
+"ede48696ebe0": "356c23fe3d7dc563"
+},
+".claude/skills/weekly-review/SKILL.md": {
+"031561c9eb5a": "1aa72ef35e6eced9",
+"1212e169d90a": "82df191dba3091ad",
+"1f5f9ebe4698": "09f7d99fcde568c4",
+"233b5eda5b5f": "61348e954a6f85ad",
+"246698989ca1": "5145fa850de0ea06",
+"34c2c7cb21cc": "2fa14bb9ebf2cc8e",
+"5375b6b8c6e5": "984617394bb0ea8a",
+"8c3af7c500f6": "b6b417511642c9c7",
+"abc7a724bb07": "be4b801c9286f3d4",
+"bb6aa0b85088": "2899845c991b8230",
+"bec332e9dd68": "a6f3fa955dc172f5",
+"d84483b32068": "064dd0c521283248",
+"e5a649faeb43": "eb2603a4f696ce0f",
+"ec98f74af198": "8e195060c57a06a4"
+},
+".gitattributes": {
+"34af5891b59f": "a84fd0c90a16bd91",
+"5f9d5f3c6043": "c9421ce708aba9c4",
+"c61292f12070": "b4e0bfa459027aba",
+"f621ad53ee93": "3c6ee04d88b1a930",
+"f75585336c5c": "2a6c2d59ebfcb356"
+},
+".gitignore": {
+"660187534b37": "2777e297f2b99a48",
+"7cdd71ea3ae5": "d0e2354153e89faa",
+"bb41a0007034": "66c232a935eeae7e",
+"c8b0824c1a7e": "0555bcc5bc8b3da2",
+"d82e0b1e871d": "7f89e5b437858bce",
+"dfc12d70078b": "9bfdcdc3898d72fc",
+"f4aae3d37bea": "e8d0e3776130a1b7"
+},
+"2_지식/원본 목록.base": {
+"5166b784252e": "1f2bc8b7d2a2e398"
+},
+"3_시스템/_eval/.gitkeep": {
+"e3b0c44298fc": "e69de29bb2d1d643"
+},
+"3_시스템/_eval/gate-cases.tsv": {
+"8780af6fdc45": "ac810c32878d06bc",
+"89e093839df0": "6008587f2f3412a1",
+"ae259a67bf32": "1084823888ef3dcd",
+"b53771d0f806": "a0a8a501e4e620d6",
+"ea11afa1e066": "db263a39cdc75343",
+"eaa4ce6665a0": "b76bb4c868dd9da6"
+},
+"3_시스템/_eval/gate-verify.ps1": {
+"56336cadedc9": "9670e6ed8a0070d0",
+"849fd2452004": "5e2f90e03439f5f4",
+"fca3daf38d68": "6104765bdd0735aa"
+},
+"3_시스템/_eval/golden-paraphrase.jsonl": {
+"1f427922016d": "a89431084befc48d"
+},
+"3_시스템/_eval/golden.jsonl": {
+"0bdc66dc3e1d": "60c2baf00ecf8f8b",
+"77548cbbd4ec": "1860e6955c029f4b"
+},
+"3_시스템/_eval/measure.md": {
+"9713fa5373ad": "876de08079c5b890",
+"f1f758e57070": "ab38ea959b8206c8",
+"f8d73bb03b72": "f4ff06b32808e0b2",
+"fba6831d77e9": "d4eb929a7dc74604"
+},
+"3_시스템/_eval/results-b1-neighbors.md": {
+"1872677961db": "2f5b4a7359f45af4",
+"3116df57c07a": "205d26b6d32d7646",
+"7e42318b05b7": "9c542c2b76082717",
+"c4a09bd7ec15": "77dea417421c8732",
+"ce8643df51bc": "617496284709855e"
+},
+"3_시스템/_eval/results-baseline.md": {
+"1c96c0d4036c": "7af2b408101026ee",
+"cb1bd403923e": "b14d1f17c5fb81e1"
+},
+"3_시스템/_eval/results-hybrid.md": {
+"4227303465cc": "f297a9550882bc64",
+"6f9b8bc7c4f9": "53aef9bd17312812",
+"d77fd99a2646": "f2099da081531456",
+"f495e37e7257": "f1b4dd5f7ba84d18"
+},
+"3_시스템/_eval/update_sim.py": {
+"2b861de36fac": "94f37646768a99e5"
+},
+"3_시스템/_ref/.gitkeep": {
+"e3b0c44298fc": "e69de29bb2d1d643"
+},
+"3_시스템/_ref/2026-07-11-규약단계-침묵생략.md": {
+"111de1b202c9": "1ed13c17deb4e9d4"
+},
+"3_시스템/_ref/incident-2026-07-03-스펙-실측-괴리.md": {
+"25baf793d3ac": "203a99021a99fc7c",
+"293e47e02a2b": "330491938a6d2a7b",
+"2c1b314b43ef": "d1fbf22905a9464c",
+"3242125d26bb": "e86789d1c2e8943c",
+"828f3550512c": "5c994a0f70a86ab7",
+"99bc166f6cee": "d4d3e8e4777b6058",
+"9aa79b517916": "61a37d98be2cf814",
+"b1bdfe168215": "30f0d29df16c2272",
+"d35128320814": "de51e686663180ee"
+},
+"3_시스템/_ref/incident-2026-07-04-search-stdout-cp949.md": {
+"38dbd00b20e5": "67bd373dd92095d2",
+"9f7ec58abd71": "978dd7632948610a",
+"a073c29fa78e": "6e5a2296b646c082",
+"bb76de69103f": "96e939aceb3b0775"
+},
+"3_시스템/_ref/incident-2026-07-04-writer-crlf-eol-churn.md": {
+"3cd3c72b1704": "8141bff56bb33423",
+"d089710aa4bb": "76a58711717e4e37"
+},
+"3_시스템/_ref/incident-2026-07-19-SessionEnd-커밋정지.md": {
+"95990cc2ab7b": "1cde3687133de290"
+},
+"3_시스템/_ref/incident-2026-07-19-빈약청크-허위이웃.md": {
+"9b5066a2093c": "6bb4d8977ae3850c"
+},
+"3_시스템/_ref/incident-2026-07-26-obsidian-svg-style-stripping.md": {
+"6e7a830e7e20": "9209087e885ce6c0"
+},
+"3_시스템/_ref/incident-2026-07-27-SessionStart-동기reindex-23초-블로킹.md": {
+"08f17a91a45a": "73595fe3d2fbebe1"
+},
+"3_시스템/_ref/incident-2026-07-27-frontmatter-title-부분인용-YAML파싱오류.md": {
+"a9055e0eefd7": "870d9b6486dfe51a"
+},
+"3_시스템/_ref/incident-2026-07-27-obsidian-블록수식-연속-날것노출.md": {
+"2e257b5d746f": "90944bac5b3f3d3c"
+},
+"3_시스템/_ref/incident-2026-07-27-weekly자동실행-권한대기-사망.md": {
+"14d3714b4bc6": "076a3b53c900f005"
+},
+"3_시스템/_ref/incident-2026-07-30-유저전역설정-classifier차단.md": {
+"bc6e2d540c40": "8dcb7cc8465e24bc"
+},
+"3_시스템/_ref/incident-2026-07-30-조건부-instruction-로딩-미작동.md": {
+"8c53412b1f2e": "c09cdcbd8a46dbb0"
+},
+"3_시스템/_ref/incident-2026-08-02-git-index-lock-62시간-자동커밋사망.md": {
+"7e6761525fad": "ca794915c8b0c057"
+},
+"3_시스템/_ref/incident-2026-08-02-코어게이트-ask사유-모델미도달.md": {
+"f2f5329b6173": "df3faf4df389c9b1"
+},
+"3_시스템/_ref/incident-2026-08-08-StartProcess-디태치-569ms.md": {
+"d8b61fe206b3": "274260bb44f679fa"
+},
+"3_시스템/_ref/incident-2026-09-04-배경태스크-15분유휴-무성종료.md": {
+"148890cd8436": "4ae06077d6cb2a3f"
+},
+"3_시스템/_ref/incident-2026-09-05-hasattr-없는메서드-조용한무동작.md": {
+"7d4b2b832b74": "df587426bcaf2b2f"
+},
+"3_시스템/_ref/incident-2026-09-19-git잠금-자동커밋-사흘침묵.md": {
+"88f4b565e6c2": "237e551a0cee0157"
+},
+"3_시스템/_ref/incident-2026-09-24-데스크탑-훅알림-두경로-모두막힘.md": {
+"6656b43e88ae": "e9e83576b99637bf"
+},
+"3_시스템/_ref/incident-2026-09-30-자동모드-서버판정-무응답-무인진행정지.md": {
+"e0372a1ffdc7": "f5fb399519c2585e"
+},
+"3_시스템/_ref/incident-2026-10-13-배포판-autocrlf-번들-줄바꿈변환.md": {
+"1040b4829cf7": "d18712b6bf75cb4f"
+},
+"3_시스템/_ref/measure-module-toggle.md": {
+"40026e81a7d8": "c3fd4f83d5e6cecd"
+},
+"3_시스템/_ref/ref-2026-08-30-claude-p-부트스트랩-40배-옵션.md": {
+"9f9587bb6749": "d046556142600d94"
+},
+"3_시스템/_ref/코어수정-준수사항-체크리스트.md": {
+"1eaaa4df65d7": "22b15c753443ddad",
+"71f708707bce": "a485cab7f44fd4a3",
+"72a13a533fc7": "f81912df95c79430",
+"95ca8336a5f0": "24397aa705dca3b8",
+"97b9839a9f43": "b5962b7989a75b1f",
+"eee2e710a9ef": "899cef587ace179e"
+},
+"3_시스템/_templates/.gitkeep": {
+"e3b0c44298fc": "e69de29bb2d1d643"
+},
+"3_시스템/actions.json": {
+"0de9a4f6ccd0": "6e60b53de55cf672"
+},
+"3_시스템/brain.py": {
+"8a0b1e0e6879": "a9f6362a7b69f9da"
+},
+"3_시스템/claude_bin.py": {
+"5f742f8aa240": "c4d00eb58e13cc78"
+},
+"3_시스템/cleanup.py": {
+"43dd1fdaf9bc": "b3e047870a2136fe",
+"d391463f972c": "5636a49e507a55b8"
+},
+"3_시스템/conventions.md": {
+"09402ad75132": "e744ee664c93e53c",
+"5342d9717554": "0307d95ce0ad8d26",
+"615d43fc8cd0": "1e43ec8afd6bee50",
+"6aea018498a6": "8d71e45cf7c126a5",
+"81a88345cea6": "0dd890302a7e7f9f",
+"8606484871a4": "94a946bb7c7da6b1",
+"961dc5e8aa5a": "409922dfca6d0ccd",
+"a6c18aee12df": "6a5f879343328c0e",
+"bddd97709d21": "e07c77b3e0fe70ff",
+"d988f588d2f0": "de0b958c1c352a20"
+},
+"3_시스템/default-layout.json": {
+"5bbc0ed2897c": "61982f43f6a513f9"
+},
+"3_시스템/docpdf.py": {
+"54ff8744f15f": "fbbea448cd93810e"
+},
+"3_시스템/drift.py": {
+"974b679fca90": "44a29db818a07216"
+},
+"3_시스템/fileops.py": {
+"8a795dae360c": "41b9d120b35b956f",
+"91a00a384791": "c6849edd8801ef49"
+},
+"3_시스템/follow.py": {
+"6e409a099207": "203e2c0537c913cc"
+},
+"3_시스템/handwriting/README.md": {
+"215c4c2a9255": "56d00bb51b61c6de",
+"238b4f58c1e2": "efed9b63750b35cf"
+},
+"3_시스템/holidays.py": {
+"3856a0091741": "eeb08459d717e93c"
+},
+"3_시스템/hooks/core-gate-decide.ps1": {
+"12596851f03d": "292437424e154bbf",
+"477e80eb0923": "414b468fd58b246a",
+"75720769a805": "003e3870466c99d2"
+},
+"3_시스템/hooks/core-gate.ps1": {
+"034170b84f2e": "34fa2370114304e3",
+"2587df1df527": "dc945070773091d4",
+"9e56e0ec1638": "2270556dad4ad409",
+"aa25c4be6d8c": "e7f2ee988fcb1ef2",
+"c0fef13f836c": "79b969d82da72a38",
+"e5c9dec4cc7c": "76394f17e6f7233d"
+},
+"3_시스템/hooks/idle-save.py": {
+"bdbbb0c8654d": "b1477f8af4ac8dff",
+"c5c1852d9cac": "e337bfeb152462ce"
+},
+"3_시스템/hooks/loop-pin.py": {
+"5d5e697b8e5d": "c1a2748b7e41712d",
+"627b36b401ee": "21250da8012d318c",
+"83111bd875f5": "99ffc2f481d65193",
+"fd364f38b5d7": "8e8b9bae003047a7",
+"ff899016c472": "01e3049fcbac4e2d"
+},
+"3_시스템/hooks/ops-guard.ps1": {
+"1dcdd48cbae2": "5472b1f7da1ddd95"
+},
+"3_시스템/hooks/permission-probe.ps1": {
+"74a26679b224": "8888d3823af9b8f1",
+"e4b13cc1a0fc": "b72c4a8b3b4c6650"
+},
+"3_시스템/hooks/pre-commit": {
+"6575695c9573": "40fdfb96f975df4d",
+"846bc2f8d04d": "193fee0f03d08dbe",
+"c1713b5f876a": "935932c063789e7e",
+"e7835562f27b": "be0fb4ca38f60503",
+"f294b8fdc557": "212b016cc89e35e6"
+},
+"3_시스템/hooks/session-end.ps1": {
+"2a10b5e55718": "81e341272ebe3eca",
+"3a0e250c2691": "5b5b3bd4c173c400",
+"3be841dcf084": "3b0ff1c07131ff9f",
+"44937dfe4b9c": "8e57bab00dbc6298",
+"56564d158b29": "e9df28eff336c961",
+"65ddf74a06f6": "dcaea5ea5c741b38",
+"70a11610fb5a": "9bd5c240a9c3fe19",
+"9b86daf817b2": "566754408c0e752e",
+"d8067bc32ab0": "653b468d509f8b64"
+},
+"3_시스템/hooks/session-notice.py": {
+"0ae801159eb6": "6b8f2ffcb6d6e39a",
+"1e9c055860f5": "c1b488ce361baaee",
+"7ad53e510f5d": "2fe28da7d8ee57d1",
+"81038f7a351a": "5ccda63490bec6d2"
+},
+"3_시스템/hooks/session-start.ps1": {
+"13957a09e15b": "399ce3723687db81",
+"290ae9b5b822": "f80121090cbd354d",
+"2a6a0717d7b3": "6cac626a3dbe6eb0",
+"363b14cd891a": "ab40e8321a8667e9",
+"69457d2cb681": "06ede6375dd3b1c1",
+"72719fc0e3be": "e8999a1a4b1d76e1",
+"728d5b6d9e2f": "ad1ef6d65072d5ed",
+"78aefa50978b": "0c647c712f64c6a3",
+"8157e1903934": "ad47232557277981",
+"97edda90f438": "6b63e5bd46326409",
+"b27c3e861f94": "1a8772d57dee7c29",
+"d806a5de0b43": "8c519a9dfc048782",
+"dad08358fab4": "3513a998cdc55108",
+"efd55bd918e6": "d942afdab37edfd1"
+},
+"3_시스템/hooks/statusline.py": {
+"5631836beaf7": "cb2168a1f3d686b2"
+},
+"3_시스템/hooks/stop-check.ps1": {
+"0047dc9c8988": "a3863a88fa4b8433",
+"43e010ee1da6": "21560a58c5221534",
+"59fed689269f": "90edce736192fe51",
+"8f944782b4a0": "3832a40c48e65d51",
+"cdbd76a840a3": "374a05924a3e7e3b",
+"de108843c4bd": "7df83dcb8fab44fa"
+},
+"3_시스템/hwlayout.py": {
+"abf9de6879d5": "f62a71e53776b737"
+},
+"3_시스템/inbox.py": {
+"bcd05573216d": "99e07832c561b0e7"
+},
+"3_시스템/ingest.py": {
+"93678cad42e5": "0b89fb41fee50b7d",
+"b5b5685cafb1": "d10b7589a1f02b4c",
+"d95cc01ea80f": "fd3dfaecd6c77a86"
+},
+"3_시스템/ingest_vision.py": {
+"2f24ed4eeab2": "ab167d79aa084b62",
+"308f20e410c1": "1aa5be67c2629ab0",
+"77790c1bd07f": "9e9931708e05202d"
+},
+"3_시스템/mdtable.py": {
+"9226acb7ebcf": "6e5b0229ece11670"
+},
+"3_시스템/migrations/0001-목적별-다섯-영역.json": {
+"329f08562ce1": "0fa5b526656ae0e0"
+},
+"3_시스템/moc.py": {
+"5795de089e8e": "7807fee8d4945047"
+},
+"3_시스템/outside.py": {
+"674b7cd456b6": "053973e4df4da7da"
+},
+"3_시스템/props-sync.py": {
+"b46be639a4c8": "920206095fc17196"
+},
+"3_시스템/record.py": {
+"64286b13752c": "998bbba3d867b82f"
+},
+"3_시스템/restructure.py": {
+"c2cc00c3c9d6": "1087dc4753d8181f"
+},
+"3_시스템/roles.json": {
+"c85d78c68744": "f9ff5c6825a6c575"
+},
+"3_시스템/roles.py": {
+"023ee9613328": "e76022ec9328dd24",
+"686363d4cd7f": "6c9955f7e56297db"
+},
+"3_시스템/schedule.py": {
+"5682b0618fb7": "d7f21194f22b90bf"
+},
+"3_시스템/search.py": {
+"034c69fa47ff": "ecd13b173ee9a94c",
+"22590d4d5558": "8594bca7a84f31f1",
+"2854f3382520": "6995d157076d5682",
+"3571b7e7d79c": "462fd3612c8454c8",
+"35a39084af0e": "e218f87cd51abb9e",
+"73ad91edee57": "bd65c66488347683",
+"86dd9c8db43c": "58f5ceed85b45118",
+"88073ea6c220": "5d781f73a8eef7fc",
+"8ba966a70c32": "e2a647a4be7d9c41",
+"94e84f8f80f9": "38c839e9c382f73e",
+"a10be66531a3": "7837ec57fcd34693",
+"abd2c462b195": "d1204c81e2485e43",
+"c53afe68998a": "a69ceda8e0910886"
+},
+"3_시스템/sendto-inbox.ps1": {
+"6d70b3e712ee": "47bbe4a1389272d6"
+},
+"3_시스템/session-stub.py": {
+"40bbae820ee0": "c4bda10756a87c90",
+"4a76fe3549ed": "10851752e5c99f72",
+"59389afde877": "52e7e72b12a30797",
+"a1d65401aa78": "2bb699efcdff99af",
+"d81a2e2276b0": "9ff0f04eeaef5a06"
+},
+"3_시스템/skills/VENDOR.txt": {
+"ab3b7e719656": "a45129c470e95d24"
+},
+"3_시스템/skills/defuddle/LICENSE": {
+"64c64d48361e": "da1355173f28f352"
+},
+"3_시스템/skills/defuddle/SKILL.md": {
+"10673a4dc70a": "82b94b5622f602bd"
+},
+"3_시스템/skills/inbox-sort/SKILL.md": {
+"7ff032471eeb": "a2d715044e91e666"
+},
+"3_시스템/skills/obsidian-markdown/LICENSE": {
+"64c64d48361e": "da1355173f28f352"
+},
+"3_시스템/skills/obsidian-markdown/SKILL.md": {
+"7ad72e1f0a90": "d72f1694c4859e5c"
+},
+"3_시스템/skills/obsidian-markdown/references/CALLOUTS.md": {
+"9912ec2e3f87": "4e9a0bbc18c71885"
+},
+"3_시스템/skills/obsidian-markdown/references/EMBEDS.md": {
+"63b6205507e2": "daebe22f7aa0f723"
+},
+"3_시스템/skills/obsidian-markdown/references/PROPERTIES.md": {
+"392953b5838c": "33aebc459c4c58f1"
+},
+"3_시스템/skills/pdf-ingest/SKILL.md": {
+"ed411a772462": "51d863715039892b"
+},
+"3_시스템/skills/search/SKILL.md": {
+"85eb56032d12": "032093a439c89c5f"
+},
+"3_시스템/skills/session-close/SKILL.md": {
+"ab0f1c1fb406": "623f663aade9a747"
+},
+"3_시스템/skills/setup-interview/SKILL.md": {
+"d16abcfe7778": "c477285319a474de"
+},
+"3_시스템/skills/weekly-review/SKILL.md": {
+"d84483b32068": "064dd0c521283248"
+},
+"3_시스템/skillstat.py": {
+"af45cc96281f": "605951d2a688adcd"
+},
+"3_시스템/tokens.py": {
+"798d8de6f012": "7ef3e30c9e996022",
+"806ed06b0311": "5dd83dc757120513"
+},
+"3_시스템/topic.py": {
+"440fb73122cf": "0d880534e6b45baf"
+},
+"3_시스템/vault-chat/상시.md": {
+"2364cb730ed3": "5677e381dfd7e7f4"
+},
+"3_시스템/vault-chat/필요시.md": {
+"038e8b0182a2": "980d16fdcc74d5b5"
+},
+"3_시스템/weekly.py": {
+"df0d8c674abb": "a5d2832635922875"
+},
+"3_시스템/work.json": {
+"0440ca612c98": "3a3464ebd09b8359"
+},
+"3_시스템/work.py": {
+"bd5f346786f9": "117d875f03230cd1"
+},
+"CLAUDE.md": {
+"1408be2df1a5": "5827b49fa6261711",
+"22433b7afb51": "1f6bc72ae74d740e",
+"2985adbd40b4": "ddef2add1a4c1e63",
+"34f9ed455b78": "2ce0d81f8b998709",
+"3821639af233": "b028a855eed5b65c",
+"3fa1b145ce47": "4b2a33bcf57b7572",
+"7be7d281a1bc": "719eac14ea1296ef",
+"8f695a777103": "5401f6c948e82caf",
+"be568459acad": "73d126ca51a388d6",
+"cef5604ef97b": "526ae39e35d1fab8"
+},
+"README.md": {
+"028c056b8aa9": "d81b47a22fa18aae",
+"0cfebb38fa1d": "4212a12c5357609e",
+"0e612799b0bb": "2003dde3fdac4707",
+"136ef305fd34": "c434f01b70453b09",
+"18dc1afe94a5": "b4137e3aa350c315",
+"309040ecf91a": "df7dea224ea5d9d0",
+"3f50d522139e": "204fdf05e0217060",
+"4239e0ef0b13": "8887b254b1cc340a",
+"472a3d8c8578": "3f98bae7ca7318b6",
+"534a65747b42": "858cd722864c017d",
+"6426aa488e15": "fc18d7a0916e238e",
+"7334d2716038": "d8f0922a3a13d803",
+"77dd0ae978ec": "4c37890ca3b34ed3",
+"797189d72698": "b7b9f500d0692258",
+"8eb97a2da247": "37fb5daf58893a44",
+"a0dd5cb999f3": "23253beb6ac68742"
+}
+},
+"rev": "43502c2ce247",
+"schema": 1
+}
