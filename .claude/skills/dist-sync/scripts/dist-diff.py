@@ -217,7 +217,7 @@ def walk(root):
     return out
 
 
-def scan_leaks(files):
+def scan_leaks(files, rules=None):
     hits = []
     for rel, full in sorted(files.items()):
         # css·js 도 본다 — brain-source styles.css 주석에 호칭이 7곳 있었다(2026-10-22).
@@ -231,7 +231,7 @@ def scan_leaks(files):
                     # 번들 js 는 한글을 \uXXXX 로 내보낸다 — 풀지 않으면 호칭·실명을 못 본다(2026-10-23 빈틈)
                     if code:
                         line = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), line)
-                    for rx, label in LEAK:
+                    for rx, label in (rules or LEAK):
                         if code and label.startswith("세션 id"):
                             continue
                         if re.search(rx, line):
@@ -406,6 +406,13 @@ def report(A, B, mode, plan=None):
         w("")
         for rel, i, txt in broken:
             w("- `%s:%d` — `%s`" % (rel, i, txt))
+        w("")
+        # 후보 목록은 볼트 쪽을 60건까지만 보여 준다 — 배포판에 실제로 남은 것은 여기서 전수로 잰다(2026-11-03 플러그인 CSS 주석의 호칭을 놓침)
+        left = scan_leaks(fb, local) if local else []
+        w("## 배포판에 남은 개인 패턴 — %d건" % len(left))
+        w("")
+        for rel, i, label, txt in left:
+            w("- `%s:%d` — %s" % (rel, i, label))
         w("")
         named = author_hits(B)
         w("## 올라갈 커밋의 작성자 — 익명이 아닌 것 %d건" % len(named))
