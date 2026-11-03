@@ -17,6 +17,8 @@
   15~60분 간격의 18%, 60분+ 의 38%) 이 감시도 함께 죽는다(taskkill /T · incident-2026-09-04).
   그리고 재기동 뒤 첫 요청은 **60분 안이어도 90%(28/31)가 전량 재작성**이다 — TTL 이 아니라 재기동이
   캐시를 깬다. 이 경우는 여기서 못 막는다. 사용률 트리거(①)는 턴 끝에 즉시 판정하므로 영향 없다.
+⛔ `/clear` 는 프로세스를 두고 세션만 바꾼다(11-03 재현) — 감시는 살아남고, 옛 대화 파일이 더 안 자라니 «유휴»로 본다.
+  그대로 깨우면 지금 세션에 옛 세션 id 로 쓰라는 지시가 간다. 그래서 기다리는 동안 이 창의 지금 세션을 견준다.
 경계: 판정만 한다. 쓰는 것은 Claude 다(맥락은 Claude 에게만 있다).
 계약: 조건 미충족·예외 = 종료코드 0(fail-open). 깨울 때만 stderr + 종료코드 2.
 """
@@ -60,6 +62,19 @@ def last_activity(path):
             if d.get("type") in ("user", "assistant") and not d.get("isSidechain"):
                 last = max(last, d.get("timestamp") or "")
     return last
+
+
+def current_session():
+    """이 창(CLAUDE_PID)의 지금 세션 id · 모르면 None. 앱 내부 파일이라(문서에 없음) 판이 바뀌면 못 읽을 수 있다."""
+    pid = os.environ.get("CLAUDE_PID")
+    if not pid:
+        return None
+    home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    try:
+        with open(os.path.join(home, "sessions", pid + ".json"), encoding="utf-8") as fh:
+            return json.load(fh).get("sessionId") or None
+    except Exception:
+        return None
 
 
 def tail_facts(path):
@@ -182,9 +197,14 @@ def main():
             deadline = min(deadline, exp - SAFETY_MIN * 60)
         act = last_activity(path)
         size = os.path.getsize(path)
-        log(short, "watch ctx={}K wait={:.0f}m".format(ctx // 1000, (deadline - start) / 60))
+        log(short, "watch ctx={}K wait={:.0f}m{}".format(ctx // 1000, (deadline - start) / 60,
+                                                         "" if current_session() else " session?"))
         while time.time() < deadline:
             time.sleep(min(POLL_S, max(1, deadline - time.time())))
+            cur = current_session()                   # 모르면 종전대로 — 기능이 조용히 죽는 쪽이 더 나쁘다
+            if cur and cur != sid:
+                log(short, "exit session-changed {}".format(cur[:8]))
+                return 0                              # /clear — 이 세션은 더 안 이어진다
             if os.path.getsize(path) != size:         # 크기는 싼 1차 거름 — 판정은 user/assistant 줄로
                 size = os.path.getsize(path)
                 if last_activity(path) != act:
