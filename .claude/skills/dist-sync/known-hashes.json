@@ -49,7 +49,7 @@
 "64c64d48361e": "da1355173f28f352"
 },
 ".claude/skills/defuddle/SKILL.md": {
-"10673a4dc70a": "82b94b5622f602bd",
+"10673a4dc70a": "287b1fc5eca3d79a",
 "3734f4845a0a": "c3fd1d96ce60da3d"
 },
 ".claude/skills/dist-sync/.claude-plugin/plugin.json": {
@@ -147,16 +147,16 @@
 "8d48cbeae1b3": "a9641310da40e6b0"
 },
 ".claude/skills/obsidian-markdown/LICENSE": {
-"64c64d48361e": "da1355173f28f352"
+"64c64d48361e": "33d692ee84f4464f"
 },
 ".claude/skills/obsidian-markdown/SKILL.md": {
-"7ad72e1f0a90": "d72f1694c4859e5c"
+"7ad72e1f0a90": "bca51a429c020a4c"
 },
 ".claude/skills/obsidian-markdown/references/CALLOUTS.md": {
 "9912ec2e3f87": "c086824c64156d17"
 },
 ".claude/skills/obsidian-markdown/references/EMBEDS.md": {
-"63b6205507e2": "daebe22f7aa0f723"
+"63b6205507e2": "668851abe0f05649"
 },
 ".claude/skills/obsidian-markdown/references/PROPERTIES.md": {
 "392953b5838c": "e46a63abadd7c182"
@@ -267,6 +267,7 @@
 "1872677961db": "2f5b4a7359f45af4",
 "3116df57c07a": "205d26b6d32d7646",
 "7e42318b05b7": "9c542c2b76082717",
+"8a34e23a2481": "7c016272805eb6c6",
 "c4a09bd7ec15": "77dea417421c8732",
 "ce8643df51bc": "617496284709855e"
 },
@@ -439,6 +440,7 @@
 "3_시스템/hooks/core-gate-decide.ps1": {
 "12596851f03d": "292437424e154bbf",
 "477e80eb0923": "414b468fd58b246a",
+"4bbc4ae677a5": "f096bde92fe2cf4f",
 "75720769a805": "003e3870466c99d2"
 },
 "3_시스템/hooks/core-gate.ps1": {
@@ -513,8 +515,10 @@
 },
 "3_시스템/hooks/stop-check.ps1": {
 "0047dc9c8988": "a3863a88fa4b8433",
+"131019200d00": "0bf1cd438f276de3",
 "43e010ee1da6": "21560a58c5221534",
 "59fed689269f": "90edce736192fe51",
+"5d8621c5fba3": "55ebd36145a470b4",
 "8f944782b4a0": "3832a40c48e65d51",
 "cdbd76a840a3": "374a05924a3e7e3b",
 "de108843c4bd": "7df83dcb8fab44fa"
@@ -574,13 +578,17 @@
 "3571b7e7d79c": "462fd3612c8454c8",
 "35a39084af0e": "e218f87cd51abb9e",
 "73ad91edee57": "bd65c66488347683",
+"7f5c24b85d72": "4c0c5378956093ab",
 "86dd9c8db43c": "58f5ceed85b45118",
 "88073ea6c220": "5d781f73a8eef7fc",
 "8ba966a70c32": "e2a647a4be7d9c41",
 "94e84f8f80f9": "38c839e9c382f73e",
+"9981173c27a2": "b5119d83e86b077d",
 "a10be66531a3": "7837ec57fcd34693",
 "abd2c462b195": "d1204c81e2485e43",
-"c53afe68998a": "a69ceda8e0910886"
+"c02f6b2a614f": "7778467ff5d41d6c",
+"c53afe68998a": "a69ceda8e0910886",
+"eeb86caac9f5": "17e7695c526a53d8"
 },
 "3_시스템/sendto-inbox.ps1": {
 "6d70b3e712ee": "47bbe4a1389272d6"
@@ -689,11 +697,11 @@
 "1408be2df1a5": "5827b49fa6261711",
 "22433b7afb51": "1f6bc72ae74d740e",
 "2985adbd40b4": "ddef2add1a4c1e63",
-"34f9ed455b78": "2ce0d81f8b998709",
+"34f9ed455b78": "a1d2c15c2ecdee58",
 "3821639af233": "b028a855eed5b65c",
 "3fa1b145ce47": "4b2a33bcf57b7572",
-"7be7d281a1bc": "719eac14ea1296ef",
-"8f695a777103": "5401f6c948e82caf",
+"7be7d281a1bc": "9f3a370ea2e19c7f",
+"8f695a777103": "e891d67ab05f7758",
 "be568459acad": "73d126ca51a388d6",
 "cef5604ef97b": "526ae39e35d1fab8"
 },
@@ -717,6 +725,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "232a558d4d60",
+"rev": "2bc24ba8a54d",
 "schema": 1
 }
