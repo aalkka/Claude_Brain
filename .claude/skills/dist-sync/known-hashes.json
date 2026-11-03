@@ -69,6 +69,7 @@
 ".claude/skills/dist-sync/scripts/dist-diff.py": {
 "18421fabb136": "3d665993529d05a1",
 "5354177f4ee7": "785d1723d014c665",
+"612b056fb18e": "b6dc0634027b35a8",
 "80300757f0b1": "46cebe33a82e961b",
 "8f7e97c07dd7": "42c92e0d9a946a27",
 "a582b89d3810": "e7d851bf03162fac",
@@ -80,6 +81,7 @@
 },
 ".claude/skills/dist-sync/skills/publish/SKILL.md": {
 "2b4af894f663": "644b8e53821ad2a4",
+"7d3aca584536": "3de822b39fd05f21",
 "98683c724762": "038464d1d9a94cb4",
 "a03cea231509": "1d3e9f6e1df1791c",
 "ec3bbfe21d8a": "c2420238b81cf4ea"
@@ -215,6 +217,7 @@
 "34af5891b59f": "a84fd0c90a16bd91",
 "5f9d5f3c6043": "c9421ce708aba9c4",
 "c61292f12070": "b4e0bfa459027aba",
+"ea8681578727": "7888b7252f9d3c66",
 "f621ad53ee93": "3c6ee04d88b1a930",
 "f75585336c5c": "2a6c2d59ebfcb356"
 },
@@ -378,7 +381,8 @@
 "e3b0c44298fc": "e69de29bb2d1d643"
 },
 "3_시스템/actions.json": {
-"0de9a4f6ccd0": "6e60b53de55cf672"
+"0de9a4f6ccd0": "6e60b53de55cf672",
+"55f1fb41398c": "e2ec56021102acc1"
 },
 "3_시스템/brain.py": {
 "8a0b1e0e6879": "a9f6362a7b69f9da"
@@ -408,14 +412,20 @@
 "3_시스템/docpdf.py": {
 "54ff8744f15f": "fbbea448cd93810e"
 },
+"3_시스템/door.py": {
+"e2c8c74591dd": "55dae4f056510da5"
+},
 "3_시스템/drift.py": {
+"0d2125789af7": "3fa5d9a16bdc03e5",
 "974b679fca90": "44a29db818a07216"
 },
 "3_시스템/fileops.py": {
 "8a795dae360c": "41b9d120b35b956f",
-"91a00a384791": "c6849edd8801ef49"
+"91a00a384791": "c6849edd8801ef49",
+"c95b7ecdeb6b": "a5518a0e5ee31085"
 },
 "3_시스템/follow.py": {
+"460729f56658": "7438b11e200b81f3",
 "6e409a099207": "203e2c0537c913cc"
 },
 "3_시스템/handwriting/README.md": {
@@ -533,6 +543,7 @@
 "5795de089e8e": "7807fee8d4945047"
 },
 "3_시스템/outside.py": {
+"4e68ea105290": "e41209a6e70a167f",
 "674b7cd456b6": "053973e4df4da7da"
 },
 "3_시스템/props-sync.py": {
@@ -631,11 +642,37 @@
 "3_시스템/topic.py": {
 "440fb73122cf": "0d880534e6b45baf"
 },
+"3_시스템/tutorial/1-세-자리.md": {
+"712a467fa62f": "9c6148113638f1a6"
+},
+"3_시스템/tutorial/2-자료-넣기.md": {
+"034cd65c57b6": "c7b90674fe72df96"
+},
+"3_시스템/tutorial/3-보면서-묻기.md": {
+"fdc8d6a2790c": "33d327e60dabd82b"
+},
+"3_시스템/tutorial/4-일-맡기기.md": {
+"8fed73dc39c4": "e245af979b6bc5f1"
+},
+"3_시스템/tutorial/5-지운-것-되살리기.md": {
+"d37997c5e747": "3aaf52dba1cae1d1"
+},
+"3_시스템/tutorial/6-마감과-주제.md": {
+"7b9a8df767b1": "cace167e05443164"
+},
+"3_시스템/tutorial/7-기록과-이어-가기.md": {
+"28fb944926ab": "6779851c5d9bd84d"
+},
+"3_시스템/tutorial/찾아보기.md": {
+"84d78ff2587b": "67b9c8bf3c2a2e76"
+},
 "3_시스템/vault-chat/상시.md": {
-"2364cb730ed3": "5677e381dfd7e7f4"
+"2364cb730ed3": "5677e381dfd7e7f4",
+"74e12da34273": "9dfb66c981dbe11d"
 },
 "3_시스템/vault-chat/필요시.md": {
-"038e8b0182a2": "980d16fdcc74d5b5"
+"038e8b0182a2": "980d16fdcc74d5b5",
+"67347353a934": "1117795f1bb3b4a1"
 },
 "3_시스템/weekly.py": {
 "df0d8c674abb": "a5d2832635922875"
@@ -670,6 +707,7 @@
 "472a3d8c8578": "3f98bae7ca7318b6",
 "534a65747b42": "858cd722864c017d",
 "6426aa488e15": "fc18d7a0916e238e",
+"7112c76a6292": "b87da0fb4cb34c31",
 "7334d2716038": "d8f0922a3a13d803",
 "77dd0ae978ec": "4c37890ca3b34ed3",
 "797189d72698": "b7b9f500d0692258",
@@ -677,6 +715,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "43502c2ce247",
+"rev": "8512e13237b7",
 "schema": 1
 }
