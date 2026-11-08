@@ -28,13 +28,6 @@
        "type": "search",
        "state": {}
       }
-     },
-     {
-      "type": "leaf",
-      "state": {
-       "type": "bookmarks",
-       "state": {}
-      }
      }
     ]
    }
@@ -44,11 +37,9 @@
   "type": "split",
   "direction": "horizontal",
   "width": 569.5,
-  "collapsed": true,
   "children": [
    {
     "type": "tabs",
-    "currentTab": 1,
     "children": [
      {
       "type": "leaf",
@@ -70,34 +61,6 @@
        "type": "outline",
        "state": {}
       }
-     },
-     {
-      "type": "leaf",
-      "state": {
-       "type": "backlink",
-       "state": {}
-      }
-     },
-     {
-      "type": "leaf",
-      "state": {
-       "type": "outgoing-link",
-       "state": {}
-      }
-     },
-     {
-      "type": "leaf",
-      "state": {
-       "type": "tag",
-       "state": {}
-      }
-     },
-     {
-      "type": "leaf",
-      "state": {
-       "type": "all-properties",
-       "state": {}
-      }
      }
     ]
    }
@@ -105,12 +68,13 @@
  },
  "ribbonHidden": {
   "brain-base": false,
+  "brain-calendar": false,
+  "claude-vault-view": false,
   "graph": false,
   "switcher": false,
   "templates": true,
   "command-palette": true,
   "canvas": true,
-  "bases": true,
-  "brain-calendar": false
+  "bases": true
  }
 }

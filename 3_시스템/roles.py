@@ -89,7 +89,7 @@ def _retention_block(vault=None):
         text = open(abs("retention", vault=vault), encoding="utf-8").read()
         m = re.search(r"```json\s*\n(.*?)\n```", text, re.S)
         return json.loads(m.group(1)) if m else {}
-    except (OSError, ValueError, TypeError):
+    except (KeyError, OSError, ValueError, TypeError):  # KeyError = roles.json 에 retention 칸이 없음(옛 배포판·시험 볼트) → 기본값
         return {}
 
 
@@ -124,6 +124,51 @@ def retention_how(key, vault=None):
     """그 칸의 «처리»(자동 휴지통·후보·…) — 표에서 «후보»로 바꾸면 대본이 자동으로 안 지운다. 못 읽으면 빈 글(자동 안 함)."""
     row = _retention_row(key, vault)
     return str(row.get("처리") or "") if isinstance(row, dict) else ""
+
+
+# ── 모듈 등록부(ADR-035) — 켜짐 판정은 여기 한 곳(옵시디언 쪽은 brain-base src/modules.ts 가 같은 규칙) ──
+def _plugin_layers(vault=None):
+    """enabledPlugins 를 Claude Code 와 같은 순서로(이 PC → 프로젝트 → 사용자). 못 읽는 층은 없는 셈."""
+    base = _vault(vault)
+    home = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(os.path.expanduser("~"), ".claude")
+    out = []
+    for p in (os.path.join(base, ".claude", "settings.local.json"), os.path.join(base, ".claude", "settings.json"), os.path.join(home, "settings.json")):
+        try:
+            with open(p, encoding="utf-8") as f:
+                d = json.load(f).get("enabledPlugins")
+            out.append(d if isinstance(d, dict) else {})
+        except (OSError, ValueError, AttributeError):
+            out.append({})
+    return out
+
+
+def module_on(mid, vault=None, layers=None):
+    """기본 = 켜짐 · enabledPlugins["<id>@skills-dir"] 가 false 면 꺼짐. 파일만 읽는다(claude 를 부르면 2초쯤 걸린다)."""
+    for lay in _plugin_layers(vault) if layers is None else layers:
+        if mid + "@skills-dir" in lay:
+            return lay[mid + "@skills-dir"] is not False
+    return True
+
+
+def modules(on_only=False, vault=None):
+    """볼트의 모듈 — [{id, dir, on, json}] · json = 못 읽으면 None(부르는 쪽이 알린다). 꺼진 모듈의 자료는 지우지 않는다."""
+    base = os.path.join(_vault(vault), ".claude", "skills")
+    layers = _plugin_layers(vault)
+    out = []
+    for mid in sorted(os.listdir(base)) if os.path.isdir(base) else []:
+        mp = os.path.join(base, mid, "module.json")
+        if not os.path.isfile(mp):
+            continue
+        on = module_on(mid, layers=layers)
+        if on_only and not on:
+            continue
+        try:
+            with open(mp, encoding="utf-8") as f:
+                mj = json.load(f)
+        except (OSError, ValueError):
+            mj = None
+        out.append({"id": mid, "dir": os.path.join(base, mid), "on": on, "json": mj})
+    return out
 
 
 def canon(name, vault=None):

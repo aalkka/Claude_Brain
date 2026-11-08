@@ -40,7 +40,7 @@ _SYSDOCS = [roles.find_note("설계노트") or roles.path("notes", "설계노트
 # 개인: 읽지도 않는다. 목록조차 만들지 않는다.
 KNOWLEDGE = "2_지식"  # mf:allow-path  (뿌리의 씨앗·원본 목록만 보러 들어가는 칸)
 PERSONAL = [
-    "1_수집/*", *_CONTENT, "3_시스템/_index/*",  # mf:allow-path
+    "1_수집/*", *_CONTENT, "3_시스템/_index/*", "3_시스템/door-app/*",  # mf:allow-path
     "3_시스템/_claude-memory/*", ".obsidian/*", ".git/*", "__pycache__/*",  # mf:allow-path
     # DoD 검증(2026-09-12)이 잡은 결함 — settings.local.json 은 개인 권한 설정이고
     # gitignore 대상인데 `.claude/skills/*` 형제라 코어로 분류됐다. 적용 단계였다면 유출.
@@ -53,9 +53,16 @@ PERSONAL = [
     # 2026-11-03 볼트 개혁 반영 — 개인 일정 · 옛 노트 자리 · 제작자 모듈(eye = 개인 프로젝트 · study-helper = 공개 저장소가 따로)
     # 학교 수집(LMS·공지 조리법·판정)·보고서 대본은 특정 학교·과제에 묶여 있다 · 행위는 optional 이라 없어도 고장이 아니다
     "2_지식/일정/*", "2_지식/notes/*", ".claude/skills/eye/*", ".claude/skills/study-helper/*",  # mf:allow-path
-    "3_시스템/lms/*", "3_시스템/lms-*", "3_시스템/collect/*", "3_시스템/web-collect.py", "3_시스템/notice-filter.py",  # mf:allow-path
+    "3_시스템/lms/*", "3_시스템/lms-*", "3_시스템/collect/*",  # mf:allow-path  (수집 엔진 web-collect·notice-filter 는 코어로 · 11-09)
     "3_시스템/labreport-*", "3_시스템/dsl-report-build.py", "3_시스템/md2docx-simple.py",  # mf:allow-path
     "3_시스템/ask.py", "3_시스템/travel-mode.ps1",  # mf:allow-path
+    # 2026-11-09 — 배포판에 안 싣는 모듈(빅보스·로드맵) · 이 PC 의 값 · 그래프 색표 · 손발 서버·예약·절전(폰 앱이 배포판에 없음)
+    ".claude/skills/bigboss/*", ".claude/skills/interactive_roadmap/*", "3_시스템/*.local.json", "3_시스템/graph_topics.json",  # mf:allow-path
+    "3_시스템/server.py", "3_시스템/server-setup.ps1", "3_시스템/m2-setup.ps1", "3_시스템/wake-test.ps1",  # mf:allow-path
+    # 개인 층 대상(학교 LMS 대본·서버·lms-intake·lms-auto)·안 싣는 모듈(로드맵·study-helper)을 돌리는 시험 · 제작자 노트를 묻는 검색 골든셋
+    "3_시스템/_eval/lms_*", "3_시스템/_eval/server_check.py", "3_시스템/_eval/flow_rehearsal_check.py",  # mf:allow-path
+    "3_시스템/_eval/r6_intake_check.py", "3_시스템/_eval/collect_desk_off_check.py", "3_시스템/_eval/roadmap_engine_check.py", "3_시스템/_eval/module_toggle_check.py",  # mf:allow-path
+    "3_시스템/_eval/golden.jsonl", "3_시스템/_eval/golden-paraphrase.jsonl",  # mf:allow-path
 ]
 # 예외 — 개인 폴더 안이지만 제작자가 배포하는 것
 PERSONAL_EXCEPT = list(_SYSDOCS)
@@ -79,7 +86,7 @@ EXCLUDE_EXT = (".pyc", ".pyo", ".lock", ".tmp")
 # 배포판이 직접 만든 Obsidian 플러그인(2026-10-13 Brain Sheet) — `.obsidian/` 은 통째로 제외지만 이 폴더는 코어다.
 # 남의 커뮤니티 플러그인 본체는 여전히 제외. 플러그인 설정(data.json)은 사용자 것이라 개인.
 DIST_PLUGINS = [".obsidian/plugins/brain-source/", ".obsidian/plugins/brain-base/", ".obsidian/plugins/brain-calendar/"]  # mf:allow-path
-DIST_PLUGIN_PERSONAL = {"data.json"}
+DIST_PLUGIN_PERSONAL = {"data.json", "tutorial-practice.json"}
 # 배포판이 거둔 플러그인 → 대신 쓰는 것(2026-10-22 brain-sheet → brain-source · .sheet 를 이어 맡음).
 # 거둔 것만 지우고 대신 쓰는 것을 켜야 한다 — 거둔 것이 «켜짐» 으로 남아 있으면 brain-source 는
 # 그쪽이 .sheet 를 맡는 줄 알고 비켜서, 아무도 안 맡은 .sheet 가 탐색기에서 사라진다(10-18 버그와 같은 꼴).
@@ -122,6 +129,7 @@ CORE = [
     "3_시스템/brain.py", "3_시스템/actions.json", "3_시스템/props-sync.py",  # mf:allow-path
     # 역할 → 자리(볼트 개혁 R6 · 2026-10-30) — 코드가 자리를 박지 않고 묻는 곳(주제 목록 2_지식/주제.md 는 씨앗)
     "3_시스템/roles.py", "3_시스템/roles.json",  # mf:allow-path
+    "3_시스템/설명서/*",  # mf:allow-path  — 사용자설명서의 장 노트(2026-11-03 · 목차인 사용자설명서는 씨앗)
     "3_시스템/tutorial/*",  # mf:allow-path  — 튜토리얼 대본·찾아보기(2026-11-03 · 씨앗인 사용자설명서와 달리 업데이트로 따라온다)
     # 주제 카드(R7) · 정리 후보(R8) · 구조 이전·받은함 자동 분류(R9) — 2026-10-30
     "3_시스템/topic.py", "3_시스템/cleanup.py", "3_시스템/restructure.py", "3_시스템/inbox.py",  # mf:allow-path
@@ -136,6 +144,11 @@ CORE = [
     "3_시스템/skillstat.py", "3_시스템/schedule.py", "3_시스템/docpdf.py", "3_시스템/vault-chat/*",  # mf:allow-path
     # 공휴일 표 받기(캘린더가 읽음 · 표는 일정 폴더 — 개인) — 2026-11-03
     "3_시스템/holidays.py",  # mf:allow-path
+    # 2026-11-09 반영 — 새 코어가 부르는 대본·표(기능 단계 · 코어 화면 선언 · 튜토리얼 검사 · 창 뒤 실행 ADR-044 · 그래프 색 묶음)
+    "3_시스템/options.py", "3_시스템/options.registry.json", "3_시스템/views.json", "3_시스템/tutorial_lint.py",  # mf:allow-path
+    "3_시스템/quietwin.py", "3_시스템/quietwin.mjs", "3_시스템/winwatch.py", "3_시스템/graph_topics.py",  # mf:allow-path
+    # 수집 창(코어 화면 · 11-07 본체 통합)이 부르는 엔진 — 출처마다 다른 것은 조리법(3_시스템/collect/* · 개인)
+    "3_시스템/web-collect.py", "3_시스템/notice-filter.py", "3_시스템/alarms.py", "3_시스템/filter-learn.py",  # mf:allow-path
 ]
 
 # publish 방향에서 배포판에 새어 나가면 안 되는 것 (2026-08-03 전수검사 계열)

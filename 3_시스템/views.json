@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "_설명": "코어 화면 선언 — 모듈이 아닌 본체 화면(수집 본체 통합 11-07). 칸은 module.json contributes.view 와 같고 owner(행위·대화 입구 접두 · 잎 상태 열쇠)와 contract(쓰기 경계 — touches 쓰는 곳 · reads 읽기만 하는 남의 자리 · forbids 닿으면 안 되는 곳)가 더해진다. practice = 튜토리얼 연습 자료 명령(E2 · brain-base 0.44 · «연습: 모듈» 장 동안 data 대신 · {acts} = 쌓인 흉내 행위 JSON · 쓰기는 진짜 대본을 안 부름). 읽는 이 = brain-base(3단계부터 · 그 전엔 없음) · 3_시스템/_eval/collect_core_check.py(꼴·계약 검사).",
+  "views": [
+    {
+      "owner": "collect_desk",
+      "id": "desk",
+      "name": "수집",
+      "icon": "inbox",
+      "html": ".claude/skills/collect_desk/view/index.html",
+      "data": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "view", "--reason", "{reason}"],
+      "practice": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "view", "--practice", "--acts", "{acts}"],
+      "watch": [
+        "3_시스템/collect/",
+        "3_시스템/collect.local.json",
+        "3_시스템/lms/courses.json",
+        "3_시스템/lms/desk.json",
+        "3_시스템/lms/known.json",
+        "3_시스템/lms/candidates.json",
+        "3_시스템/_index/collect/",
+        "3_시스템/_index/lms/",
+        "3_시스템/_index/수집-대기열.md",
+        "2_지식/일/외부뇌/알림-설정.md"
+      ],
+      "chat": [
+        {"id": "add", "send": "/collect_desk:add", "ask": "무엇을 모으려 하시는지 자세히 말씀해 주십시오. 주소를 아시면 함께 적어 주십시오."},
+        {"id": "fix", "send": "/collect_desk:fix {source}", "ask": "이 수집을 고칠까요? 덧붙일 말이 있으면 함께 적어 주십시오.",
+         "args": [{"name": "source", "match": "^[a-z0-9][a-z0-9-]{1,48}$", "exists": "3_시스템/collect/{source}.json"}]}
+      ],
+      "contract": {
+        "touches": [
+          "3_시스템/collect/",
+          "3_시스템/collect.local.json",
+          "3_시스템/_index/collect/draft/",
+          "3_시스템/lms/desk.json",
+          "3_시스템/lms/courses.json",
+          "3_시스템/lms/known.json",
+          "3_시스템/lms/candidates.json",
+          "3_시스템/_index/수집-대기열.md"
+        ],
+        "reads": [
+          "3_시스템/_index/collect/",
+          "3_시스템/_index/lms/",
+          "3_시스템/lms/manifest.json",
+          "3_시스템/ledger/actions.jsonl",
+          "2_지식/일정/",
+          "2_지식/일/외부뇌/알림-설정.md"
+        ],
+        "forbids": ["1_수집/**"]
+      }
+    }
+  ]
+}

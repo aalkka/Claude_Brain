@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/core-gate.ps1\""
+            "command": "f=\"$CLAUDE_PROJECT_DIR/3_시스템/hooks/core-gate-front.py\"; if [ -f \"$f\" ]; then py -3 -S \"$f\"; r=$?; if [ $r -eq 0 ] || [ $r -eq 2 ] || [ $r -eq 3 ]; then exit $r; fi; fi; powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/core-gate.ps1\""
           }
         ]
       }
@@ -85,7 +85,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/stop-check.ps1\""
+            "command": "py -3 \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/stop-check.py\" || powershell -NoProfile -ExecutionPolicy Bypass -File \"$CLAUDE_PROJECT_DIR/3_시스템/hooks/stop-check.ps1\""
           }
         ]
       },

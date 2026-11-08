@@ -80,9 +80,21 @@ def build():
     mk("mf-t-cyc-b", mod(["3_시스템/_index/mf-t-cyc-b/"]), deps=["mf-t-cyc-a"])
     mk("mf-t-depmiss", mod(["3_시스템/_index/mf-t-depmiss/"]), deps=["mf-t-does-not-exist"])
     mk("mf-t-badscript", mod(["3_시스템/_index/mf-t-badscript/"]),
-       scripts={"x.py": 'SRC = "1_수집/_inbox/note.md"\n'})
+       scripts={"x.py": 'SRC = "1_수집/받은함/note.md"\n'})
     mk("mf-t-outscript", mod(["3_시스템/_index/mf-t-outscript/"]),
        scripts={"x.py": 'DST = "2_지식/notes/aaa.md"\n'})
+    # reads(11-07) — 읽기만 하는 남의 자리. 같은 대본이 reads 없으면 경고(none) · 있으면 조용(reads · reads 가 touches 의 위 폴더여도)
+    #   touches 안 reads = 중복 경고 · 1_수집·코어파일(그것을 품은 넓은 폴더 포함)은 reads 로도 못 풂 · 목록 아님 = 막힘
+    src = 'IDX = "3_시스템/_index/{0}/"\nNOTE = "2_지식/mf-t-reads/설정.md"\n'
+    mk("mf-t-reads-none", mod(["3_시스템/_index/mf-t-reads-none/draft/"]), scripts={"x.py": src.format("mf-t-reads-none")})
+    mk("mf-t-reads", mod(["3_시스템/_index/mf-t-reads/draft/"],
+                         extra={"reads": ["3_시스템/_index/mf-t-reads/", "2_지식/mf-t-reads/설정.md"]}),
+       scripts={"x.py": src.format("mf-t-reads")})
+    mk("mf-t-reads-dup", mod(["3_시스템/_index/mf-t-reads-dup/"], extra={"reads": ["3_시스템/_index/mf-t-reads-dup/a.json"]}))
+    mk("mf-t-reads-collect", mod(["3_시스템/_index/mf-t-reads-collect/"], extra={"reads": ["1_수집/받은함/"]}))
+    mk("mf-t-reads-core", mod(["3_시스템/_index/mf-t-reads-core/"], extra={"reads": ["3_시스템/config.json"]}))
+    mk("mf-t-reads-wide", mod(["3_시스템/_index/mf-t-reads-wide/"], extra={"reads": ["3_시스템/"]}))
+    mk("mf-t-reads-type", mod(["3_시스템/_index/mf-t-reads-type/"], extra={"reads": "3_시스템/_index/x/"}))
     mk("mf-t-drift", mod(["3_시스템/_index/mf-t-drift/"], surfaces={"skills": [], "hooks": [], "mcp": []}),
        skills=("demo", "extra"))
     mk("mf-t-nomodjson", None)
@@ -119,6 +131,48 @@ def build():
     con("mf-t-act-doc", {"doctor": "py a.py"})
     con("mf-t-act-later", {"menus": [{"where": "file"}], "settings": {}})
     mk("mf-t-act-type", mod(["3_시스템/_index/mf-t-act-type/"], extra={"contributes": ["search"]}))
+    # ⑫ 튜토리얼·설명서(ADR-035)
+    def doc(m, tutorial=None, manual=None, files=None):
+        c = {k: v for k, v in (("tutorial", tutorial), ("manual", manual)) if v is not None}
+        mk(m, mod([f"3_시스템/_index/{m}/"], extra={"contributes": c}))
+        for rel, body in (files or {}).items():
+            w(os.path.join(SKILLS, m, rel), body)
+
+    chap = ("---\n형식: 2\n장: 1\n이름: 시험\n시간: 1분\n없애는 일: 시험\n해낼 일: 홈을 혼자 연다\n연습: 없음\n---\n"
+            "## 홈 열기\n말: 이 단추로 홈을 여세요.\n가리키기: 리본 \"외부뇌 홈\"\n기다리기: 보임 홈\n풀이: 누르기\n\n"
+            "## 확인\n말: 대화창을 여세요.\n가리키기: 리본 \"외부뇌 대화\"\n기다리기: 보임 대화창\n풀이: 누르기\n")
+    v1 = "---\n장: 1\n이름: 시험\n---\n## 하나\n말: 보세요.\n기다리기: 다음\n"
+    man = "---\ntitle: 시험\n---\n# 시험\n"
+    ch = lambda m, name=None: [{"file": f".claude/skills/{m}/manual/{name or '설명서-' + m}.md", "name": "시험", "gist": "시험"}]
+    doc("mf-t-doc-ok", ".claude/skills/mf-t-doc-ok/tutorial", ch("mf-t-doc-ok"),
+        {"tutorial/1-시험.md": chap, "tutorial/연습 자료.md": "# 대본 아님\n", "manual/설명서-mf-t-doc-ok.md": man})
+    doc("mf-t-doc-out", "3_시스템/tutorial")
+    doc("mf-t-doc-empty", ".claude/skills/mf-t-doc-empty/tutorial", None, {"tutorial/연습 자료.md": "# 대본 아님\n"})
+    doc("mf-t-doc-nosay", ".claude/skills/mf-t-doc-nosay/tutorial", None, {"tutorial/1.md": "---\n장: 1\n이름: 시험\n---\n## 하나\n기다리기: 다음\n"})
+    doc("mf-t-doc-prac", ".claude/skills/mf-t-doc-prac/tutorial", None, {"tutorial/1.md": "---\n장: 1\n이름: 시험\n연습 파일: 없음.md\n---\n## 하나\n말: 보세요.\n"})
+    # 형식 v2 — 3_시스템/tutorial_lint.py 와 같은 함수(합격선 미달 = block · v1 도 미달 «형식 v1» = block · 11-08)
+    doc("mf-t-doc-v1", ".claude/skills/mf-t-doc-v1/tutorial", None, {"tutorial/1.md": v1})
+    v2 = "---\n형식: 2\n장: 1\n이름: 시험\n시간: 1분\n없애는 일: 시험\n해낼 일: 홈을 혼자 연다\n연습: 없음\n---\n"
+    hit = "가리키기: 리본 \"외부뇌 홈\"\n기다리기: 보임 홈\n풀이: 누르기\n"
+    chat_hit = "가리키기: 리본 \"외부뇌 대화\"\n기다리기: 보임 대화창\n풀이: 누르기\n"
+    doc("mf-t-doc-v2ok", ".claude/skills/mf-t-doc-v2ok/tutorial", None,
+        {"tutorial/1.md": v2 + "## 홈 열기\n말: 이 단추로 홈을 여세요.\n" + hit + "\n## 확인\n말: 대화창을 여세요.\n" + chat_hit})
+    # 확인이 앞 단계를 그대로 되풀이(같은 대상 · 사용자 11-09) = 막음
+    doc("mf-t-doc-repeat", ".claude/skills/mf-t-doc-repeat/tutorial", None,
+        {"tutorial/1.md": v2 + "## 홈 열기\n말: 이 단추로 홈을 여세요.\n" + hit + "\n## 확인\n말: 홈을 다시 여세요.\n보여 주기: 창닫기\n" + hit})
+    doc("mf-t-doc-v2bad", ".claude/skills/mf-t-doc-v2bad/tutorial", None,
+        {"tutorial/1.md": v2 + "## 하나\n말: 보세요.\n기다리기: 다음\n\n## 확인\n말: 혼자 해 보세요.\n" + hit})
+    doc("mf-t-doc-file", None, ch("mf-t-doc-file"))
+    doc("mf-t-doc-name", None, ch("mf-t-doc-name", "아무개"), {"manual/아무개.md": man})
+    doc("mf-t-doc-nofm", None, ch("mf-t-doc-nofm"), {"manual/설명서-mf-t-doc-nofm.md": "# 머리 없음\n"})
+    doc("mf-t-doc-dup", None, ch("mf-t-doc-dup"), {"manual/설명서-mf-t-doc-dup.md": man})
+    doc("mf-t-doc-link", None, ch("mf-t-doc-link"), {"manual/설명서-mf-t-doc-link.md": man})
+    p = os.path.join(REF, "mf-t-docdup")
+    made_dirs.append(p)
+    w(os.path.join(p, "설명서-mf-t-doc-dup.md"), "---\ntype: reference\ntitle: fixture\nstatus: active\n---\nfixture\n")
+    # 코어 글이 모듈 장으로 링크 — 진짜 글을 고치지 않고 검사 함수만 바꿔 끼운다
+    orig = C.core_doc_links
+    C.core_doc_links = lambda: (lambda d: (d["links"].setdefault("설명서-mf-t-doc-link", []).append("시험 코어 글"), d)[1])(orig())
     # 노트 basename 중복(Stop훅 스코프 = 3_시스템/_ref/** 사용 — MOC 요구 대상 아님)
     for sub in ("mf-t-dupA", "mf-t-dupB"):
         p = os.path.join(REF, sub)
@@ -144,7 +198,15 @@ CASES = [
     ("mf-t-othermod",  False, "산출물 경계 위반",     "blocks"),
     ("mf-t-goodout",   True,  "산출물 폴더",         "infos"),
     ("mf-t-nest-b",    True,  "touches 포함관계",    "warns"),
-    ("mf-t-outscript", True,  "touches 밖",         "warns"),
+    ("mf-t-outscript", True,  "touches·reads 밖",   "warns"),
+    ("mf-t-reads-none",    True,  "touches·reads 밖",   "warns"),
+    ("mf-t-reads",         True,  "touches·reads 밖",   "!warns"),   # ! = 그 말이 없어야 통과
+    ("mf-t-reads",         True,  "touches 안",         "!warns"),
+    ("mf-t-reads-dup",     True,  "touches 안",         "warns"),
+    ("mf-t-reads-collect", False, "reads 에 1_수집",     "blocks"),
+    ("mf-t-reads-core",    False, "코어파일 '3_시스템/config.json'", "blocks"),
+    ("mf-t-reads-wide",    False, "코어파일",            "blocks"),
+    ("mf-t-reads-type",    False, "reads 는 경로 글자 목록", "blocks"),
     ("mf-t-drift",     True,  "surfaces.skills 드리프트", "warns"),
     ("mf-t-nomodjson", True,  "module.json 없음",   "warns"),
     ("mf-t-future",    True,  "schema 99",          "warns"),
@@ -160,6 +222,25 @@ CASES = [
     ("mf-t-act-doc",      False, "contributes.doctor", "blocks"),
     ("mf-t-act-later",    True,  "아직 읽는 곳 없음",   "infos"),
     ("mf-t-act-type",     False, "contributes 는 객체", "blocks"),
+    ("mf-t-doc-ok",       True,  "튜토리얼 1장 · 설명서 1장", "infos"),
+    ("mf-t-doc-out",      False, "모듈 안의 폴더가 아님", "blocks"),
+    ("mf-t-doc-empty",    False, "대본 없음",          "blocks"),
+    ("mf-t-doc-nosay",    False, "«말:» 없음",         "blocks"),
+    ("mf-t-doc-prac",     False, "연습 파일 없음",      "blocks"),
+    ("mf-t-doc-v1",       False, "형식 v1",            "blocks"),
+    ("mf-t-doc-v2ok",     True,  "튜토리얼 1장",        "infos"),
+    ("mf-t-doc-v2bad",    False, "해 보기 아님",        "blocks"),
+    ("mf-t-doc-repeat",   False, "그대로 되풀이",       "blocks"),
+    ("mf-t-doc-v1",       False, "튜토리얼 만들기",     "infos"),    # ⑫ 안내 줄 = SKILL «튜토리얼 만들기»
+    ("mf-t-doc-ok",       True,  "고치는 순서",         "!infos"),
+    ("mf-t-doc-v2bad",    False, "튜토리얼 만들기",     "infos"),
+    ("mf-t-doc-v2ok",     True,  "고치는 순서",         "!infos"),   # 통과한 장에는 안내 줄 없음
+    ("mf-t-doc-empty",    False, "쓰는 순서",           "blocks"),
+    ("mf-t-doc-file",     False, "모듈 안의 파일이 아님", "blocks"),
+    ("mf-t-doc-name",     False, "로 시작해야 한다",    "blocks"),
+    ("mf-t-doc-nofm",     False, "프론트매터 없음",     "blocks"),
+    ("mf-t-doc-dup",      False, "설명서 이름 겹침",    "blocks"),
+    ("mf-t-doc-link",     False, "모듈을 끄면 깨진다",  "blocks"),
 ]
 
 
@@ -172,10 +253,12 @@ def run():
         ok_match = (r["ok"] == want_ok)
         kw_match = True
         if kw:
-            kw_match = any(kw in x for x in r.get(bucket, []))
+            hit = any(kw in x for x in r.get(bucket.lstrip("!"), []))
+            kw_match = not hit if bucket.startswith("!") else hit
         passed = ok_match and kw_match
         fails += 0 if passed else 1
-        rows.append((name, "PASS" if passed else "FAIL", r["ok"], want_ok, kw or "-",
+        rows.append((name, "PASS" if passed else "FAIL", r["ok"], want_ok,
+                     (f"없음 «{kw}»" if bucket.startswith("!") else kw) if kw else "-",
                      "" if passed else json.dumps(r, ensure_ascii=False)[:220]))
 
     # exit code 계약: 정상=0 · block=1
@@ -187,14 +270,25 @@ def run():
         fails += 0 if passed else 1
         rows.append((f"exit:{name}", "PASS" if passed else "FAIL", p.returncode, want_code, "exit code", ""))
 
-    # 실모듈 회귀(정상 통과 유지)
-    for name in ("module-forge", "study-helper", "dist-sync"):
+    # 실모듈 회귀(정상 통과 유지) — collect_desk 는 수집 본체 통합 4단계(11-08)에 모듈이 아니게 됨(검사 = 3_시스템/_eval/collect_core_check.py)
+    for name in ("module-forge", "study-helper", "dist-sync", "interactive_roadmap"):
         if name in mods:
             r = C.check(name, mods, core)
             passed = r["ok"]
             fails += 0 if passed else 1
             rows.append((f"real:{name}", "PASS" if passed else "FAIL", r["ok"], True, "회귀",
                          "" if passed else json.dumps(r["blocks"], ensure_ascii=False)[:220]))
+
+    # ⑫ 안내 줄이 가리키는 절·본보기가 있다 — 절 이름을 바꾸거나 본보기를 옮기면 안내가 허공을 가리킨다
+    rel, _, title = C.TUTORIAL_HOWTO.partition(" «")
+    sk = os.path.join(C.VAULT, *rel.split("/"))
+    skill = open(sk, encoding="utf-8").read() if os.path.isfile(sk) else ""
+    docs = [(f"doc:절 {title.rstrip('»')}", f"## {title.rstrip('»')}" in skill)]
+    for p in ("3_시스템/tutorial/8-수집.md", ".claude/skills/module-forge/tutorial/1-모듈-점검.md", ".claude/skills/dist-sync/tutorial/1-업데이트.md"):  # SKILL «본보기» 줄(배포판에 실리는 장만 · bigboss 는 안 실음 11-09)
+        docs.append((f"doc:본보기 {p.split('/')[-1]}", f"`{p}`" in skill and os.path.isfile(os.path.join(C.VAULT, *p.split("/")))))
+    for label, passed in docs:
+        fails += 0 if passed else 1
+        rows.append((label, "PASS" if passed else "FAIL", passed, True, "⑫ 안내 줄 대상", ""))
 
     print(f"{'케이스':<22} {'결과':<6} {'ok':<6} {'기대':<6} 검증키워드")
     print("-" * 92)

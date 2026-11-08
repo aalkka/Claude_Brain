@@ -4,6 +4,7 @@
 
 CLI:
   python search.py --reindex            증분 재인덱스(hash 변경분만)
+  python search.py --reindex --auto     훅이 부름 — 기능 단계 «의미 찾기»를 따른다(낮음 = 6시간에 한 번·전원 연결 때 · 끔 = 안 함)
   python search.py --rebuild            전체 재인덱스
   python search.py --q "질의" --k 8     하이브리드 top-k → JSON lines (--mode lexical|vector|hybrid)
   python search.py --neighbors <path>   B1용 의미이웃 top-k(상대방식, 기본 k=3)
@@ -53,6 +54,13 @@ for _s in (sys.stdout, sys.stderr):
 VAULT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import roles  # noqa: E402 — 자리는 역할로 묻는다(볼트 개혁 R6)
+try:
+    import options  # noqa: E402 — 기능 단계(high·low·off = 높음·낮음·끔) · 어떤 오류도 high
+except Exception:  # options.py 가 없거나 깨져도 찾기·재색인은 지금처럼(high) — 훅이 매 세션 부르는 파일이다
+    class options:  # noqa: N801
+        level = staticmethod(lambda *a, **k: "high")
+        params = staticmethod(lambda *a, **k: {})
+        on_battery = staticmethod(lambda: False)
 INDEX_DIR = os.path.join(VAULT, "3_시스템", "_index")
 INDEX_PATH = os.path.join(INDEX_DIR, "embeddings.json")
 CONFIG_PATH = os.path.join(VAULT, "3_시스템", "config.json")
@@ -64,15 +72,20 @@ TARGET_GLOBS = [
     "1_수집/**/*.md",   # 원본 색인(_색인/, ingest.py)·원본 메모(사람). 10-14 ADR-013.
     "3_시스템/_index/pdf-cache/**/*.md",  # 원본이 볼트에 없는 옛 PDF 정제본만 남김— 색인과 겹친 10개는 pdf-cache-retired/ 로 옮김(10-14).
 ]
-# 승격 원문(_promoted) = 2_지식 노트와 같은 글 → 중복 적중 방지로 제외.
 # MOC = 노트 설명 모음 → 노트 자신과 겹쳐 흔한 낱말로 올라온다(B10 · 11-02). 지도는 moc.py.
-EXCLUDE_PREFIX = ("1_수집/_inbox/_promoted/", "2_지식/MOC.md")
+EXCLUDE_PREFIX = ("2_지식/MOC.md",)
 WINDOW = 40           # 헤딩 없는/긴 섹션 창 크기(줄)
 MAX_CHUNKS = 120      # 노트당 청크 상한(거대 _변환본 비용 바운드)
 MAX_CHUNKS_INDEX = 2000   # 원본 색인은 찾기가 목적 — 120 이면 긴 PDF 뒷부분(쪽당 1청크)이 검색에서 빠진다
 RECENCY_W = 0.0       # 지식검색 recency 역효과(진단) → 기본 0. 필요시 상향.
 HALF_LIFE_DAYS = 90.0
 RRF_K = 60
+NUMPY_MAX = 300       # 증분 청크가 이 이하면 torch 없이(_NumpyBert) — 11-06 실측: torch 경로 고정비 ≈150초·사설 2.8GB
+                      #   (import torch 15초 · sentence_transformers 115초 · 모델 14초, 부하 중) · numpy 적재 1.8초 · 청크당 1.2초
+LOCK_PATH = os.path.join(INDEX_DIR, ".reindex.lock")
+AGAIN_PATH = os.path.join(INDEX_DIR, ".reindex-again")
+LOCK_STALE_S = 15 * 60
+LAST_PATH = os.path.join(INDEX_DIR, ".reindex-last")   # 마지막으로 끝까지 돈 재색인 시각(low 의 6시간 재기)
 
 
 def config_model_name():
@@ -327,34 +340,147 @@ def save_index(idx):
     os.replace(tmp, INDEX_PATH)
 
 
-def reindex(full=False):
+def _lock():
+    """재색인 하나만(11-06 실측: 세션이 몰려 시작하면 torch 재색인이 겹쳐 남은 RAM 175MB). 못 잡으면 None."""
+    os.makedirs(INDEX_DIR, exist_ok=True)
+    for _ in range(2):
+        try:
+            fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, ("%d %d" % (os.getpid(), time.time())).encode())
+            os.close(fd)
+            return LOCK_PATH
+        except FileExistsError:
+            try:
+                pid, ts = open(LOCK_PATH).read().split()[:2]
+                alive = True
+                try:
+                    import psutil
+                    alive = psutil.pid_exists(int(pid))
+                except ImportError:
+                    pass
+                if time.time() - float(ts) > LOCK_STALE_S or not alive:
+                    os.remove(LOCK_PATH)          # 죽었거나 오래된 잠금 — 한 번 치우고 다시
+                    continue
+            except (OSError, ValueError):
+                pass
+            return None
+    return None
+
+
+def due(vault_level=None):
+    """자동 재색인을 지금 할지 — (할지, 까닭). high = 늘 · low = 마지막 뒤 every_hours 가 지났고 전원 연결 · off = 안 함."""
+    lvl = vault_level or options.level("search.semantic")
+    if lvl == "off":
+        return False, "의미 찾기 끔"
+    if lvl != "low":
+        return True, ""
+    hours = float(options.params("search.semantic", "low").get("every_hours") or 6)
+    try:
+        age = time.time() - float(open(LAST_PATH, encoding="ascii").read().split()[0])
+    except (OSError, ValueError, IndexError):
+        age = None
+    if age is not None and age < hours * 3600:
+        return False, "낮음 — 마지막 재색인 %.1f시간 전(%g시간마다)" % (age / 3600, hours)
+    if options.on_battery():
+        return False, "낮음 — 배터리라 미룸(전원 연결 때)"
+    return True, ""
+
+
+def reindex(full=False, auto=False):
+    if auto:
+        go, why = due()
+        if not go:
+            print("reindex: 건너뜀 — " + why, file=sys.stderr)
+            return None
+    if _lock() is None:
+        open(AGAIN_PATH, "w").close()           # 도는 쪽이 끝에 한 번 더 돈다 — 이번 변경도 빠지지 않는다
+        print("reindex: 다른 재색인이 도는 중 — 끝나면 그쪽이 한 번 더 돈다", file=sys.stderr)
+        return None
+    try:
+        idx = _reindex(full)
+        for _ in range(2):                       # 도는 사이 다른 세션이 부른 몫
+            if not os.path.exists(AGAIN_PATH):
+                break
+            os.remove(AGAIN_PATH)
+            idx = _reindex(False)
+        try:
+            with open(LAST_PATH, "w", encoding="ascii") as f:
+                f.write("%d\n" % time.time())
+        except OSError:
+            pass
+        return idx
+    finally:
+        try:
+            os.remove(LOCK_PATH)
+        except OSError:
+            pass
+
+
+_ENC = {}
+
+
+def _encoder(model_name, n):
+    """증분은 _NumpyBert(torch 없음), 크거나 numpy 가 안 되면 기존 sentence_transformers."""
+    def np_enc():
+        if "np" not in _ENC:
+            try:
+                snap = _hf_snapshot(model_name)
+                _ENC["np"] = _NumpyBert(snap) if snap else None
+            except Exception:
+                _ENC["np"] = None
+        return _ENC["np"]
+    if n <= NUMPY_MAX and np_enc() is not None:
+        return _ENC["np"]
+    if "st" not in _ENC:
+        try:
+            _ENC["st"] = load_model()[0]
+        except Exception:                        # torch 가 없는 PC(저사양 선택지) — 느려도 numpy 로 끝까지
+            if np_enc() is None:
+                raise
+            return _ENC["np"]
+    return _ENC["st"]
+
+
+def _reindex(full=False):
     model_name = config_model_name()   # 모델명만(로드 X). 실제 모델은 to_embed 있을 때만 지연로드.
     idx = {} if full else load_index()
     if not full and idx.get("_model") not in (None, model_name):
         print(f"model changed ({idx.get('_model')} -> {model_name}): forcing full rebuild (차원혼합 방지)", file=sys.stderr)
         idx = {}
-    cur = set(); to_embed = []; meta = {}
+    cur = set(); to_embed = []; meta = {}; dirty = idx.get("_model") != model_name
     for ap in iter_files():
         rp = rel(ap); cur.add(rp)
+        ent = idx.get(rp) or {}
+        try:
+            stt = os.stat(ap)
+        except OSError:
+            continue
+        if ent.get("size") == stt.st_size and ent.get("mtime") == stt.st_mtime:
+            continue                    # 크기·시각이 같으면 내용도 같다고 본다(git 과 같은 기준 · 해시 읽기 생략)
         h = file_hash(ap)
-        if idx.get(rp, {}).get("hash") == h:
+        if ent.get("hash") == h:
+            ent["mtime"], ent["size"] = stt.st_mtime, stt.st_size     # 내용 그대로 · 다음부터 해시 생략
+            dirty = True
             continue
         text = strip_managed(read_text(ap))
         ch = chunk_text(text, MAX_CHUNKS_INDEX if rp.startswith("1_수집/_색인/") else MAX_CHUNKS)
-        meta[rp] =(h, os.path.getmtime(ap), parse_status(text), gist(text), len(ch))
+        meta[rp] =(h, stt.st_mtime, parse_status(text), gist(text), len(ch), stt.st_size)
         for c in ch: to_embed.append((rp, c))
     for rp in list(notes(idx).keys()):
-        if rp not in cur: del idx[rp]
+        if rp not in cur: del idx[rp]; dirty = True
+    if not to_embed and not dirty:
+        print(f"indexed {len(notes(idx))} notes, 0 chunks — 바뀐 것 없음(저장 안 함)", file=sys.stderr)
+        return idx
     if to_embed:
-        model, _ = load_model()   # 지연로드: 임베딩할 변경분 있을 때만 16s 모델로드(무변경 시 스킵)
+        model = _encoder(model_name, len(to_embed))   # 지연로드: 임베딩할 변경분 있을 때만 · 증분은 torch 없이
         docs = [pdoc(model_name, c) for _, c in to_embed]
         vecs = model.encode(docs, normalize_embeddings=True, show_progress_bar=False, batch_size=32)
         by = {}
         for (rp, _), v in zip(to_embed, vecs):
             by.setdefault(rp, []).append([round(float(x), 6) for x in v])
         for rp, vs in by.items():
-            h, mt, st, g, _ = meta[rp]
-            idx[rp] = {"hash": h, "mtime": mt, "status": st, "gist": g, "vecs": vs}
+            h, mt, st, g, _, sz = meta[rp]
+            idx[rp] = {"hash": h, "mtime": mt, "size": sz, "status": st, "gist": g, "vecs": vs}
     idx["_model"] = model_name
     save_index(idx)
     print(f"indexed {len(notes(idx))} notes, {len(to_embed)} chunks (model={model_name})", file=sys.stderr)
@@ -396,13 +522,18 @@ def note_text(rp):
 BM25_K1, BM25_B = 1.2, 0.75
 
 
-def lexical_scores(query, idx):
+def disk_notes():
+    """노트 목록을 디스크에서(색인이 아니라) — 의미 찾기가 낮음·끔이면 새 노트가 색인에 늦게 들어가도 낱말로는 바로 찾게."""
+    return [rel(ap) for ap in iter_files()]
+
+
+def lexical_scores(query, idx, disk=False):
     # BM25(2026-09-24 교체). 옛 식 «매칭 토큰수×10 + log(빈도)» 는 IDF·길이 보정이 없어 긴 노트
     # (MOC·인수인계)가 흔한 낱말만으로 위에 올랐다 — 패러프레이즈 정답을 밀어낸 자리의 청크 수 중앙값 37
     # (코퍼스 9). 세 평가셋 모두 비후퇴: lexical MRR@8 literal 0.58→0.96 · 패러프레이즈 3→5/12 ·
     # MOC 설명 167쌍 0.65→0.85, hybrid 0.89→0.94 · 4→5/12 · 0.76→0.82. 근거 = _eval/results-hybrid.md.
     ts = toks(query)
-    docs = [(rp, note_text(rp)) for rp in notes(idx)]
+    docs = [(rp, note_text(rp)) for rp in (disk_notes() if disk else notes(idx))]
     docs = [(rp, t) for rp, t in docs if t]
     if not docs or not ts: return []
     avg = sum(len(t) for _, t in docs) / len(docs)
@@ -443,16 +574,16 @@ def rrf(rank_lists, k=RRF_K):
     return sorted(((v, rp) for rp, v in agg.items()), reverse=True)
 
 
-def ranked(query, idx, mode, model=None, model_name=None):
+def ranked(query, idx, mode, model=None, model_name=None, disk=False):
     now = time.time()
     if mode == "lexical":
-        return lexical_scores(query, idx)
+        return lexical_scores(query, idx, disk)
     qv = model.encode([pqry(model_name, query)], normalize_embeddings=True)[0]
     qv = [float(x) for x in qv]
     vec = vector_scores(qv, idx, now)
     if mode == "vector":
         return vec
-    lex = lexical_scores(query, idx)
+    lex = lexical_scores(query, idx, disk)
     lex_matched = [(sc, rp) for sc, rp in lex if sc > 0]  # 0점 노트 순위노이즈 배제(RRF는 매칭리스트만)
     return rrf([lex_matched, vec])
 
@@ -651,13 +782,19 @@ def main():
     ap.add_argument("--eval")
     ap.add_argument("--link-dryrun", action="store_true", help="B1 위키링크 블록 미리보기(파일 수정 0)")
     ap.add_argument("--link-write", action="store_true", help="B1 위키링크 관리블록 실기입")
+    ap.add_argument("--auto", action="store_true", help="훅이 부름 — 기능 단계 «의미 찾기»를 따름(손으로 부르면 늘 돈다)")
     args = ap.parse_args()
+    auto = args.auto or os.environ.get("BRAIN_AUTO") == "1"   # 훅은 환경 변수로 준다(옛 search.py 가 모르는 인자로 죽지 않게)
 
-    if args.rebuild: reindex(full=True)
-    elif args.reindex: reindex(full=False)
+    ran = None
+    if args.rebuild: ran = reindex(full=True)
+    elif args.reindex: ran = reindex(full=False, auto=auto)
 
     if args.link_write:
-        write_links(dry=False)
+        if auto and ran is None and options.level("search.semantic") != "high":
+            print("link-write: 건너뜀 — 이번에 재색인을 안 함(의미 찾기 낮음·끔)", file=sys.stderr)
+        else:
+            write_links(dry=False)
     elif args.link_dryrun:
         write_links(dry=True)
     elif args.eval:
@@ -666,13 +803,18 @@ def main():
         for cos, rp, g in neighbors(args.neighbors, k=args.k):
             print(json.dumps({"path": rp, "cosine": round(cos, 4), "gist": g}, ensure_ascii=False))
     elif args.q:
+        lvl = options.level("search.semantic")
+        mode = "lexical" if lvl == "off" else args.mode      # 끔 = 낱말만(모델을 안 띄운다)
+        if mode != args.mode:
+            print("의미 찾기 끔 — 낱말 찾기만", file=sys.stderr)
         model, model_name = (None, None)
-        if args.mode != "lexical":
+        if mode != "lexical":
             model, model_name = load_query_model()
         idx = load_index()
-        for sc, rp in ranked(args.q, idx, args.mode, model, model_name)[:(args.k or 8)]:
-            e = idx.get(rp, {})
-            print(json.dumps({"path": rp, "score": round(sc, 4), "gist": e.get("gist", "")}, ensure_ascii=False))
+        for sc, rp in ranked(args.q, idx, mode, model, model_name, disk=lvl != "high")[:(args.k or 8)]:
+            e = idx.get(rp)
+            g = e.get("gist", "") if e else gist(read_text(os.path.join(VAULT, rp)))   # 색인에 아직 없는 새 노트
+            print(json.dumps({"path": rp, "score": round(sc, 4), "gist": g}, ensure_ascii=False))
 
 
 if __name__ == "__main__":

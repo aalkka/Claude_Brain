@@ -8,13 +8,24 @@
 $vault  = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $root   = if ($env:CORE_GATE_ROOT) { $env:CORE_GATE_ROOT } else { $vault }
 $vaultN = ($root -replace '\\', '/')
-$target = $null
-foreach ($m in [regex]::Matches($p, '(?:[A-Za-z]:/[^\s";,|&]*?)?(' + $core + ')')) {
-    if ($m.Value -match '^[A-Za-z]:/') {
-        if (-not $m.Value.StartsWith($vaultN + '/', [StringComparison]::OrdinalIgnoreCase)) { continue }
+$target = $forced
+if ($forced) {
+    # 설치 대본 — 다른 볼트(시험 볼트)에 까는 것은 코어가 아니다
+    if ($p -match 'install\.mjs\s+["'']?((?:[A-Za-z]:|/[A-Za-z])/[^\s"'']*)') {
+        $dst = ($Matches[1] -replace '^/([A-Za-z])/', '$1:/').TrimEnd('/')
+        if (-not $dst.Equals($vaultN, [StringComparison]::OrdinalIgnoreCase)) { exit 0 }
     }
-    $target = $m.Groups[1].Value
-    break
+} else {
+    foreach ($m in [regex]::Matches($p, '(?:(?:[A-Za-z]:|/[A-Za-z])/[^\s";,|&]*?)?(' + $core + ')')) {
+        $abs = $m.Value -replace '^/([A-Za-z])/', '$1:/'
+        if ($abs -match '^[A-Za-z]:/') {
+            if (-not $abs.StartsWith($vaultN + '/', [StringComparison]::OrdinalIgnoreCase)) { continue }
+        } elseif ($p.Substring(0, $m.Index) -match '(^|[\s"''=(,;|&<>])(?!\.\.?/)[^\s"''=(,;|&<>$%]+/$') {
+            continue   # 다른 폴더 아래 같은 이름(시험 볼트 test/vault-ci/.obsidian/… · ~/.claude/settings.json) · 변수로 시작하는 경로·./·../ 는 코어로 본다
+        }
+        $target = $m.Groups[1].Value
+        break
+    }
 }
 if (-not $target) { exit 0 }
 
@@ -23,7 +34,7 @@ if (-not $target) { exit 0 }
 # 코어를 읽기만 하는 명령이 전부 걸린다(2026-08-17 실측: 셸 발동의 61%가 비쓰기).
 # 인라인 코드(-c / -Command / heredoc)는 절로 쪼갤 수 없으므로 '쓰기 표지'로 가른다 —
 # 코어 스크립트 '실행'·설정 '검사'와 코어 '쓰기'를 가르는 선이다.
-if ($tool -in 'Bash','PowerShell') {
+if ($tool -in 'Bash','PowerShell' -and -not $forced) {
     $fire = $false
     $rxCode = "(?s)(?:-c|-Command)\s+(['""]).*?\1|<<\s*['""]?(\w+).*?\2"
     $code = -join ([regex]::Matches($p, $rxCode) | ForEach-Object { $_.Value })
@@ -72,6 +83,8 @@ if ($tool -in 'Bash','PowerShell') {
         $verbs ='>\s*&?[^\s;|&]*(' + $core + ')|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|git\s+(checkout|restore|apply|reset)|WriteAll\w+|AppendAll\w+|\b(?:python\d?|node|perl)\b(?!\s+(?:-\S+\s+)*(?:' + $core + '))|\bpy\s+(-\d(\.\d+)?\s+)?-c\b|\bchmod\b|update-index'
         foreach ($c in ($shell -split '(?:;|&&|\|\||\||\r?\n)')) {
             if ($c -notmatch ('(' + $core + ')')) { continue }
+            # cp 는 끝 인자가 대상이다 — 코어를 다른 데로 복사하는 것은 읽기(개정 7 · 격리 사본을 뜰 때마다 승인 창이 떴다)
+            if ($c -match '(^|\s)cp\s' -and $c -notmatch ('(' + $core + ')["'']?\s*$') -and ($c -replace '(^|\s)cp\s', ' ') -notmatch $verbs) { continue }
             if ($c -match $verbs) { $fire = $true; break }
         }
     }

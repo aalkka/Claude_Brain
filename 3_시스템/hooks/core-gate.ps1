@@ -59,10 +59,14 @@ if ($tool -in 'Bash','PowerShell' -and $p -match 'fileops\.py[^;&|]*\s(update|mi
     if (Test-Path $og) { . $og }
 }
 
+# 빌더의 설치 대본은 글자에 코어 경로가 안 보이지만 .obsidian/plugins 를 덮는다(개정 7) — 판정부가 대상 볼트를 본다.
+$forced = $null
+if ($tool -in 'Bash','PowerShell' -and $p -match '(^|[\s;&|(/"''])node(\.exe)?["'']?\s+(\S*/)?install\.mjs\b') { $forced = '.obsidian/plugins/(install.mjs)' }
+
 # 값싼 1차 검사를 먼저 한다. 대부분의 호출은 코어와 무관하고, 아래 절대경로 순회는
 # 선택적 접두 + non-greedy 라 백트래킹이 붙는다 — 1차를 빼면 비코어 경로가
 # 220ms→296ms 로 늘어난다(2026-08-17 실측). 상시 비용은 여기서 결정된다.
-if ($p -notmatch ('(' + $core + ')')) { exit 0 }
+if (-not $forced -and $p -notmatch ('(' + $core + ')')) { exit 0 }
 
 # 무거운 판정(볼트 판정·절 분리·토큰)은 별도 파일로 뺀다. PowerShell 은 실행하지 않는
 # 코드도 파싱·AST 생성 비용을 치르므로, 한 파일에 두면 코어와 무관한 모든 도구 호출이

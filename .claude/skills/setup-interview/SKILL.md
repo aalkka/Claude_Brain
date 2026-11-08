@@ -19,6 +19,7 @@ description: 신규 설치 개인최적화. 첫 실행 시 또는 "/재보정" �
 7. 기존 지식: 이전할 노트/PDF 있나 → 있으면 inbox/pdf-ingest 경로 안내(일괄 마이그레이션 아님, 개별).
 8. 하드웨어: **자동감지 먼저** — `nvidia-smi --query-gpu=name,memory.total --format=csv` 실행(실패 시 `wmic path win32_VideoController get name` + RAM은 `systeminfo`). 감지 실패 시에만 질문. → 임베딩 모델 config 결정(VRAM≥8GB=bge-m3 / 4~8GB=e5-base / 그 외·CPU=e5-small). 일반 사용자는 GPU 사양 모름 — 물어보는 것보다 감지가 정확.
    **우선순위: 측정 > 티어표.** `_eval/results-*`에 측정 채택 구성이 이미 있으면(=첫 사용자·측정 수행자) 그것이 config 우선 — 티어표는 측정 안 하는 신규 배포 사용자의 기본값. config는 `3_시스템/config.json` `"embed_model"`.
+   **기능 단계(옵션):** 감지 뒤 `options` 스킬 절차(재기 → 표 → 답 → 확정)를 이 자리에서 돈다. 새 볼트는 모델이 아직 없어 임베딩은 CPU 점수로 미루고, 노트가 적어 git·색인 값이 작게 나온다(까닭에 «빈 볼트 값» · 노트가 3배로 늘면 건강 줄이 «옵션 추천 다시»를 권함). **의미 찾기가 «끔»이면 임베딩 모델을 내려받지 않는다.**
    **이웃밀도(graph.neigh_k):** 벡터 채택 시 의미그래프 노트당 자동링크 이웃 수. `config.json` `"graph":{"neigh_k":3}`. **기본 3 그대로 두는 게 정답**(측정 채택값 — avg차수 4.5, 고립0, 소규모 코퍼스 최적). 물어보지 말고 기본 유지 → 사용자가 그래프 조밀/희소를 명시 요구할 때만 조정(밀=5, 희=2). 코퍼스 커지면(수백 노트) union 밀도 선형↑라 재검토. floor·dup은 안전레일이라 건드리지 않음.
 
 9. 개인 백업 저장소: 사용자에게 **개인 비공개 repo URL** 요청. 받으면 —
@@ -35,6 +36,6 @@ description: 신규 설치 개인최적화. 첫 실행 시 또는 "/재보정" �
    **주의(정직히 안내)**: 클라우드 에이전트는 개인 repo를 clone해 돌리므로 **커밋된 내용만** 봄(로컬 전용 `_index`·미커밋 세션은 없음). 골든셋 재측정은 클라우드서 `sentence-transformers` 설치 필요(느림) → 무거우면 그 스텝은 스킵하고 통찰합성·open-loops 정리만 시켜도 됨. 산출은 push로 다음 세션에 반영됨.
    **해제/변경**: `/재보정` 또는 `schedule` 스킬로 cron 갱신·삭제.
 
-산출: settings.local.json 옵션R(autoMemoryDirectory) + CLAUDE.md §0 슬롯 치환 + `2_지식/profile.md` 채움 + `2_지식/open-loops.md` 초기화 + search.py 모델 config 기입 + 개인 repo origin 설정 + (선택)weekly-review 클라우드 cron 등록.
+산출: settings.local.json 옵션R(autoMemoryDirectory) + CLAUDE.md §0 슬롯 치환 + `2_지식/profile.md` 채움 + `2_지식/open-loops.md` 초기화 + search.py 모델 config 기입 + 기능 단계(`3_시스템/options.local.json`) + 개인 repo origin 설정 + (선택)weekly-review 클라우드 cron 등록.
 원칙: 코어 규약(§1~§3)은 안 건드림. 개인 레이어만. 재실행(/재보정) 시 diff 제시 → 확인 후 적용(사용자 저작물 불가침).
 (예시 캘리브레이션은 승격 — 슬롯2 필수. 나머지 강화 5수단[역질문 검증·주기 재보정 자동화 등]은 DEFERRED — 인터뷰 산출물은 사용 중 자연 교정됨[세션서 톤 지적→profile 갱신], 선불 정교화 ROI 낮음.)

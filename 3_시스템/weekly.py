@@ -61,14 +61,15 @@ def core_gate():
             for ln in h:
                 if ln[:10] < cut:
                     continue
-                tag = next((t for t in TAGS if f" {t} " in ln), "태그 없음")
+                # 태그 뒤에 까닭이 붙는 줄(`GATE-BROKEN(decide 없음)`)도 센다 — 빈칸만 보면 «태그 없음»으로 빠졌다(11-06 시스템 재기 8)
+                tag = next((t for t in TAGS if f" {t} " in ln or f" {t}(" in ln), "태그 없음")
                 cnt[tag] = cnt.get(tag, 0) + 1
                 if tag.startswith("TOKEN-"):
                     targets.append(ln.split(tag, 1)[1].strip()[:60])
     total = sum(cnt.values())
     out.append(f"- 게이트 발동 {total} · " + " · ".join(f"{k} {v}" for k, v in sorted(cnt.items())))
     if cnt.get("GATE-BROKEN"):
-        out.append("- ⚠ **GATE-BROKEN** — 판정부가 사라져 게이트가 죽은 상태")
+        out.append("- ⚠ **GATE-BROKEN** — 게이트가 판정 없이 통과시킨 호출이 있다(판정부 없음·판정부 오류 · 줄의 괄호가 까닭)")
     if lines and not total:
         out.append("- ⚠ 코어 변경이 있는데 발동 0 — 게이트가 죽었거나 우회됐다")
     if targets:

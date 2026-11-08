@@ -6,17 +6,17 @@ CLI:
   python tokens.py                     최근 20세션 요약표
   python tokens.py --n 46              최근 N세션
   python tokens.py --all               전량
-  python tokens.py --session a1b2c3d4  단일 세션 상세(턴별 누적 출력 곡선)
+  python tokens.py --session 1dace65b  단일 세션 상세(턴별 누적 출력 곡선)
   python tokens.py --raw out.json      원자료를 파일로 저장(요약만 stdout)
 
-설계 제약(전부 실측에 근거한다)
+설계 제약(근거 → [[외부뇌-토큰절감-모듈]])
   - 리스크 1: 계측 자체가 토큰을 쓴다 → stdout은 요약 수치만. 원자료는 --raw 파일로.
   - 자기참조 오염: 세션 로그에는 이 계측기를 논의한 대화가 들어 있다. 문자열 매칭으로 세면
-    문서가 자기를 잡는다(실측: `rg -c 'output_style'` 오탐 21 대 실제 5).
+    문서가 자기를 잡는다(07-30 실측: `rg -c 'output_style'` 오탐 21 대 실제 5).
     → 판별은 반드시 레코드 구조(type · attachment.type)로 한다.
-  - 파일 I/O는 encoding="utf-8" 명시, errors="ignore" 금지.
-  - 경로에 버전해시·절대경로를 박지 않는다. 프로젝트 디렉터리는 VAULT에서 유도.
-  - 깨진 줄을 조용히 버리지 않는다. bad 열로 보고한다.
+  - 확정 13: 파일 I/O는 encoding="utf-8" 명시, errors="ignore" 금지.
+  - 확정 12: 경로에 버전해시·절대경로 박지 않는다. 프로젝트 디렉터리는 VAULT에서 유도.
+  - 깨진 줄을 조용히 버리지 않는다(caveman의 실패 양식). bad 열로 보고한다.
 
 표준입력 환산 = input + CW*cache_creation + CR*cache_read (기본 CW=2.0, CR=0.10).
   출력 토큰은 단가가 달라 합산하지 않고 별도 열로 둔다.
@@ -370,7 +370,7 @@ CONF_MARK = re.compile(r"미검증|실측|추정|측정(?:됨|된|되지)|가정
 
 
 def print_quality(row):
-    """출력 품질 규칙 준수의 직접 지표. 기준선은 제작자 볼트 실측(2026-08-02)."""
+    """§5(ADR-009) 준수의 직접 지표. 기준선 = 2026-08-02 `31d929c6`."""
     ans = row.get("answers") or []
     if not ans:
         return
@@ -399,7 +399,7 @@ def print_quality(row):
     inline = INLINE_MATH.findall(stripped)
     conf = CONF_MARK.findall(body)
 
-    print("\n출력 품질 지표")
+    print("\n출력 품질 — §5(ADR-009) 지표")
     print("  답변 %d개 · 답변당 가시자 중앙값 %d자   (기준선 2,426)" % (len(ans), med))
     if tables:
         print("  표 %d개 · 데이터행 중앙값 %d · 3행 미만 %d개(%.0f%%)   (기준선 13%%)"

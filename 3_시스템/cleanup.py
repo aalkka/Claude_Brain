@@ -11,8 +11,7 @@
      · 남길 것 = 1_수집 제출 > 1_수집 > 0_작업 · 같은 칸이면 먼저 생긴 것
      · 0_작업 파일의 쌍둥이가 1_수집 에 있으면 «제출·승격된 작업 파일» — 마지막 수정이 --days(30)일 지난 것만 후보
   ② 빈 파일(0바이트)  ③ 빈 폴더(역할 자리·주제 폴더·고정 하위 폴더는 뺌)
-  ④ 받은함 `_promoted`(승격 노트가 원문 전체를 담음 — §13 B6)
-  ⑤ 강의자료·공지(학기 끝 + 보존 표의 날) · 웹 수집 보관 칸(학기 끝) · 고아 첨부(어느 노트도 이름을 안 씀)
+  ④ 강의자료·공지(학기 끝 + 보존 표의 날) · 웹 수집 보관 칸(학기 끝) · 고아 첨부(어느 노트도 이름을 안 씀)
 보고만(지우지 않음): 받은함에 7일 넘게 머문 것(§13 B5) · 휴지통 30일 넘은 것(비우기는 사람).
 안 함: 웹 공지 마감+30일·대기 칸(웹 수집 대본이 직접).
 """
@@ -114,7 +113,6 @@ def find(days):
                 else:
                     dup.append({"src": r, "keep": keep, "size": size})
     inbox = roles.abs("inbox")
-    promoted = sorted(rel(os.path.join(inbox, "_promoted", f)) for f in (os.listdir(os.path.join(inbox, "_promoted")) if os.path.isdir(os.path.join(inbox, "_promoted")) else []))
     stay = []
     i_days, t_days = (float("inf") if x is None else x for x in (roles.retention("받은함"), roles.retention("휴지통")))  # None(무기한) = 알리지 않음
     if os.path.isdir(inbox):
@@ -128,7 +126,7 @@ def find(days):
                  for d, age, n, sz in fileops.trash_items(fileops.Ctx(VAULT)) if age >= t_days]
     today = dt.date.today()
     return {"dup": dup, "promoted_work": promoted_work, "promoted_work_young": young, "empty_files": empty_files,
-            "empty_dirs": empty_dirs, "promoted": promoted, "inbox_stay": stay, "trash_old": old_trash,
+            "empty_dirs": empty_dirs, "inbox_stay": stay, "trash_old": old_trash,
             "lecture_old": lecture_old(today), "archive_old": archive_old(today), "orphan_attach": orphan_attachments()}
 
 
@@ -223,8 +221,6 @@ def plan_of(c):
         ops.append({"op": "rm", "src": r, "why": "빈 파일", "user_asked": r.startswith(src_root)})
     for r in c["empty_dirs"]:
         ops.append({"op": "rm", "src": r, "why": "빈 폴더", "user_asked": r.startswith(src_root)})
-    for r in c["promoted"]:
-        ops.append({"op": "rm", "src": r, "why": "받은함 승격 끝(원문은 승격 노트에) — 설계안 §13 B6", "user_asked": True})
     return ops
 
 
@@ -252,8 +248,8 @@ def main(argv=None):
         print(json.dumps({"plan": rel(out), "ops": len(ops), **c}, ensure_ascii=False))
         return 0
     print("정리 후보 %d건 → %s" % (len(ops), rel(out)))
-    print("  같은 내용 사본 %d · 제출·승격된 작업 파일 %d(%s 안 된 것 %d) · 빈 파일 %d · 빈 폴더 %d · 받은함 승격 끝 %d" % (
-        len(c["dup"]), len(c["promoted_work"]), "무기한" if a.days == float("inf") else "%d일" % a.days, c["promoted_work_young"], len(c["empty_files"]), len(c["empty_dirs"]), len(c["promoted"])))
+    print("  같은 내용 사본 %d · 제출·승격된 작업 파일 %d(%s 안 된 것 %d) · 빈 파일 %d · 빈 폴더 %d" % (
+        len(c["dup"]), len(c["promoted_work"]), "무기한" if a.days == float("inf") else "%d일" % a.days, c["promoted_work_young"], len(c["empty_files"]), len(c["empty_dirs"])))
     print("  강의자료 학기 끝 지남 %d · 보관 칸 학기 끝 지남 %d · 고아 첨부 %d" % (len(c["lecture_old"]), len(c["archive_old"]), len(c["orphan_attach"])))
     for o in ops[:20]:
         print("  - %s — %s" % (o["src"], o["why"]))

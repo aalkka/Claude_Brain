@@ -365,7 +365,7 @@ def obsidian_cli(ctx):
         exe = shutil.which("obsidian")
         if exe and os.environ.get("FILEOPS_NO_OBSIDIAN") != "1" and obsidian_running():
             try:
-                out = subprocess.run([exe, "vault"], capture_output=True, timeout=5).stdout.decode("utf-8", "replace")
+                out = subprocess.run([exe, "vault"], capture_output=True, timeout=5, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout.decode("utf-8", "replace")
                 m = re.search(r"^path\t(.+)$", out, re.M)
                 if m and os.path.normcase(os.path.abspath(m.group(1).strip())) == os.path.normcase(ctx.vault):
                     _OBS = exe
@@ -407,7 +407,7 @@ def obsidian_move(ctx, rs, rd):
         return False
     expect(ctx, rs, rd)
     try:
-        subprocess.run([exe, "move", "path=" + rs, "to=" + rd], capture_output=True, timeout=30)
+        subprocess.run([exe, "move", "path=" + rs, "to=" + rd], capture_output=True, timeout=30, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))    # 서버(pyw)에서 부르면 콘솔이 새로 뜬다
     except (OSError, subprocess.TimeoutExpired):
         pass
     for _ in range(50):                                     # 옵시디언이 끝낼 때까지(최대 5초)
@@ -1124,6 +1124,20 @@ def load_events(ctx):
     return out
 
 
+# 튜토리얼 연습 장부(brain-base E1 · git 밖) — hidden = 연습이 남긴 장부 줄 id(최근 300). ops.jsonl 은 덧붙이기만이라 줄은 그대로 두고,
+# brain-base 장부 창·휴지통 창·홈 칸처럼 보기(2_지식/장부.md)·«장부 최근»(log)에서만 뺀다. undo·restore·where 는 그대로 다 본다.
+PRACTICE_BOOK = ".obsidian/plugins/brain-base/tutorial-practice.json"
+
+
+def hidden_ids(ctx):
+    try:
+        with open(ctx.abs(PRACTICE_BOOK), encoding="utf-8") as f:
+            h = json.load(f).get("hidden")
+    except (OSError, ValueError, AttributeError):
+        return set()
+    return {x for x in h if isinstance(x, str)} if isinstance(h, list) else set()
+
+
 def op_undo(ctx, key):
     evs = load_events(ctx)
     group = [e for e in evs if e.get("id") == key] or [e for e in evs if e.get("batch") == key]
@@ -1192,11 +1206,15 @@ def short(e):
 
 
 def op_log(ctx, n, grep):
+    hide = hidden_ids(ctx)
     evs = [e for e in load_events(ctx) if not grep or grep.lower() in json.dumps(e, ensure_ascii=False).lower()]
-    for e in evs[-n:]:
+    shown = [e for e in evs if e.get("id") not in hide]
+    for e in shown[-n:]:
         t, who, op, path, extra = short(e)
         print("%s %s %s %s%s · %s" % (t, who, op, path, (" · " + " · ".join(extra)) if extra else "", e.get("batch")))
-    if not evs:
+    if len(shown) < len(evs):
+        print("(튜토리얼 연습 줄 %d 가림 — ops.jsonl 에는 있음)" % (len(evs) - len(shown)))
+    if not shown:
         print("장부에 해당 기록 없음")
 
 
@@ -1454,7 +1472,8 @@ def save_json(p, obj):
 # ── 보기(2_지식/장부.md) ───────────────────────────────────────────────────
 
 def write_view(ctx):
-    evs = load_events(ctx)[-VIEW_N:]
+    hide = hidden_ids(ctx)  # 튜토리얼 연습 줄(위 PRACTICE_BOOK)
+    evs = [e for e in load_events(ctx) if e.get("id") not in hide][-VIEW_N:]
     p = ctx.abs(VIEW)
     created = now().strftime("%Y-%m-%d")
     if os.path.exists(p):
@@ -1524,6 +1543,7 @@ def main(argv=None):
     p.add_argument("--older", type=int, default=30)
     p = sp.add_parser("who", help="이 파일·폴더를 쥔 프로그램")
     p.add_argument("path")
+    sp.add_parser("view", help="장부 보기(2_지식/장부.md)만 다시 쓰기 — 튜토리얼이 연습 줄을 가린 뒤")
     a = ap.parse_args(argv)
 
     ctx = Ctx(a.vault, by=a.by, dry=a.dry)
@@ -1565,6 +1585,8 @@ def main(argv=None):
             note = held_note(to_rel(ctx, a.path)[1])
             if note:
                 print(note)
+        elif c == "view":
+            write_view(ctx)
     except Stop as e:
         print("✗ %s" % e)
         if ctx.events:

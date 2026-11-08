@@ -141,8 +141,17 @@ def fm_mentions(fm, want):
     return False
 
 
-def upcoming(today):
-    """일정 파일 전부의 열린 줄(오늘부터) — 날짜·시각 순. topic = 줄 머리(«과목 · …»)의 정식 이름(모르면 None)."""
+def passed(dd, time, end, now=None):
+    """그 일정 줄이 지났나 — 날짜가 어제 이전이면 지남 · 오늘이면 시각(끝 시각이 있으면 끝)이 지났을 때만 지남(시각 없으면 그날 안은 안 지남)."""
+    now = now or datetime.now(KST)
+    if dd < now.date():
+        return True
+    t = end or time
+    return bool(t) and dd == now.date() and now.strftime("%H:%M") >= t.zfill(5)
+
+
+def upcoming(today, now=None):
+    """일정 파일 전부의 열린 줄(오늘부터 · 오늘이면 시각이 아직 안 지난 것) — 날짜·시각 순. topic = 줄 머리(«과목 · …»)의 정식 이름(모르면 None)."""
     d = roles.abs("schedule")
     rows = []
     if not os.path.isdir(d):
@@ -159,12 +168,12 @@ def upcoming(today):
                     dd = datetime.strptime(m.group(2), "%Y-%m-%d").date()
                 except ValueError:
                     continue
-                if dd < today:
+                if dd < today or passed(dd, m.group(3), m.group(4), now):
                     continue
                 text = m.group(5)
                 head = text.split(" · ", 1)[0].strip()
                 clean, src = clean_line(text)
-                rows.append({"date": m.group(2), "wd": WD[dd.weekday()], "time": m.group(3) or "", "text": clean,
+                rows.append({"date": m.group(2), "wd": WD[dd.weekday()], "time": m.group(3) or "", "end": m.group(4) or "", "text": clean,
                              "days": (dd - today).days, "file": rel(os.path.join(d, fn)), "line": i,
                              "src": src, "head": head, "topic": roles.canon(head)})
     rows.sort(key=lambda r: (r["date"], r["time"].zfill(5)))
@@ -180,9 +189,9 @@ def clean_line(text):
     return clean, src.group(1) if src else ""
 
 
-def status(t, today, back=30):
+def status(t, today, back=30, now=None):
     """마감·제출 현황(설계안 §19.4) — 이 주제 일정 줄을 지난 back 일부터 · 체크 = 냄(LMS 마감은 «내 제출»으로 [x]) ·
-    지났는데 체크 없으면 «놓침» · 아직이면 «남음»."""
+    지났는데(날짜 · 오늘이면 시각까지) 체크 없으면 «놓침» · 아직이면 «남음»."""
     d = roles.abs("schedule")
     want = {n.lower() for n in names(t)}
     rows = []
@@ -203,8 +212,8 @@ def status(t, today, back=30):
                     continue
                 clean, src = clean_line(m.group(5))
                 done = m.group(1) != " "
-                rows.append({"date": m.group(2), "wd": WD[dd.weekday()], "time": m.group(3) or "", "text": clean, "days": (dd - today).days,
-                             "state": "냄" if done else ("놓침" if dd < today else "남음"), "file": rel(os.path.join(d, fn)), "line": i, "src": src})
+                rows.append({"date": m.group(2), "wd": WD[dd.weekday()], "time": m.group(3) or "", "end": m.group(4) or "", "text": clean, "days": (dd - today).days,
+                             "state": "냄" if done else ("놓침" if passed(dd, m.group(3), m.group(4), now) else "남음"), "file": rel(os.path.join(d, fn)), "line": i, "src": src})
     rows.sort(key=lambda r: (r["date"], r["time"].zfill(5)))
     # 지난 것은 가까운 것만 · 앞으로 것은 모두(위 N 안에서)
     past = [r for r in rows if r["days"] < 0][-N["status"] // 2:]

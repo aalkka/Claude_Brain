@@ -1,21 +1,21 @@
 """외부뇌 행위 실행기 — 볼트 개혁 R4(행위 층 최소형). 외부뇌가 할 수 있는 일을 이름 붙은 행위 하나로 부른다.
 
 같은 행위를 Claude 셸 · 터미널 · 예약 작업 · 옵시디언(바탕 플러그인) · 폰(나중)에서 똑같이 부르고, 부른 것은 같은 꼴로 장부에 남는다.
-행위 선언 = 3_시스템/actions.json(코어) + 각 모듈 module.json 의 contributes.actions. 대본은 그대로 두고 감싸기만 한다.
+행위 선언 = 3_시스템/actions.json(코어) + 켜진 모듈 module.json 의 contributes.actions. 대본은 그대로 두고 감싸기만 한다.
 
 사용:
   py -3 3_시스템/brain.py list [--json]                    # 할 수 있는 일
   py -3 3_시스템/brain.py run <행위> [이름=값 …] [--json]   # 예: run search q=전자기 · run files.move src=… dst=… why=…
   py -3 3_시스템/brain.py doctor [--json]                  # 건강 한 줄씩(claude 판 · 옵시디언 CLI · git 잠금 · 일정 · 색인 · 휴지통 · 받은함 · 따라가기 · 행위 선언 · 모듈마다)
-  py -3 3_시스템/brain.py run collect.lms -- --sleep-after # `--` 뒤는 대본에 그대로(rest 를 선언한 행위만)
+  py -3 3_시스템/brain.py run collect.lms -- --dry         # `--` 뒤는 대본에 그대로(rest 를 선언한 행위만)
   py -3 3_시스템/brain.py home                             # 홈 화면 JSON(받은함·마감·수집 마지막·휴지통·장부 최근·주제) — 읽기만 · 장부에 안 남김
-  py -3 3_시스템/brain.py modules [--json] [--no-claude]   # 모듈 목록(판·스킬·행위·디스크·마지막 실행 · 켜짐·상시 토큰) — 켜기·끄기는 옵시디언 홈에서 사람이
+  py -3 3_시스템/brain.py modules [--json] [--no-claude] [--sync]   # 모듈 목록(판·스킬·행위·디스크·마지막 실행 · 켜짐·상시 토큰) — 켜기·끄기는 옵시디언 홈에서 사람이 · --sync = 설명서 사본 맞춤
   --by <누가>  장부의 «누가»(기본 = Claude 셸이면 claude, 아니면 user · 옵시디언은 obsidian · 예약은 schedule)
   --yes        send(밖으로 보냄)·usage(Claude 사용량) 행위를 실제로 돌린다
 
 장부 = 3_시스템/ledger/actions.jsonl(덧붙이기만) — {ts, action, by, args, code, seconds}.
 """
-import argparse, datetime as dt, glob, json, os, re, shutil, subprocess, sys, time
+import argparse, datetime as dt, json, os, re, shutil, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(HERE)
@@ -28,10 +28,17 @@ def detect_by():
     return "claude" if os.environ.get("CLAUDECODE") == "1" else "user"
 
 
+def module_list(on_only=True):
+    """모듈 등록부(roles.py) — 꺼진 모듈은 행위·건강·기록·화면에 안 나온다(ADR-035)"""
+    sys.path.insert(0, HERE)
+    import roles
+    return roles.modules(on_only=on_only)
+
+
 def load_actions():
-    """[(행위, 출처)] · 문제 목록 — 코어 먼저, 모듈은 뒤. 같은 id 는 먼저 온 것만."""
+    """[(행위, 출처)] · 문제 목록 — 코어 먼저, 켜진 모듈은 뒤. 같은 id 는 먼저 온 것만."""
     out, problems, seen = [], [], set()
-    srcs = [(CORE, "core")] + [(p, "module:" + os.path.basename(os.path.dirname(p))) for p in sorted(glob.glob(os.path.join(VAULT, ".claude", "skills", "*", "module.json")))]
+    srcs = [(CORE, "core")] + [(os.path.join(m["dir"], "module.json"), "module:" + m["id"]) for m in module_list()]
     for path, owner in srcs:
         try:
             with open(path, encoding="utf-8") as f:
@@ -108,7 +115,8 @@ def cmd_run(a):
     acts, _ = load_actions()
     found = next(((x, o) for x, o in acts if x["id"] == a.action), None)
     if not found:
-        print("모르는 행위: %s — brain.py list" % a.action, file=sys.stderr)
+        off = next((m["id"] for m in module_list(on_only=False) if not m["on"] and a.action.startswith(m["id"] + ".")), None)
+        print(("모듈 %s 이(가) 꺼져 있음: %s — 켜기 = 옵시디언 홈 «모듈»" % (off, a.action)) if off else ("모르는 행위: %s — brain.py list" % a.action), file=sys.stderr)
         return 2
     x, owner = found
     if x.get("risk") in NEEDS_YES and not a.yes:
@@ -147,7 +155,8 @@ def cmd_run(a):
     secs = round(time.time() - t0, 1)
     ts = dt.datetime.now().isoformat(timespec="seconds")
     if code == 0 and x.get("empty") and re.search(x["empty"], out, re.M):
-        log({"ts": ts, "action": x["id"], "by": by, "code": 0, "empty": True})  # 받은 것 없음 — 짧게 적고 끝(사용자 10-30)
+        if by != "schedule":    # 예약은 15분마다 돈다 — 받은 것 없음을 하루 96줄 쌓지 않는다
+            log({"ts": ts, "action": x["id"], "by": by, "code": 0, "empty": True})  # 받은 것 없음 — 짧게 적고 끝(사용자 10-30)
     else:
         log({"ts": ts, "action": x["id"], "owner": owner, "by": by, "args": kv or None, "rest": rest or None, "code": code, "seconds": secs})
     if a.json:
@@ -241,6 +250,18 @@ def doctor_checks():
         res.append(chk("따라가기", "warn" if wait or not f["ready"] else "ok", " · ".join(wait) if wait else "마지막 비교 %s" % (f["last"] or "")[5:16].replace("T", " ") if f["ready"] else "사진 없음 — brain.py run follow.run"))
     except Exception as e:  # noqa: BLE001
         res.append(chk("따라가기", "warn", "확인 실패(%s)" % type(e).__name__))
+    # 기능 단계(옵션 설계 §3-4·§4-4) — 고른 값 파일 깨짐 · PC 가 바뀜 · 노트가 3배(빈 볼트 값으로 추천했음) → «옵션 추천 다시»
+    try:
+        import options
+        s = options.show()
+        why = [p for p in s["problems"] if p.startswith("고른 값 파일")][:1]
+        why += ["PC 가 바뀜 — «옵션 추천 다시»"] if s["machine"]["changed"] else []
+        why += ["노트가 3배 — «옵션 추천 다시»"] if s["machine"]["renotes"] else []
+        low = [f["name"] for f in s["features"] if f["ready"] and s["now"].get(f["id"], "high") != "high"]
+        res.append(chk("기능 단계", "warn" if why else "ok", " · ".join(why) if why else "낮춤 %d(%s)" % (len(low), "·".join(low)) if low
+                       else "전부 높음" + ("" if s["file"] == "ok" else " · 추천 안 받음(«옵션 추천 다시»)")))
+    except Exception as e:  # noqa: BLE001
+        res.append(chk("기능 단계", "warn", "확인 실패(%s)" % type(e).__name__))
     _, problems = load_actions()
     res.append(chk("행위 선언", "bad" if problems else "ok", "; ".join(problems)[:200] if problems else "문제 없음"))
     return res + module_checks()
@@ -250,28 +271,24 @@ RANK = {"ok": 0, "warn": 1, "bad": 2}
 
 
 def module_checks():
-    """모듈마다 한 줄 — 판 · 정적 검사(module-forge check · 모듈과 무관한 볼트 경고는 뺌) · 모듈이 선언한 contributes.doctor.
+    """켜진 모듈마다 한 줄 — 판 · 정적 검사(module-forge check · 모듈과 무관한 볼트 경고는 뺌) · 모듈이 선언한 contributes.doctor.
     doctor 대본 계약: 마지막 줄 = 건강 한 줄 · 종료 코드 0 ok · 1 warn · 그 밖 bad · 20초 안."""
-    paths = sorted(glob.glob(os.path.join(VAULT, ".claude", "skills", "*", "module.json")))
-    if not paths:
+    mods = module_list()
+    if not mods:
         return []
     env = dict(os.environ, PYTHONIOENCODING="utf-8")
     static = {}
     check_py = os.path.join(VAULT, ".claude", "skills", "module-forge", "scripts", "check.py")
-    if os.path.isfile(check_py):
+    if os.path.isfile(check_py) and any(m["id"] == "module-forge" for m in mods):  # module-forge 를 끄면 정적 검사만 빠진다
         try:
             r = subprocess.run([sys.executable, check_py, "--all", "--no-registry"], cwd=VAULT, capture_output=True, timeout=60, env=env)
             static = json.loads(r.stdout.decode("utf-8", "replace")).get("modules") or {}
         except (OSError, subprocess.TimeoutExpired, ValueError):
             static = None
     res = []
-    for mp in paths:
-        d = os.path.dirname(mp)
-        name = os.path.basename(d)
-        try:
-            with open(mp, encoding="utf-8") as f:
-                mj = json.load(f)
-        except (OSError, ValueError):
+    for m in mods:
+        d, name, mj = m["dir"], m["id"], m["json"]
+        if mj is None:
             res.append(chk("모듈 " + name, "bad", "module.json 못 읽음"))
             continue
         try:
@@ -364,7 +381,7 @@ def home_data():
         dirs = topic.topic_dirs(t)
         mt = max([os.path.getmtime(f) for _, p in dirs for f in topic.walk_files(os.path.join(VAULT, *p.split("/")))] or [0])
         topics.append({"이름": t["이름"], "영역": t.get("영역"), "별칭": t.get("별칭") or [], "상태": t.get("상태"),
-                       "next": {k: nxt[k] for k in ("date", "wd", "time", "text", "days")} if nxt else None, "mtime": mt or None})
+                       "next": {k: nxt[k] for k in ("date", "wd", "time", "end", "text", "days")} if nxt else None, "mtime": mt or None})
     try:  # 작업 폴더 작업 상태(work.py — 끝남·결과물 없음·멈춤) · 탐색기 배지·홈 카드가 쓴다
         import work
         wk = work.summary(work.status())
@@ -387,25 +404,33 @@ def home_data():
             "inbox": {"count": len(items), "oldest": max(ages.values()) if ages else None, "path": roles.path("inbox"),
                       "items": [dict({"name": p, "days": ages[p]}, **{k: sugg[p][k] for k in ("dst", "sure", "why", "dup", "act", "n") if p in sugg}) for p in items[:8]]},
             "deadlines": up[:6],
-            "collect": [dict(runs[i], name=acts.get(i, {}).get("name", i)) for i in sorted(runs) if i.startswith("collect.")],
+            "collect": collect_alerts() + [dict(runs[i], name=acts.get(i, {}).get("name", i)) for i in sorted(runs) if i.startswith("collect.")],
             "trash": trash,
             "ops": tail_jsonl(os.path.join(HERE, "ledger", "ops.jsonl"), 5),
             "topics": topics}
 
 
+def collect_alerts():
+    """홈 «수집» 칸에 열린 대기열을 빨갛게(code 1) — 끊긴 로그인이 조용히 지나가지 않게(10-27~11-03 8회 실측)."""
+    try:
+        with open(os.path.join(HERE, "_index", "수집-대기열.md"), encoding="utf-8") as f:
+            lines = [ln for ln in f.read().splitlines() if ln.startswith("- [ ] ")]
+    except OSError:
+        return []
+    when = lambda ln: ln[6:25].replace(" ", "T")
+    login = [ln for ln in lines if "mylms 로그인 만료" in ln]
+    rest = [ln for ln in lines if "mylms 로그인 만료" not in ln]
+    return ([{"name": "mylms 로그인 필요", "ts": when(login[-1]), "code": 1}] if login else []) + \
+           ([{"name": "수집 대기열 %d건" % len(rest), "ts": when(rest[-1]), "code": 1}] if rest else [])
+
+
 def modules_data(ask_claude=True):
-    """모듈마다 — 판·설명·스킬·행위·디스크·마지막 실행 · (claude 가 있으면) 켜짐·상시 토큰(`claude plugin list --json` · `plugin details`)."""
+    """모듈마다(꺼진 것도 — 켤 스위치가 있어야 한다) — 판·설명·스킬·행위·디스크·마지막 실행·켜짐 · (claude 가 있으면) 상시 토큰(`plugin details`)."""
     sys.path.insert(0, HERE)
     runs = tail_jsonl(LOG, 2000)
     out = []
-    for mp in sorted(glob.glob(os.path.join(VAULT, ".claude", "skills", "*", "module.json"))):
-        d = os.path.dirname(mp)
-        mid = os.path.basename(d)
-        try:
-            with open(mp, encoding="utf-8") as f:
-                mj = json.load(f)
-        except (OSError, ValueError):
-            mj = {}
+    for m in module_list(on_only=False):
+        d, mid, mj = m["dir"], m["id"], m["json"] or {}
         try:
             with open(os.path.join(d, ".claude-plugin", "plugin.json"), encoding="utf-8") as f:
                 pj = json.load(f)
@@ -420,7 +445,7 @@ def modules_data(ask_claude=True):
         out.append({"id": mid, "plugin": mid + "@skills-dir", "version": pj.get("version"), "description": pj.get("description", ""),
                     "skills": (mj.get("surfaces") or {}).get("skills", []), "actions": [a.get("id") for a in con.get("actions", [])],
                     "doctor": bool(con.get("doctor")), "mb": round(size / 1e6, 1), "last": mine[-1] if mine else None,
-                    "enabled": None, "always_on": None})
+                    "enabled": m["on"], "always_on": None})
     if ask_claude and out:
         import claude_bin
         from concurrent.futures import ThreadPoolExecutor
@@ -434,18 +459,77 @@ def modules_data(ask_claude=True):
                 return subprocess.run([exe, "plugin", *args], cwd=VAULT, capture_output=True, timeout=60, env=env).stdout.decode("utf-8", "replace")
             except (OSError, subprocess.TimeoutExpired):
                 return ""
-        with ThreadPoolExecutor(max_workers=len(out) + 1) as ex:
-            lst = ex.submit(run, "list", "--json")
+        with ThreadPoolExecutor(max_workers=len(out)) as ex:
             det = {m["id"]: ex.submit(run, "details", m["plugin"]) for m in out}
-            try:
-                on = {p["id"]: p.get("enabled") for p in json.loads(lst.result() or "[]")}
-            except ValueError:
-                on = {}
             for m in out:
-                m["enabled"] = on.get(m["plugin"])
                 g = re.search(r"Always-on:\s*~?([\d,]+)\s*tok", det[m["id"]].result())
                 m["always_on"] = int(g.group(1).replace(",", "")) if g else None
     return out
+
+
+# 모듈 설명서 사본(ADR-035) — 옵시디언은 점 폴더를 안 본다. 켜진 모듈의 장을 보이는 자리에 두어야 검색·빠른 전환·링크·Claude 가 찾는다.
+DOC_MARK = "%% 모듈 설명서 사본"
+
+
+def _retry(fn, *args):
+    """켜진 옵시디언이 쥔 파일은 잠깐 WinError 5 — 0.1초 간격 30번"""
+    for i in range(30):
+        try:
+            return fn(*args)
+        except PermissionError:
+            if i == 29:
+                raise
+            time.sleep(0.1)
+
+
+def module_chapters(m):
+    """모듈이 선언한 설명서 장 — [(사본 이름, 원본)] · 모듈 밖·없는 파일은 건너뜀(module-forge check 가 막는다)"""
+    out = []
+    for ch in ((m["json"] or {}).get("contributes") or {}).get("manual") or []:
+        rel = ch.get("file") if isinstance(ch, dict) else None
+        src = os.path.join(VAULT, *str(rel).split("/")) if rel else ""
+        if rel and os.path.normcase(os.path.abspath(src)).startswith(os.path.normcase(m["dir"]) + os.sep) and os.path.isfile(src):
+            out.append((os.path.basename(src), src))
+    return out
+
+
+def sync_module_docs():
+    """켜진 모듈의 장 → 3_시스템/설명서/_index/ · 꺼진 모듈 것은 치운다(사본표가 달린 파일만 · 다시 켜면 또 만든다). 쓸 것이 없으면 안 쓴다."""
+    dst = os.path.join(HERE, "설명서", "_index")
+    want, wrote, gone = {}, [], []
+    for m in module_list():
+        for name, src in module_chapters(m):
+            with open(src, encoding="utf-8") as f:
+                text = f.read()
+            rel = os.path.relpath(src, VAULT).replace(os.sep, "/")
+            mark = "%s — 원본 = %s · 고치려면 원본을 고친다 · 모듈을 끄면 이 파일은 사라진다 %%%%\n" % (DOC_MARK, rel)
+            g = re.match(r"---\r?\n.*?\r?\n---\r?\n", text, re.S)
+            want[name] = text[:g.end()] + mark + text[g.end():] if g else mark + text
+    if want:
+        os.makedirs(dst, exist_ok=True)
+    for name, body in want.items():
+        p = os.path.join(dst, name)
+        try:
+            with open(p, encoding="utf-8", newline="") as f:
+                if f.read() == body:
+                    continue
+        except OSError:
+            pass
+        tmp = os.path.join(dst, ".%s.tmp" % name)
+        with open(tmp, "w", encoding="utf-8", newline="") as f:
+            f.write(body)
+        _retry(os.replace, tmp, p)
+        wrote.append(name)
+    for name in sorted(os.listdir(dst)) if os.path.isdir(dst) else []:
+        p = os.path.join(dst, name)
+        if name in want or not name.endswith(".md") or not os.path.isfile(p):
+            continue
+        with open(p, encoding="utf-8", errors="replace") as f:
+            if DOC_MARK not in f.read(2000):
+                continue  # 사본이 아닌 파일은 손대지 않는다
+        _retry(os.remove, p)
+        gone.append(name)
+    return {"want": sorted(want), "wrote": wrote, "gone": gone}
 
 
 def cmd_home(a):
@@ -454,6 +538,9 @@ def cmd_home(a):
 
 
 def cmd_modules(a):
+    if a.sync:
+        print(json.dumps(sync_module_docs(), ensure_ascii=False))
+        return 0
     ms = modules_data(not a.no_claude)
     if a.json:
         print(json.dumps(ms, ensure_ascii=False))
@@ -482,7 +569,8 @@ def main(argv=None):
     sp.add_parser("doctor", parents=[common])
     sp.add_parser("home", parents=[common])
     p = sp.add_parser("modules", parents=[common])
-    p.add_argument("--no-claude", action="store_true", help="켜짐·상시 토큰을 claude 에 묻지 않음(빠름)")
+    p.add_argument("--no-claude", action="store_true", help="상시 토큰을 claude 에 묻지 않음(빠름)")
+    p.add_argument("--sync", action="store_true", help="켜진 모듈의 설명서 사본을 맞춤(옵시디언이 켤 때·모듈을 켜고 끌 때 부름)")
     argv = list(sys.argv[1:] if argv is None else argv)
     tail = []
     if "--" in argv:                                          # `-- --sleep-after` 처럼 대본 선택을 넘김 — 3.11 argparse 는 하위 명령 뒤 `--` 를 못 넘겨 직접 가른다
