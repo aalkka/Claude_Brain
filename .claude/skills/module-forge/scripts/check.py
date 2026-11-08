@@ -9,15 +9,20 @@
 
 block: ①'_'접두(로더 스킵) ②모듈명↔코어스킬 동명 ③노트 basename 중복 ④1_수집 침범(I3)
        ⑤예약훅(I2) ⑥모듈간 touches 동일경로 ⑦deps 순환·미존재 ⑧코어 config 키 선언(I3)
-       ⑨스크립트의 1_수집 접근·코어파일 참조(I1) ⑩산출물 폴더 규약(notes/ 금지·타모듈 침범)
+       ⑨스크립트의 1_수집 접근·코어파일 참조(I1) · reads 선언의 1_수집·코어파일 ⑩산출물 폴더 규약(notes/ 금지·타모듈 침범)
        ⑪contributes 행위·건강 선언(id 접두 '<모듈>.'·겹침·risk·builtin·대본 없음·모르는 자리표 — ADR-019)
+       ⑫contributes 튜토리얼·설명서 선언(모듈 밖·대본 꼴·설명서 이름 규칙·겹침·코어 글이 모듈 장으로 링크 — ADR-035)
+         · 대본은 3_시스템/tutorial_lint.py 의 check_folder 로 잰다(코어와 같은 함수) — 합격선 미달이 block(형식 v1 도 미달 한 건 ·
+           13장 모두 v2 로 옮김 11-08) · v1 장은 엔진이 못 읽는 꼴(legacy)도 함께 알린다
+         · 미달·대본 없음이면 안내 줄(info·block)이 쓰는 순서 = SKILL «튜토리얼 만들기»(TUTORIAL_HOWTO)를 가리킨다
 warn : module.json 부재 · surfaces 드리프트 · touches 포함관계(인접)
-       · 스크립트 하드코딩 경로가 touches 밖 · 무관 basename 중복 · schema 버전 상회
+       · 스크립트 하드코딩 경로가 touches·reads 밖 · reads 가 touches 안(중복) · 무관 basename 중복 · schema 버전 상회
        · 행위·doctor 가 모듈 밖 대본을 부름 · 행위 name 없음
 infos: 네임스페이스 열거(네이티브 `/<모듈>:<스킬>`가 이미 충돌차단 → 정보만)
 
 forward-compat: module.json의 **모르는 키는 무시**한다(P4 확장 필드 선반영 안전).
        스키마가 바뀌면 `schema` 값을 올린다 → 구버전 check.py는 warn으로 자백.
+       `reads`(11-07)는 더한 키라 schema 1 그대로 — 구버전은 무시해 «touches 밖» 경고를 낼 뿐(더 엄격 · 거짓 통과 없음).
 
 한계(정직): 런타임 충돌(훅 실행순서·MCP 포트·bin PATH) 미검출 — P4 연기.
        SKILL.md 프로즈를 Claude가 읽고 쓰는 경로는 정적으로 귀속 불가 →
@@ -56,11 +61,14 @@ MODULE_SCHEMA = 1  # module.json 스키마 버전(미래 필드 추가 시 증�
 MODULES_ROOT = "2_지식/modules"  # mf:allow-path
 sys.path.insert(0, os.path.join(VAULT, "3_시스템"))
 import roles  # noqa: E402 — 자리는 역할로(볼트 개혁 R6)
+import tutorial_lint  # noqa: E402 — 튜토리얼 대본 규칙은 한 곳(코어 정적 검사와 같은 함수)
 NOTE_AREAS = roles.group("note_areas")  # 코어 지식 노트 자리 전부(R9 뒤 노트·학교·프로젝트·생활)
 # 오탐 억제(정직히 명시): 리터럴 스캔은 '언급'과 '접근'을 구분 못 한다 →
 #   ⓐ 주석 줄 제외 ⓑ 글로브(*) 포함 = 선언/패턴이지 대상 아님 ⓒ 명시 escape.
 ALLOW_LINE = "mf:allow-path"        # 해당 줄만 제외
 ALLOW_FILE = "mf:allow-path-file"   # 파일 전체 제외(테스트 픽스처 등)
+# ⑫ 안내 줄이 가리키는 절 — 튜토리얼을 쓰는 순서·본보기(test_check 가 이 절과 본보기 파일이 있는지 잰다)
+TUTORIAL_HOWTO = ".claude/skills/module-forge/skills/check/SKILL.md «튜토리얼 만들기»"
 # contributes(행위·건강) — 코어 brain.py 와 같은 계약(ADR-019). 코어 행위 목록은 겹침 검사에만 읽는다.
 CORE_ACTIONS = os.path.join(VAULT, "3_시스템", "actions.json")
 ACTION_RISKS = ("read", "write", "send", "usage")
@@ -96,6 +104,40 @@ def vault_basenames():
             b = os.path.splitext(os.path.basename(p))[0]
             m.setdefault(b, []).append(p)
     return m
+
+
+def other_manuals(module, mods):
+    """다른 모듈이 선언한 설명서 장 이름 → 모듈"""
+    out = {}
+    for name, info in mods.items():
+        con = (info.get("module") or {}).get("contributes")
+        chs = con.get("manual") if isinstance(con, dict) else None
+        if name == module or not isinstance(chs, list):
+            continue
+        for ch in chs:
+            if isinstance(ch, dict) and ch.get("file"):
+                out[os.path.splitext(os.path.basename(norm(ch["file"])))[0]] = name
+    return out
+
+
+def core_doc_links():
+    """코어 설명서 글 — {names: 코어 장 이름, links: 링크 대상 → [글]}. 모듈을 끄면 그 장이 없어지니 여기서 모듈 장으로 링크하면 깨진다."""
+    sysd = os.path.join(VAULT, "3_시스템")
+    paths = glob.glob(os.path.join(sysd, "설명서", "*.md")) + glob.glob(os.path.join(sysd, "tutorial", "*.md"))
+    names = {os.path.splitext(os.path.basename(p))[0] for p in paths}
+    hub = roles.find_note("사용자설명서")
+    if hub:
+        paths.append(os.path.join(VAULT, *hub.split("/")))
+    links = {}
+    for p in paths:
+        try:
+            with open(p, encoding="utf-8") as f:
+                text = f.read()
+        except OSError:
+            continue
+        for t in set(re.findall(r"\[\[([^\]|#]+)", text)):
+            links.setdefault(t.strip(), []).append(os.path.relpath(p, VAULT).replace(os.sep, "/"))
+    return {"names": names, "links": links}
 
 
 def scan_surfaces(d):
@@ -332,13 +374,32 @@ def check(module, mods, core):
             f"`.claude/skills/{module}/config.json` 또는 `3_시스템/_index/{module}/config.json`에 둘 것."
         )
 
-    # ── ⑨ 스크립트 정적 스캔 (1_수집·코어파일=block · touches 밖=warn) ──
+    # ── ⑨ 스크립트 정적 스캔 (1_수집·코어파일=block · touches ∪ reads 밖=warn) ──
+    # reads = 읽기만 하는 남의 볼트 경로(코어 엔진 상태 폴더·설정 노트 등 — 주인은 코어나 다른 모듈).
+    #   touches(쓰는·소유하는 자리)에 넣으면 주인을 잘못 선언한다. 1_수집·코어파일은 reads 로도 풀지 않는다.
+    reads = mj.get("reads")
+    if reads is None:
+        reads = []
+    elif not (isinstance(reads, list) and all(isinstance(r, str) and norm(r) for r in reads)):
+        blocks.append("reads 는 경로 글자 목록이어야 한다 — 읽기만 하는 볼트 경로(코어 상태 폴더·남의 설정 노트 등).")
+        reads = []
+    reads = [norm(r) for r in reads]
+    for r in reads:
+        core = [c for c in CORE_PATHS if under_any(r, [c]) or under_any(c, [r])]
+        if r.startswith("1_수집"):
+            blocks.append(f"I3 위반 — reads 에 1_수집: '{r}'. 1_수집은 읽기로도 풀지 않는다(대본 참조도 block).")
+        elif core:
+            blocks.append(f"I1 위반 — reads '{r}' 가 코어파일 '{core[0]}' 에 닿음. 코어파일은 reads 로 풀지 않는다.")
+        elif under_any(r, touches):
+            warns.append(f"reads '{r}' 가 touches 안 — 쓰는 자리는 touches 하나로 둔다(읽기도 덮는다).")
     lit_hits, core_hits = scan_scripts(info["dir"])
+    bounds = touches + reads
     for rel, p in lit_hits:
         if p.startswith("1_수집"):
             blocks.append(f"I3 위반 — 스크립트가 1_수집 경로 참조: {rel} → '{p}'.")
-        elif touches and not under_any(p, touches):
-            warns.append(f"스크립트 하드코딩 경로가 touches 밖: {rel} → '{p}' (touches: {', '.join(touches)}).")
+        elif bounds and not under_any(p, bounds):
+            where = f"touches: {', '.join(touches) or '없음'}" + (f" · reads: {', '.join(reads)}" if reads else "")
+            warns.append(f"스크립트 하드코딩 경로가 touches·reads 밖: {rel} → '{p}' ({where}). 쓰면 touches, 읽기만 하면 reads 에.")
     for rel, c in sorted(set(core_hits)):
         blocks.append(f"I1 위반 — 스크립트가 코어파일 참조: {rel} → '{c}'. 모듈은 코어를 건드리지 않는다.")
 
@@ -445,11 +506,75 @@ def check(module, mods, core):
             warns.append(f"행위 '{aid}' name 없음 — 목록·옵시디언에 id 가 그대로 보인다.")
     if "doctor" in con:
         argv_problems("contributes.doctor", con["doctor"], set())
-    later = sorted(set(con) - {"actions", "doctor"})
+    if "record" in con:
+        argv_problems("contributes.record", con["record"], set())
+    if "view" in con:
+        v = con["view"] if isinstance(con["view"], dict) else {}
+        argv_problems("contributes.view.data", v.get("data"), {"reason"})
+        html = str(v.get("html") or "")
+        if not (under_any(norm(html), [mod_rel]) and os.path.isfile(os.path.join(VAULT, norm(html)))):
+            blocks.append(f"contributes.view.html — 모듈 안의 화면 파일이 아님 '{html}'.")
+    # ── ⑫ 튜토리얼·설명서 선언 (ADR-035 — 켜진 모듈 것만 볼트 목록에 합쳐지고 끄면 빠진다) ──
+    n_chap, n_man = 0, 0
+    if "tutorial" in con:
+        t = norm(str(con["tutorial"] or ""))
+        d = os.path.join(VAULT, t)
+        if not (under_any(t, [mod_rel]) and os.path.isdir(d)):
+            blocks.append(f"contributes.tutorial — 모듈 안의 폴더가 아님 '{t}'.")
+        else:
+            tl = tutorial_lint.check_folder(d, module, mj, VAULT)
+            for r in tl["chapters"]:
+                n_chap += 1
+                name = os.path.basename(r["file"])
+                # 형식과 상관없이 합격선 미달은 막는다(13장 모두 v2 · 11-08 · v1 = 미달 «형식 v1») · v1 장은 엔진이 못 읽는 꼴(legacy)을 앞에 붙인다
+                legacy = list(r.get("legacy") or []) if r["version"] == 1 else []
+                bad = legacy + [x for x in tutorial_lint.lines(r["blocks"]) if x not in legacy]
+                blocks.extend(f"튜토리얼 대본 {name} — {x}" for x in bad)
+                warns.extend(f"튜토리얼 대본 {name} — {x}" for x in tutorial_lint.lines(r["warns"]))
+                if bad:  # 안내 줄은 막음 수에 넣지 않는다(건강 줄 «검사 막힘 N» 은 고칠 것만 셈)
+                    infos.append(f"튜토리얼 대본 {name} — 합격선 미달 {len(bad)}건(까닭 = py -3 3_시스템/tutorial_lint.py --why {r['file']}) · 고치는 순서 = {TUTORIAL_HOWTO}.")
+            blocks.extend(f"튜토리얼 대본 — {x}" for x in tl["problems"])
+            if not n_chap:
+                blocks.append(f"contributes.tutorial — 대본 없음 '{t}'(머리에 «장:» 이 있는 md · 쓰는 순서 = {TUTORIAL_HOWTO}).")
+    if "manual" in con:
+        chs = con["manual"] if isinstance(con["manual"], list) else None
+        if chs is None:
+            blocks.append("contributes.manual 은 목록이어야 한다 — [{\"file\": …, \"name\": …, \"gist\": …}].")
+        names = vault_basenames()
+        others = other_manuals(module, mods)
+        core_docs = core_doc_links()
+        for ch in chs or []:
+            rel = norm(ch.get("file") or "") if isinstance(ch, dict) else ""
+            base = os.path.splitext(os.path.basename(rel))[0]
+            if not (under_any(rel, [mod_rel]) and os.path.isfile(os.path.join(VAULT, rel))):
+                blocks.append(f"contributes.manual — 모듈 안의 파일이 아님 '{rel}'.")
+                continue
+            n_man += 1
+            if not ch.get("name"):
+                blocks.append(f"contributes.manual '{base}' — name 없음(목차에 보일 이름).")
+            if not base.startswith(f"설명서-{module}"):
+                blocks.append(f"설명서 이름 '{base}' — '설명서-{module}' 로 시작해야 한다(다른 모듈·코어 장과 안 겹치게).")
+            if base in names:
+                blocks.append(f"설명서 이름 겹침 '{base}' (위키링크 모호): {os.path.relpath(names[base][0], VAULT)}.")
+            if base in others:
+                blocks.append(f"설명서 이름 겹침 '{base}' — 모듈 {others[base]}와.")
+            if base in core_docs["names"]:
+                blocks.append(f"설명서 이름 겹침 '{base}' — 코어 장과.")
+            for doc in core_docs["links"].get(base, []):
+                blocks.append(f"코어 글 {doc} 이 모듈 설명서 [[{base}]] 로 링크 — 모듈을 끄면 깨진다(목차는 brain-manual 이 그린다).")
+            with open(os.path.join(VAULT, rel), encoding="utf-8") as f:
+                text = f.read()
+            if not text.startswith("---"):
+                blocks.append(f"설명서 {base} — 프론트매터 없음.")
+            for other in sorted({x for x in others if re.search(r"\[\[" + re.escape(x) + r"[\]|#]", text)}):
+                warns.append(f"설명서 {base} 가 다른 모듈의 장 [[{other}]] 로 링크 — 그 모듈을 끄면 깨진다.")
+    later = sorted(set(con) - {"actions", "doctor", "record", "view", "tutorial", "manual"})
     if later:
         infos.append(f"contributes.{', '.join(later)} — 아직 읽는 곳 없음(바탕 플러그인 R5 부터) · 무시됨.")
     if mine:
         infos.append(f"행위 {len(mine)}개: {', '.join(mine)} (brain.py list · run).")
+    if n_chap or n_man:
+        infos.append(f"튜토리얼 {n_chap}장 · 설명서 {n_man}장 — 켜진 동안만 볼트 목록에 합쳐진다.")
 
     # ── 네임스페이스 (info — 네이티브 `/<모듈>:<스킬>`가 이미 충돌차단) ──
     if info["actual"]["skills"]:

@@ -111,5 +111,20 @@ DENY	O19 obsidian eval = 금지	OBS-EVAL-DENY Bash	-	{"tool_name":"Bash","permis
 DENY	O20 obsidian move = fileops 로	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian move path=\"2_지식/notes/a.md\" to=\"2_지식/notes/b.md\""}}
 DENY	O21 obsidian delete = fileops 로	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"obsidian delete path=0_작업/x.docx"}}
 DENY	O22 경로로 부른 Obsidian.com eval	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"& \"C:\\Users\\u\\AppData\\Local\\Programs\\Obsidian\\Obsidian.com\" eval code=1"}}
-NOFIRE	O23 obsidian search	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian search query=과목"}}
+NOFIRE	O23 obsidian search	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian search query=기물실"}}
 NOFIRE	O24 obsidian command id	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian command id=brain-source:build-index"}}
+# 개정 7(2026-11-03) — 설치 대본 · 경로 귀속 · cp 원본 자리
+ASK	Z1 node install.mjs 본 볼트 [자동]	Bash .obsidian/plugins/(install.mjs)	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cd /c/brain-base && node install.mjs \"<VS>\" 2>&1 | tail -2"}}
+ASK	Z2 node 경로/install.mjs	PowerShell .obsidian/plugins/(install.mjs)	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"node C:/brain-base/install.mjs <VS>"}}
+ALLOW	Z3 node install.mjs + 토큰	TOKEN-ALLOW Bash .obsidian/plugins/(install.mjs)	expires=2099-01-01T00:00:00Z\nscope=.obsidian/plugins/*\nbind=any	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"node install.mjs <VS>"}}
+NOFIRE	Z4 node install.mjs 시험 볼트	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"node install.mjs C:/brain-base/test/vault-ci"}}
+NOFIRE	Z5 install 낱말만(실행 아님)	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"grep -n install.mjs README.md"}}
+ASK	Z6 Git Bash 절대 경로 = 이 볼트	Bash .obsidian/plugins/brain-source/main.js	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp build/main.js <VG>/.obsidian/plugins/brain-source/main.js"}}
+NOFIRE	Z7 Git Bash 절대 경로 = 볼트 밖	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp build/main.js /c/brain-base/test/vault-ci/.obsidian/plugins/brain-source/main.js"}}
+NOFIRE	Z8 상대 경로 시험 볼트	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp calendar/build/main.js test/vault-ci/.obsidian/plugins/brain-calendar/"}}
+ASK	Z9 변수로 시작하는 경로 = 코어로 봄	Bash .obsidian/plugins/x/main.js	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp a.js $V/.obsidian/plugins/x/main.js"}}
+ASK	Z10 ../ 경로 = 코어로 봄	Bash CLAUDE.md	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cd 2_지식 && echo x > ../CLAUDE.md"}}
+NOFIRE	Z11 사용자 설정(~/.claude) = 볼트 코어 아님	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp a ~/.claude/settings.json"}}
+NOFIRE	Z12 cp 코어 → 다른 데 = 읽기	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp 3_시스템/hooks/core-gate.ps1 /tmp/sand/"}}
+ASK	Z13 cp 다른 데 → 코어	Bash 3_시스템/hooks/core-gate.ps1	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp /tmp/x 3_시스템/hooks/core-gate.ps1"}}
+ASK	Z14 cp 원본 자리 + 같은 절 다른 쓰기	Bash CLAUDE.md	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp CLAUDE.md /tmp/x > CLAUDE.md"}}

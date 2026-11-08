@@ -58,6 +58,7 @@ SUB_WORDS = [
     ("공지", ["공지", "안내", "notice"]),
     ("강의자료", ["강의", "주차", "lecture", "slide", "slides", "chap", "chapter", "week"]),
 ]
+LECTURE_NO = re.compile(r"제\s*\d+\s*강|\d+\s*강(?![가-힣])")  # «제11강»·«3강» — 낱말 표(휴강·보강과 겹침)로는 못 잡는다(11-03 «동남아 제11강» 이 받은함에 남음)
 
 
 def rel(a):
@@ -91,7 +92,8 @@ def sub_of(s):
         for w in words:
             if word_hit(w.lower(), s):
                 return sub, w
-    return None, None
+    m = LECTURE_NO.search(s)
+    return ("강의자료", m.group()) if m else (None, None)
 
 
 def topic_row(topic):
@@ -268,7 +270,7 @@ def classify_file(out, name, a, same):
     kind = kind_of(name)
     if kind == "md":
         topic, hit = topic_of_text(stem + "\n" + peek(a))
-        out.update(why="md = 아이디어·노트 → 승격은 Claude(conventions)" + (" · 주제 «%s»" % topic if topic else ""))
+        out.update(why="md = 사용자가 적은 아이디어 노트면 승격은 Claude(conventions)" + (" · 주제 «%s»" % topic if topic else ""))
         return out
     topic, hit = topic_of_text(stem)
     if not topic:

@@ -67,8 +67,10 @@ def content_roots():
 
 
 def machine_dirs():
-    """내용 칸 안의 기계 파생물 — ingest·수집 대본이 스스로 옮기고 지운다."""
-    return {roles.path("source_index"), roles.path("sources") + "/_lms"}
+    """내용 칸 안의 기계 파생물 — ingest·수집 대본이 스스로 옮기고 지운다.
+    튜토리얼 연습 폴더(<작업>/튜토리얼)는 brain-base 엔진이 만들고 장부(.obsidian/plugins/brain-base/tutorial-practice.json)로 바로 지운다(E1 · 0.41.0) —
+    사진에 들면 엔진의 지움이 «바깥에서 지움» 장부 줄이 된다. brain-base followscope.ts 와 같은 거름."""
+    return {roles.path("source_index"), roles.path("sources") + "/_lms", roles.path("work") + "/튜토리얼"}
 
 
 def in_scope(p):

@@ -1,4 +1,4 @@
-# 제3자 고지 — Brain Source 0.32.0
+# 제3자 고지 — Brain Source 0.35.12
 
 Brain Source 의 번들(`main.js`·`sheet.js`·`hwp.js`·`pdf.js`·`rhwp_bg.wasm`)에는 아래 오픈소스 패키지 127개가 묶여 있다(esbuild metafile 실측 · 빌드마다 다시 만든다).
 Brain Source 자체는 Apache-2.0 이다(같은 폴더의 `LICENSE`). Apache-2.0 패키지는 원문이 그 `LICENSE` 와 같으므로 저작권자와 NOTICE 만 싣는다.

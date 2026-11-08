@@ -8,8 +8,8 @@
     {"id": "schedule.refresh", "name": "일정 다시 만들기", "risk": "write", "run": ["{py}", "3_시스템/schedule.py", "build"]},
     {"id": "schedule.holidays", "name": "공휴일 표 다시 받기(구글 대한민국 공휴일 달력)", "risk": "write", "run": ["{py}", "3_시스템/holidays.py"]},
     {"id": "schedule.week", "name": "이번 주 일정", "risk": "read", "run": ["{py}", "3_시스템/schedule.py", "week", "7"]},
-    {"id": "collect.lms", "name": "LMS 수집 지금", "optional": true, "risk": "write", "run": ["{py}", "3_시스템/lms-auto.py"], "rest": {"name": "opts", "label": "lms-auto 선택(--dry · --sleep-after)"}, "empty": "^받은 것: LMS 요약 0 · 웹 새 글 0"},
-    {"id": "collect.lms.wake", "name": "LMS 수집 전 깨움 표시·크롬 띄우기", "optional": true, "risk": "write", "run": ["{py}", "3_시스템/lms-auto.py", "--mark-wake"]},
+    {"id": "collect.lms", "name": "LMS 수집 지금", "optional": true, "risk": "write", "run": ["{py}", "3_시스템/lms-auto.py"], "rest": {"name": "opts", "label": "lms-auto 선택(--dry)"}, "empty": "^받은 것: LMS 요약 0 · 웹 새 글 0"},
+    {"id": "collect.lms.wake", "name": "LMS 수집 전 크롬 띄우기·반영까지 PC 붙들기", "optional": true, "risk": "write", "run": ["{py}", "3_시스템/lms-auto.py", "--wake"]},
     {"id": "collect.web", "name": "웹 공지 수집 지금", "optional": true, "risk": "write", "run": ["{py}", "3_시스템/web-collect.py"]},
     {"id": "files.move", "name": "옮기기·이름 바꾸기", "risk": "write", "run": ["{py}", "3_시스템/fileops.py", "--by", "{by}", "mv", "{src}", "{dst}", "--why", "{why}"], "args": [{"name": "src", "label": "원래 자리"}, {"name": "dst", "label": "새 자리"}, {"name": "why", "label": "까닭"}]},
     {"id": "files.trash", "name": "휴지통으로", "risk": "write", "run": ["{py}", "3_시스템/fileops.py", "--by", "{by}", "rm", "{path}", "--why", "{why}"], "args": [{"name": "path", "label": "경로"}, {"name": "why", "label": "까닭"}], "rest": {"name": "opts", "label": "선택(--user-asked = 1_수집 원본 · 사람이 시켰을 때만)"}},
@@ -34,6 +34,16 @@
     {"id": "follow.accept", "name": "한꺼번에 사라진 것을 지움으로 받아들이기", "risk": "write", "run": ["{py}", "3_시스템/follow.py", "--accept"]},
     {"id": "follow.refetch", "name": "사라진 LMS 원본 다음 수집 때 다시 받기", "risk": "write", "run": ["{py}", "3_시스템/follow.py", "refetch", "{path}"], "args": [{"name": "path", "label": "사라진 원본 경로"}]},
     {"id": "follow.keep", "name": "사라진 것 그대로 두기(답 기다림에서 뺌)", "risk": "write", "run": ["{py}", "3_시스템/follow.py", "keep", "{path}"], "args": [{"name": "path", "label": "사라진 원본 경로"}]},
-    {"id": "topic.card", "name": "주제 카드(마감·작업·원본·노트·지난 대화)", "risk": "read", "run": ["{py}", "3_시스템/topic.py", "card", "{topic}"], "args": [{"name": "topic", "label": "주제 이름·별칭 또는 경로"}]}
+    {"id": "topic.card", "name": "주제 카드(마감·작업·원본·노트·지난 대화)", "risk": "read", "run": ["{py}", "3_시스템/topic.py", "card", "{topic}"], "args": [{"name": "topic", "label": "주제 이름·별칭 또는 경로"}]},
+    {"id": "collect_desk.set", "name": "수집 설정 고치기", "risk": "write", "args": [{"name": "source", "label": "출처"}, {"name": "field", "label": "칸"}, {"name": "value", "label": "값"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "set", "{source}", "{field}", "{value}"]},
+    {"id": "collect_desk.fetch", "name": "이 출처 지금 받기", "risk": "write", "args": [{"name": "source", "label": "출처"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "fetch", "{source}"]},
+    {"id": "collect_desk.judge", "name": "이 출처 판정(구독 사용량)", "risk": "write", "args": [{"name": "source", "label": "출처"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "judge", "{source}"]},
+    {"id": "collect_desk.item", "name": "글 살리기·빼기·되돌리기·표시", "risk": "write", "args": [{"name": "source", "label": "출처"}, {"name": "id", "label": "글번호"}, {"name": "op", "label": "동작"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "item", "{source}", "{id}", "{op}"]},
+    {"id": "collect_desk.open", "name": "출처 사이트 열기", "risk": "read", "args": [{"name": "source", "label": "출처"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "open", "{source}"]},
+    {"id": "collect_desk.contract", "name": "후보 출처 계약 답", "risk": "write", "args": [{"name": "id", "label": "후보"}, {"name": "answer", "label": "답"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "contract", "{id}", "{answer}"]},
+    {"id": "collect_desk.probe", "name": "수집 추가: 한 쪽 탐색", "risk": "read", "args": [{"name": "url", "label": "주소"}], "rest": {"name": "opts", "label": "--robots-note 사용자 결정(robots 가 막은 쪽)"}, "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "probe", "{url}"]},
+    {"id": "collect_desk.try", "name": "수집 추가: 초안 미리보기(저장 없음)", "risk": "read", "args": [{"name": "id", "label": "초안"}], "rest": {"name": "opts", "label": "--view = 글 하나도"}, "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "try", "{id}"]},
+    {"id": "collect_desk.add", "name": "수집 추가 확정", "risk": "write", "args": [{"name": "id", "label": "초안"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "add", "{id}"]},
+    {"id": "collect_desk.fix", "name": "깨진 조리법 고침 적용", "risk": "write", "args": [{"name": "id", "label": "출처"}], "run": ["{py}", ".claude/skills/collect_desk/scripts/collect_desk.py", "fix", "{id}"]}
   ]
 }

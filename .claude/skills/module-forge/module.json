@@ -6,8 +6,10 @@
   "invocation": "model",
   "surfaces": { "skills": ["check"], "hooks": [], "mcp": [] },
   "contributes": {
+    "tutorial": ".claude/skills/module-forge/tutorial",
+    "manual": [{"file": ".claude/skills/module-forge/manual/설명서-module-forge.md", "name": "모듈 점검", "gist": "충돌 검사 · 막힘과 경고 · 모듈 만들 때 칸"}],
     "actions": [
-      {"id": "module-forge.check", "name": "모듈 충돌 검사(전 모듈)", "risk": "write", "run": ["{py}", ".claude/skills/module-forge/scripts/check.py", "--all"]}
+      {"id": "module-forge.check", "name": "모듈 충돌 검사(전 모듈)", "risk": "read", "run": ["{py}", ".claude/skills/module-forge/scripts/check.py", "--all", "--no-registry"]}
     ]
   },
   "note": "모듈 정적 충돌검사 전용(11-02 설계·스캐폴드 기능을 뺐다)"

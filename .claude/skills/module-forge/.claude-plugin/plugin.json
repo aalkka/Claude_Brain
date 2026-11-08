@@ -1,6 +1,6 @@
 {
   "name": "module-forge",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "외부뇌 모듈 정적 충돌검사.",
   "author": { "name": "External Brain" }
 }

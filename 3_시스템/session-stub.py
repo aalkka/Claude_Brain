@@ -43,6 +43,7 @@ SYS_RX = re.compile(r"^(3_시스템/|\.claude/|CLAUDE\.md)")   # 이걸 건드�
 PEND_SKIP = ".pending-skip.txt"       # 사용자가 "넘어가"라 한 세션 id (거부 채널)
 PEND_MAX_AGE_D = 30       # mtime 선필터. 트랜스크립트 보존과 맞춘다(파싱량 상수 유지)
 PEND_FILE = ".pending-sessions.txt"   # Stop이 쓰고 SessionStart가 읽는다(생산자-소비자)
+TITLE_CACHE = ".titles.json"          # 미완료 세션 제목 캐시 {대화 기록 이름: [끝난 줄까지 읽은 자리, 마지막 제목 날글]} (11-06 재기 §3-5)
 # 셸 명령 속 기록 쓰기. 경로만 나오면(cat·grep) 읽기일 수 있어 쓰기 표지가 함께 있을 때만 인정한다.
 REC_RX = re.compile(r"(2_지식[/\\]+(?:recent|open-loops)\.md|2_지식[/\\]+sessions[/\\]+[^\s\"'`|;>]+\.md)")
 SHELL_WRITE_RX = re.compile(r"open\([^)]*['\"][wa]['\"]|\.write\(|write_text|Add-Content|Set-Content|Out-File"
@@ -266,19 +267,88 @@ def render(st, path):
 TITLE_RX = re.compile(rb'"customTitle":"((?:[^"\\]|\\.)*)"')
 
 
-def session_title(tdir, sh, st):
+def _is_tx(name, sh):
+    """`<sh>*.jsonl` glob 과 같은 판정(윈도 glob 은 대소문자를 안 가린다)."""
+    n = name.lower()
+    return n.startswith(sh.lower()) and n.endswith(".jsonl")
+
+
+def _last_title(p, cache):
+    """p 의 마지막 custom-title 날글(이스케이프 그대로 · 없으면 None).
+
+    대화 기록은 덧붙기만 하므로 cache = (지난 판, 이번 판) 에 [끝난 줄까지 읽은 자리, 그때까지의
+    마지막 날글, 그 자리 앞 32바이트] 를 두고 그 뒤만 읽는다. 앞 32바이트가 다르면(줄었거나 다시 쓴
+    파일) 처음부터 읽는다. 쓰는 중인 마지막 줄은 캐시에 넣지 않고 매번 다시 본다.
+    """
+    old, new = cache
+    key = os.path.basename(p)
+    ent = old.get(key)
+    ok = isinstance(ent, list) and len(ent) == 3 and isinstance(ent[0], int) and ent[0] >= 0 and \
+        (ent[1] is None or isinstance(ent[1], str)) and isinstance(ent[2], str)
+    off, raw_t, mark = ent if ok else (0, None, "")
+    back = min(off, 32)
+    with open(p, "rb") as fh:
+        fh.seek(off - back)
+        buf = fh.read()
+        if buf[:back].hex() != mark:
+            fh.seek(0)
+            buf = fh.read()
+            off, raw_t, back = 0, None, 0
+    body = buf[back:]
+    cut = body.rfind(b"\n") + 1
+    hits = TITLE_RX.findall(body[:cut])
+    if hits:
+        raw_t = hits[-1].decode("utf-8", "replace")
+    new[key] = [off + cut, raw_t, buf[max(0, back + cut - 32):back + cut].hex()]
+    tail = TITLE_RX.findall(body[cut:])
+    return tail[-1].decode("utf-8", "replace") if tail else raw_t
+
+
+def _titles_load(outdir):
+    try:
+        with open(os.path.join(outdir, TITLE_CACHE), encoding="utf-8") as fh:
+            c = json.load(fh)
+        return c if isinstance(c, dict) else {}
+    except Exception:
+        return {}
+
+
+def _titles_save(outdir, cache):
+    """이번에 쓴 항목만 남긴다(= 지금 미완료 세션들) · 같으면 쓰지 않는다 · 세션별 tmp 로 원자 교체."""
+    old, new = cache
+    if new == old:
+        return
+    path = os.path.join(outdir, TITLE_CACHE)
+    tmp = "{}.tmp-{}".format(path, os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(new, fh, ensure_ascii=False)
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
+def session_title(tdir, sh, st, names=None, cache=None):
     """알림에 붙일 세션 제목. id 만으로는 기록할지 고를 수 없다(사용자 2026-10-03).
 
     1순위 = 트랜스크립트의 마지막 `custom-title`(데스크탑 사이드바 제목과 같다).
-    없으면(실측 40세션 중 5) 첫 발화 앞부분. 미완료 세션(≤5)에만 불리므로 전량 읽어도 싸다.
+    없으면(실측 40세션 중 5) 첫 발화 앞부분. 미완료 세션(≤5)에만 불린다.
+    통째로 읽으면 턴마다 34MB(11-06 · 5세션)라 cache 로 늘어난 몫만 읽는다(시스템 재기 §3-5).
     """
     t = ""
+    cache = cache if cache is not None else ({}, {})
     try:
-        for p in glob.glob(os.path.join(tdir, sh + "*.jsonl")) if tdir else []:
-            with open(p, "rb") as fh:
-                hits = TITLE_RX.findall(fh.read())
-            if hits:
-                t = json.loads(b'"' + hits[-1] + b'"')
+        if names is None:
+            names = os.listdir(tdir) if tdir else []
+        for n in names:
+            if not _is_tx(n, sh):
+                continue
+            raw_t = _last_title(os.path.join(tdir, n), cache)
+            if raw_t is not None:
+                t = json.loads('"' + raw_t + '"')
                 break
     except Exception:
         t = ""
@@ -316,6 +386,13 @@ def scan_pending(outdir, cur_short, tdir):
                 skip.add(mm.group(1))
         except Exception:
             pass
+    # 대화 기록 폴더(580개)를 상태 파일마다 glob 하지 않고 한 번만 읽는다(11-06 재기 §3-5 · 149번에 0.45초)
+    try:
+        names = os.listdir(tdir) if tdir else []
+    except OSError:
+        names = []
+    have = {n[:8].lower() for n in names if n.lower().endswith(".jsonl")}
+    tcache = (_titles_load(outdir), {})
     for sp in sorted(glob.glob(os.path.join(outdir, ".state-*.json"))):
         sh = os.path.basename(sp)[7:15]
         if sh == cur_short or sh in skip:
@@ -327,7 +404,7 @@ def scan_pending(outdir, cur_short, tdir):
         except OSError:
             continue
         # P7: 원본이 없으면 '왜'를 복원할 수 없다 -> 알려도 소용없다.
-        if tdir and not glob.glob(os.path.join(tdir, sh + "*.jsonl")):
+        if tdir and sh.lower() not in have:
             continue
         try:
             st = json.load(open(sp, encoding="utf-8"))
@@ -361,7 +438,8 @@ def scan_pending(outdir, cur_short, tdir):
             continue
         age = (dt.datetime.now(dt.timezone.utc) - end).days
         out.append((sh, (end + KST).strftime("%m-%d %H:%M"), len(st.get("seen", [])), age,
-                    session_title(tdir, sh, st)))
+                    session_title(tdir, sh, st, names, tcache)))
+    _titles_save(outdir, tcache)
     return out
 
 

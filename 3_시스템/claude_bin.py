@@ -28,7 +28,7 @@ def candidates():
     own = {os.path.normcase(os.path.abspath(x)) for x in (os.path.join(os.path.expanduser("~"), ".local", "bin", "claude.exe"), shutil.which("claude")) if x and os.path.isfile(x)}
     for p in own:
         try:
-            got = subprocess.run([p, "--version"], capture_output=True, timeout=15).stdout.decode("utf-8", "replace")
+            got = subprocess.run([p, "--version"], capture_output=True, timeout=15, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)).stdout.decode("utf-8", "replace")  # 창 없는 서버(pyw)에서 불려도 창이 안 뜨게
         except (OSError, subprocess.TimeoutExpired):
             continue
         m = re.search(r"(\d+\.\d+\.\d+)", got)

@@ -4,12 +4,12 @@
 왜: 받은함에 넣으려면 옵시디언을 켜고 끌어 넣어야 했고, 복사라 원래 파일을 또 지워야 했다 — 폴더에 직접 넣는 것과 다를 게 없었다.
 문 셋(우클릭 메뉴 · 단축키 · 탐색기 왼쪽 즐겨찾기)이 이 엔진 하나로 들어온다. 정리(inbox.py · 확신 높음만 제자리로)는 볼트가 켜져 있을 때만 한다
 (11-03 «볼트를 켜면 그때 · 예약 필요 없음») — 켜져 있으면 넣자마자 · 꺼져 있으면 받은함에서 기다렸다 brain-base 가 켤 때 sweep 을 부른다.
-우클릭·단축키·즐겨찾기 등록에 쓰는 작은 실행 파일은 볼트 밖 빌더에서 만들며 배포판에는 없다(자리 = `DOOR_APP`). 없어도 put·list·recent·sweep·undo 는 돈다.
+우클릭·단축키·즐겨찾기 등록에 쓰는 작은 실행 파일(구동부)의 자리는 `3_시스템/door-app/`(바꾸려면 `DOOR_APP`)이다. 볼트 밖 빌더에서 만들고 서명 없는 실행 파일이라 배포판에는 없다. 없어도 put·list·recent·sweep·undo 는 돈다.
 
   py -3 3_시스템/door.py put <경로...>      옮김(볼트가 켜져 있으면 바로 정리)
   py -3 3_시스템/door.py list <목록 파일>    우클릭·단축키가 부른다(줄마다 경로 · 읽고 지움)
   py -3 3_시스템/door.py recent             내려받기에서 방금 받은 파일 하나
-  py -3 3_시스템/door.py sweep              받은함에 새로 든 것 정리(brain-base 가 켤 때 · 켜진 동안 받은함에 새로 들 때)
+  py -3 3_시스템/door.py sweep              받은함에 새로 든 것 정리 + 끝난 작업 비우기(brain-base 가 켤 때 · 켜진 동안 받은함에 새로 들 때)
   py -3 3_시스템/door.py undo <토큰>         알림의 되돌리기(원래 자리로)
   py -3 3_시스템/door.py install | remove | status   즐겨찾기·단축키·보내기·알림·Shift+우클릭 등록·해제·확인(지속 설정 — 사람이 승인)
 
@@ -44,8 +44,7 @@ SEEN = os.path.join(OUT, "seen.json")
 LOCK = os.path.join(OUT, "lock")
 LOG = os.path.join(OUT, "door.log")
 UNDO = os.path.join(OUT, "undo")
-APP = os.environ.get("DOOR_APP") or r"C:\brain-inbox\app"
-PIN = os.path.join(os.path.dirname(APP), "받은함")  # 즐겨찾기에 «받은함»으로 보이게 — 받은함을 가리키는 연결(junction)
+APP = os.environ.get("DOOR_APP") or os.path.join(HERE, "door-app")
 HOTKEY = "Ctrl+Alt+B"
 AUMID = "Claude_Brain.Door"
 CLSID = "{6F1D2C84-3B7A-4E95-A1C6-7D2E9B40F513}"
@@ -416,7 +415,24 @@ def recent():
     return put([best])
 
 
+def sweep_work():
+    """끝난 작업 비우기(work.py sweep · 볼트를 켤 때 함께) — 실패해도 받은함 정리는 돈다."""
+    try:
+        import work
+        with Lock(wait=0):
+            done = work.sweep()
+    except Busy:
+        return
+    except Exception:  # noqa: BLE001
+        log("작업 비우기 실패\n" + traceback.format_exc())
+        return
+    if done:
+        items = [{"name": d["path"].rsplit("/", 1)[-1], "dst": d["path"], "batch": d["batch"], "orig": None} for d in done]
+        toast("끝난 작업 비움", " · ".join(i["name"] for i in items), keep_undo(items))
+
+
 def sweep():
+    sweep_work()
     if not fresh():
         return 0
     try:
@@ -519,14 +535,19 @@ def set_keys(on):
     put_key(keys[2], default="BrainInbox")
     put_key(keys[2] + r"\InprocServer32", default=dll, ThreadingModel="Apartment")
     for k in keys[3:]:
-        put_key(k, MUIVerb="받은함으로", Icon=dll + ",0", ExplorerCommandHandler=CLSID)
+        put_key(k, MUIVerb="외부뇌 받은함으로", Icon=dll + ",0", ExplorerCommandHandler=CLSID)
 
 
 def write_cfg():
-    """실행 파일 옆 설정(README 없는 빌더 산출 칸) — 레지스트리·시작 메뉴를 건드리지 않는다."""
+    """실행 파일 옆 설정 — 레지스트리·시작 메뉴를 건드리지 않는다."""
     py = shutil.which("py") or os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "py.exe")
     with open(os.path.join(APP, "door.cfg"), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join([py, os.path.abspath(__file__), VAULT]) + "\n")
+
+
+def pin_path():
+    """왼쪽 즐겨찾기 = 받은함 진짜 자리"""
+    return os.path.normpath(roles.abs("inbox"))
 
 
 def install():
@@ -540,15 +561,14 @@ def install():
 $ErrorActionPreference='Stop'
 $sh=New-Object -ComObject Shell.Application
 $ws=New-Object -ComObject WScript.Shell
-$pin=%(pin)s; $inbox=%(inbox)s; $exe=%(exe)s
-if(-not (Test-Path -LiteralPath $pin)){ New-Item -ItemType Junction -Path $pin -Target $inbox | Out-Null }
+$pin=%(pin)s; $exe=%(exe)s
 $qa=$sh.Namespace('shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}')
 if(-not ($qa.Items() | Where-Object { $_.Path -eq $pin })){ $sh.Namespace($pin).Self.InvokeVerb('pintohome') }
 $s=$ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Programs')) '외부뇌 받은함.lnk'))
-$s.TargetPath=$exe; $s.Hotkey=%(hotkey)s; $s.IconLocation=$exe+',0'; $s.Description='받은함으로'; $s.Save()
+$s.TargetPath=$exe; $s.Hotkey=%(hotkey)s; $s.IconLocation=$exe+',0'; $s.Description='외부뇌 받은함으로'; $s.Save()
 $s=$ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath('SendTo')) '외부뇌 받은함.lnk'))
-$s.TargetPath=$exe; $s.IconLocation=$exe+',0'; $s.Description='받은함으로'; $s.Save()
-""" % {"pin": lit(PIN), "inbox": lit(roles.abs("inbox")), "exe": lit(exe), "hotkey": lit(HOTKEY)}
+$s.TargetPath=$exe; $s.IconLocation=$exe+',0'; $s.Description='외부뇌 받은함으로'; $s.Save()
+""" % {"pin": lit(pin_path()), "exe": lit(exe), "hotkey": lit(HOTKEY)}
     r = powershell(ps)
     if r.returncode != 0:
         print("등록 실패:\n" + (r.stderr or r.stdout)[-1500:])
@@ -564,9 +584,8 @@ $sh=New-Object -ComObject Shell.Application
 $pin=%(pin)s
 $qa=$sh.Namespace('shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}')
 foreach($it in $qa.Items()){ if($it.Path -eq $pin){ $it.InvokeVerb('unpinfromhome') } }
-if(Test-Path -LiteralPath $pin){ [IO.Directory]::Delete($pin) }
 foreach($d in 'Programs','SendTo'){ $l=Join-Path ([Environment]::GetFolderPath($d)) '외부뇌 받은함.lnk'; if(Test-Path -LiteralPath $l){ Remove-Item -LiteralPath $l } }
-""" % {"pin": lit(PIN)}
+""" % {"pin": lit(pin_path())}
     r = powershell(ps)
     print("지움" if r.returncode == 0 else "일부 실패:\n" + r.stderr[-800:])
     return status()
@@ -580,8 +599,9 @@ $pin=%(pin)s
 $l=Join-Path ([Environment]::GetFolderPath('Programs')) '외부뇌 받은함.lnk'
 '단축키 ' + $(if(Test-Path -LiteralPath $l){ (New-Object -ComObject WScript.Shell).CreateShortcut($l).Hotkey } else { 'False' })
 '첫 메뉴 패키지 ' + [bool](Get-AppxPackage -Name 'BrainInbox.Menu')
-""" % {"pin": lit(PIN)})
+""" % {"pin": lit(pin_path())})
     print(r.stdout.strip())
+    print("구동부 %s %s" % (os.path.exists(os.path.join(APP, "brain-key.exe")), APP))
     import winreg as w
     try:
         w.CloseKey(w.OpenKey(w.HKEY_CURRENT_USER, r"Software\Classes\*\shell\BrainInbox"))

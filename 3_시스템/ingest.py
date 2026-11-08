@@ -191,25 +191,111 @@ def unpua(text, fonts):
     return PUA_SYM.sub(sub, text)
 
 
+def pdf_char_font(tp, k):
+    """글자 k 의 글꼴 이름. 서브셋 이름(CIDFont+F2)이면 글꼴 가족 이름(Wingdings)으로."""
+    import ctypes
+    import pypdfium2.raw as R
+    buf = ctypes.create_string_buffer(256)
+    name = ""
+    if hasattr(R, "FPDFText_GetTextObject") and hasattr(R, "FPDFFont_GetFamilyName"):
+        o = R.FPDFText_GetTextObject(tp, k)
+        f = R.FPDFTextObj_GetFont(o) if o else None
+        if f and R.FPDFFont_GetFamilyName(f, buf, 256):
+            name = buf.value.decode("utf-8", "replace")
+    if not name and R.FPDFText_GetFontInfo(tp, k, buf, 256, None):
+        name = buf.value.decode("utf-8", "replace")
+    return name
+
+
 def pdf_pua_fonts(tp):
-    """PDF 쪽 글자 층에서 기호 글꼴 글자의 글꼴 이름(글자 차례). 서브셋 이름(CIDFont+F2)이면 글꼴 가족 이름(Wingdings)으로."""
+    """PDF 쪽 글자 층에서 기호 글꼴 글자의 글꼴 이름(글자 차례)."""
+    import pypdfium2.raw as R
+    return [pdf_char_font(tp, k) for k in range(tp.count_chars()) if 0xF020 <= R.FPDFText_GetUnicode(tp, k) <= 0xF0FF]
+
+
+# ───────── 글자 차례 — PDF 는 글자를 어떤 차례로든 쓸 수 있고 pdfium 은 쓴 차례대로 읽는다 ─────────
+# hwp → «Microsoft: Print To PDF» 는 한 줄을 글꼴별로 나눠 쓴다(한글 따로 · 숫자·괄호 따로) → «1. : 선발 인원 90 총 명»(11-05 장학 공고 · 동남아 강의).
+# 그런 문서만 글자 위치로 줄을 다시 세운다. 판별 = 같은 줄에서 뒤로 돌아간 횟수 ÷ 줄 바뀐 횟수(문서 전체).
+# 11-05 볼트 PDF 전수 실측: 어긋난 문서 11개 0.63~0.93(모두 그 경로) · 나머지 0.12 이하(수식의 위·아래 첨자). 멀쩡한 문서의 글은 한 글자도 안 바뀐다.
+JUMBLE_MIN, JUMBLE_RATE = 3, 0.3
+GAP_WORD, GAP_CELL = 0.15, 2.0                          # 앞 글자 끝과 다음 글자 시작의 간격(글자 크기 배수) — 넘으면 한 칸 / 표 칸
+_BLANK = {0, 9, 10, 13, 32, 0xA0, 0x3000}
+
+
+def pdf_chars(tp):
+    """글자 층의 글자 [(차례, 코드, 왼쪽 x, 오른쪽 x, 기준선 y, 크기)] — 쓴 차례. 공백·pdfium 이 끼워 넣은 글자는 뺀다(간격은 위치로 다시 잰다)."""
     import ctypes
     import pypdfium2.raw as R
     out = []
+    if not hasattr(R, "FPDFText_GetLooseCharBox"):       # 옛 pypdfium2 — 복원 없이 쓴 차례 그대로
+        return out
+    ox, oy, box = ctypes.c_double(), ctypes.c_double(), R.FS_RECTF()
     for k in range(tp.count_chars()):
-        if not 0xF020 <= R.FPDFText_GetUnicode(tp, k) <= 0xF0FF:
+        u = R.FPDFText_GetUnicode(tp, k)
+        if u in _BLANK or R.FPDFText_IsGenerated(tp, k) == 1:
             continue
-        buf = ctypes.create_string_buffer(256)
-        name = ""
-        if hasattr(R, "FPDFText_GetTextObject") and hasattr(R, "FPDFFont_GetFamilyName"):
-            o = R.FPDFText_GetTextObject(tp, k)
-            f = R.FPDFTextObj_GetFont(o) if o else None
-            if f and R.FPDFFont_GetFamilyName(f, buf, 256):
-                name = buf.value.decode("utf-8", "replace")
-        if not name and R.FPDFText_GetFontInfo(tp, k, buf, 256, None):
-            name = buf.value.decode("utf-8", "replace")
-        out.append(name)
+        if R.FPDFText_GetCharOrigin(tp, k, ox, oy) and R.FPDFText_GetLooseCharBox(tp, k, box):
+            out.append((k, u, ox.value, max(box.right, ox.value), oy.value, max(abs(box.top - box.bottom), 1.0)))
     return out
+
+
+def order_stat(chars):
+    """(같은 줄에서 뒤로 돌아간 횟수, 줄 바뀐 횟수). 돌아감 = 같은 기준선에서 글자 크기 절반 넘게 왼쪽으로."""
+    back = turns = 0
+    for a, b in zip(chars, chars[1:]):
+        size = max(a[5], b[5])
+        if abs(a[4] - b[4]) > 0.3 * size:
+            turns += 1
+        elif b[2] < a[2] - 0.5 * size:
+            back += 1
+    return back, turns
+
+
+def reading_order(chars, char_of=lambda k, u: chr(u)):
+    """글자 위치로 줄을 다시 세운 글.
+    띠 = 기준선이 같은 글자 · 조각 = 쓴 차례에서 같은 띠가 끊기지 않고 이어진 글자. x 범위가 겹치는 조각끼리만 한 줄로 합쳐 x 차례로 놓고,
+    안 겹치는 조각(표의 다른 칸·다른 단)과 줄끼리의 차례는 쓴 차례를 지킨다 — 위에서 아래로 다시 늘어놓으면 단·칸이 섞인다."""
+    bands, band_of = [], {}
+    for c in sorted(chars, key=lambda c: -c[4]):
+        if not bands or abs(bands[-1][0] - c[4]) > 0.3 * max(bands[-1][1], c[5]):
+            bands.append((c[4], c[5]))
+        band_of[c[0]] = len(bands) - 1
+    pieces, prev = {}, None
+    for c in chars:
+        b = band_of[c[0]]
+        if b != prev:
+            pieces.setdefault(b, []).append([])
+            prev = b
+        pieces[b][-1].append(c)
+    segs = []
+    for b, ps in pieces.items():
+        cur, right = None, None
+        for p in sorted(ps, key=lambda p: min(c[2] for c in p)):
+            lo, hi = min(c[2] for c in p), max(c[3] for c in p)
+            if cur is not None and lo <= right:
+                cur += p
+                right = max(right, hi)
+            else:
+                if cur is not None:
+                    segs.append((min(c[0] for c in cur), b, cur))
+                cur, right = list(p), hi
+        segs.append((min(c[0] for c in cur), b, cur))
+    lines, last = [], None
+    for _, b, cs in sorted(segs, key=lambda s: s[0]):
+        buf, end = [], None
+        for c in sorted(cs, key=lambda c: (c[2], c[0])):
+            if end is not None:
+                gap = c[2] - end
+                buf.append("  " if gap > GAP_CELL * c[5] else " " if gap > GAP_WORD * c[5] else "")
+            buf.append(char_of(c[0], c[1]))
+            end = c[3] if end is None else max(end, c[3])
+        s = "".join(buf)
+        if b == last:
+            lines[-1] += "  " + s
+        else:
+            lines.append(s)
+        last = b
+    return "\n".join(lines)
 
 
 def office_pua_fonts(path):
@@ -307,7 +393,7 @@ def ocr_images(pngs):
             f.write("\n".join(pngs) + "\n")
         try:
             r = subprocess.run([_PS, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1, lst],
-                               capture_output=True, timeout=30 + 10 * len(pngs))
+                               capture_output=True, timeout=30 + 10 * len(pngs), creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         except subprocess.TimeoutExpired:
             return None, "OCR 시간 초과"
     out = r.stdout.decode("utf-8", "replace").lstrip("\ufeff").splitlines()
@@ -330,40 +416,104 @@ def ocr_images(pngs):
     return res, None
 
 
+# 방향 — 윈도우 OCR 은 글이 돌아가 있어도 바로잡지 않고 깨진 글자를 낸다(11-05 관정 제출서류 = 세로 쪽에 가로로 그린 표 · «1卜1卜 =1卜»).
+# 판별 = 말이 되는 낱말(한글 2자+ · 영문 3자+)에 든 글자 비율. 11-05 실측(정상 쪽 16장을 4방향으로 돌려 읽음): 바른 방향 0.63~0.89 ·
+# 틀린 방향 0.45 이하 · 손글씨 쪽은 어느 방향이든 0.33 이하(그래서 안 돌린다). 깨진 쪽만 나머지 세 방향을 더 읽으니 멀쩡한 쪽은 비용이 없다.
+ROT_CLEAN, ROT_GAIN, ROT_MIN, ROT_BATCH = 0.55, 2, 20, 8
+OCR_ROT = {}                     # {sha: {쪽: 돌린 각도(반시계)}} — 품질 줄용(0 = 돌려 봤지만 그대로)
+
+
+def word_ratio(lines):
+    """OCR 줄 → (글자 수, 말이 되는 낱말에 든 글자의 비율)."""
+    t = " ".join(lines or [])
+    n = len(re.sub(r"\s", "", t))
+    return (n, sum(map(len, re.findall(r"[가-힣]{2,}|[A-Za-z]{3,}", t))) / n) if n else (0, 0.0)
+
+
+def looks_turned(key, lines):
+    """돌려 읽어 볼 쪽인가. 문서 안 그림은 글자가 어느 정도 있을 때만(작은 그림·아이콘까지 네 번 읽지 않는다)."""
+    n, c = word_ratio(lines)
+    return c < ROT_CLEAN and (n >= ROT_MIN or not str(key).startswith("img:"))
+
+
+def pick_turn(lines0, cands):
+    """지금 줄과 [(각도, 줄 | None)] → 바꿀 각도(그대로면 0). 다 실패면 None(다음에 다시)."""
+    cands = [(r, ln) for r, ln in cands if ln is not None]
+    if not cands:
+        return None
+    good = lambda ln: word_ratio(ln)[0] * word_ratio(ln)[1]     # 말이 되는 글자 수 — 비율만 보면 세로 축 이름 몇 글자가 쪽 전체를 밀어낸다(FPGA 슬라이드 198자 → 56자)
+    r, ln = max(cands, key=lambda x: good(x[1]))
+    n, c = word_ratio(ln)
+    return r if n >= ROT_MIN and c >= ROT_CLEAN and good(ln) >= ROT_GAIN * good(lines0) else 0
+
+
 def ocr_cached(sha, keys, render):
     """keys(쪽 번호 등) 의 OCR 줄. 캐시(sha256 별 json)에 없는 것만 render(key, png경로) 로 그려 읽는다.
+    깨져 보이는 쪽은 돌려서도 읽는다 — 옛 캐시의 쪽도(돌려 봤는지는 캐시 «rot» 에 남아 한 번만 한다).
 
     돌려줌 = ({key: 줄 목록 | None}, 실패 까닭 | None, 엔진 이름 | None).
     """
     import tempfile
+    from PIL import Image
     cp = os.path.join(OCR_CACHE, f"{sha}.json")
-    cache, engine = {}, None
+    cache, engine, rots = {}, None, {}
     if os.path.isfile(cp):
         try:
             with open(cp, encoding="utf-8") as f:
                 c = json.load(f)
             if c.get("dpi") == OCR_DPI:
-                cache, engine = c.get("pages") or {}, c.get("engine")
+                cache, engine, rots = c.get("pages") or {}, c.get("engine"), c.get("rot") or {}
         except (OSError, ValueError):
             cache = {}
     todo = [k for k in keys if str(k) not in cache]
-    why = None
-    if todo:
+    turn = [k for k in keys if str(k) in cache and str(k) not in rots and looks_turned(k, cache[str(k)])]
+    why, dirty = None, False
+    if todo or turn:
         with tempfile.TemporaryDirectory(prefix="ingest-png-") as td:
-            pngs = []
-            for i, k in enumerate(todo):
-                p = os.path.join(td, f"{i}.png")                # 열쇠(img:…)는 파일 이름이 될 수 없다
-                render(k, p)
-                pngs.append(p)
-            got, why = ocr_images(pngs)
-        if got is not None:
-            engine = OCR_ENGINE
-            for k, lines in zip(todo, got):
-                if lines is not None:                      # 장 하나의 실패는 캐시하지 않는다(다음에 다시)
-                    cache[str(k)] = lines
+            png = {}
+
+            def image(k):
+                if k not in png:
+                    png[k] = os.path.join(td, f"{len(png)}.png")   # 열쇠(img:…)는 파일 이름이 될 수 없다
+                    render(k, png[k])
+                return png[k]
+            if todo:
+                got, why = ocr_images([image(k) for k in todo])
+                if got is not None:
+                    engine, dirty = OCR_ENGINE, True
+                    for k, lines in zip(todo, got):
+                        if lines is not None:              # 장 하나의 실패는 캐시하지 않는다(다음에 다시)
+                            cache[str(k)] = lines
+                            if looks_turned(k, lines):
+                                turn.append(k)
+            for i in range(0, len(turn), ROT_BATCH):
+                batch, turned = turn[i:i + ROT_BATCH], []
+                for k in batch:
+                    with Image.open(image(k)) as im:
+                        for r in (90, 180, 270):
+                            p = f"{png[k]}.{r}.png"
+                            im.rotate(r, expand=True).save(p, compress_level=1)
+                            turned.append((k, r, p))
+                got, w = ocr_images([x[2] for x in turned])
+                for _, _, p in turned:
+                    os.remove(p)
+                if got is None:                            # 엔진이 죽었다 — 돌려 본 적 없는 채로 두고 다음에 다시
+                    why = why or w
+                    break
+                for k in batch:
+                    cands = [(r, lines) for (k2, r, _), lines in zip(turned, got) if k2 == k]
+                    r = pick_turn(cache[str(k)], cands)
+                    if r is None:
+                        continue
+                    if r:
+                        cache[str(k)] = dict(cands)[r]
+                    rots[str(k)], dirty = r, True
+                engine = OCR_ENGINE or engine
+        if dirty:
             os.makedirs(OCR_CACHE, exist_ok=True)
             with open(cp, "w", encoding="utf-8") as f:
-                json.dump({"engine": engine, "dpi": OCR_DPI, "pages": cache}, f, ensure_ascii=False)
+                json.dump({"engine": engine, "dpi": OCR_DPI, "pages": cache} | ({"rot": rots} if rots else {}), f, ensure_ascii=False)
+    OCR_ROT[sha] = rots
     return {k: cache.get(str(k)) for k in keys}, why, engine
 
 
@@ -467,13 +617,9 @@ def embedded_images(path):
     """docx·pptx·html 본문에 실린 그림 {img_key: bytes} — ocr_embedded 와 같은 열쇠. 압축 파일의 media 를 통째로 훑지 않는 까닭 =
     슬라이드 틀(마스터)의 로고·배경도 거기 있어서 본문에 안 나오는 그림까지 읽게 된다."""
     import base64, io
-    import markitdown
     from PIL import Image
-    global _MD
-    if _MD is None:
-        _MD = markitdown.MarkItDown(enable_plugins=False)
     out = {}
-    for m in IMG_MD.finditer(_MD.convert(path, keep_data_uris=True).text_content or ""):
+    for m in IMG_MD.finditer(md_converter().convert(path, keep_data_uris=True).text_content or ""):
         d = re.match(r"data:[\w.+/-]+;base64,(.+)", m.group(2))
         if not d:
             continue
@@ -491,7 +637,7 @@ def embedded_images(path):
 def ex_pdf(path, origin, sha):
     import pypdfium2 as pdfium
     pdf = pdfium.PdfDocument(path)
-    texts, empty = [], []
+    texts, empty, backs, turns, reordered = [], [], [], 0, []
     try:
         n = len(pdf)
         for i in range(n):
@@ -501,11 +647,25 @@ def ex_pdf(path, origin, sha):
             if PUA_SYM.search(s):
                 s = unpua(s, pdf_pua_fonts(tp))
             s = clean_plain(s)
+            b, t = order_stat(pdf_chars(tp))
+            backs.append(b)
+            turns += t
             tp.close()
             page.close()
             if len(re.sub(r"\s", "", s)) < 20:
                 empty.append(i + 1)
             texts.append(s)
+        if sum(backs) >= JUMBLE_MIN and sum(backs) / max(1, turns) >= JUMBLE_RATE:   # 쪽이 아니라 문서로 판별한다 — 수식 쪽 하나가 넘겨도 건드리지 않게
+            for i, b in enumerate(backs):
+                if b:
+                    page = pdf[i]
+                    tp = page.get_textpage()
+                    s = clean_plain(reading_order(pdf_chars(tp), lambda k, u: (sym_table(pdf_char_font(tp, k)) or {}).get(u, chr(u)) if 0xF020 <= u <= 0xF0FF else chr(u)))
+                    tp.close()
+                    page.close()
+                    if len(re.sub(r"\s", "", s)) >= len(re.sub(r"\s", "", texts[i])):         # 글자를 잃으면 쓴 차례 그대로 둔다
+                        texts[i] = s
+                        reordered.append(i + 1)
         got, why, engine = {}, None, None
         if empty:
             def render(k, out):
@@ -540,8 +700,13 @@ def ex_pdf(path, origin, sha):
     segs = []
     if pend:
         segs.append(f"부분 — 글자 없는 쪽 {len(pend)}/{n} (OCR 대기 · {why or '읽기 실패'}): {pages(pend)}")
+    if reordered:
+        segs.append(f"글자 차례 복원 {len(reordered)}/{n}쪽")
     if ocred:
         segs.append(f"OCR {len(ocred)}/{n}쪽: {pages(ocred)}")
+        turned = [p for p in ocred if OCR_ROT.get(sha, {}).get(str(p))]
+        if turned:
+            segs.append(f"방향 보정 {len(turned)}쪽: {pages(turned)}")
     if blank:                                           # 표지·사진 쪽 = 더 찾을 글자가 없다 — 경고 아님
         segs.append(f"OCR 로도 더 없는 쪽: {pages(blank)}")
     seen = [p for p in range(1, n + 1) if str(p) in vis]
@@ -572,11 +737,47 @@ def ex_image(path, origin, sha):
         if v:   # OCR 은 없어도 그림 읽기가 있으면 찾을 거리가 있다
             return f"{head}{v}", {"extractor": f"{VERSION} + {engine}{vx}"}, "ok · OCR 글자 없음" + vq
         return f"{head}\n\n_(OCR 로도 글자 없음)_", {"extractor": f"{VERSION} + {engine}"}, "부분 — OCR 로도 글자 없음"
+    tq = " · 방향 보정" if OCR_ROT.get(sha, {}).get("0") else ""
     return (f"{head}\n\n{OCR_TAG}\n\n" + clean_plain("\n".join(lines)) + v,
-            {"extractor": f"{VERSION} + {engine}{vx}", "lines": len(lines)}, "ok · OCR" + vq)
+            {"extractor": f"{VERSION} + {engine}{vx}", "lines": len(lines)}, "ok · OCR" + tq + vq)
 
 
 _MD = None
+
+
+class _PictureBytes:
+    """python-pptx Image 자리 — markitdown 이 쓰는 것만."""
+    filename = None
+
+    def __init__(self, blob, content_type):
+        self.blob, self.content_type = blob, content_type
+
+
+def _picture_image(shape):
+    """그림 바이트와 파일이 밝힌 형식. 형식 판단은 ocr_embedded(PIL)가 바이트로 한다."""
+    rid = shape._element.blip_rId                       # 링크 그림 = 없음
+    try:
+        part = shape.part.related_part(rid) if rid else None
+    except KeyError:
+        part = None
+    return _PictureBytes(part.blob, part.content_type) if part is not None else _PictureBytes(b"", "image/unknown")
+
+
+def md_converter():
+    """markitdown 변환기(하나만 만든다). pptx 그림 한 장이 슬라이드 전부를 없애지 않게 Picture.image 를 바꿔 둔다:
+    python-pptx 는 형식을 모르는 그림(image/unknown · EMF)에서 예외를 내고 markitdown 은 그것을 잡지 않아 문서 전체가 «추출 실패» 가 된다
+    (11-05 디지털시스템실험 10주차 = 슬라이드 56장이 image18.bin 하나에 — 속은 멀쩡한 PNG)."""
+    global _MD
+    if _MD is None:
+        import markitdown
+        try:
+            from pptx.shapes.picture import Picture
+            Picture.image = property(_picture_image)
+        except ImportError:
+            pass
+        _MD = markitdown.MarkItDown(enable_plugins=False)
+    return _MD
+
 
 # 문서 안 그림(사용자 10-26 «강의자료를 보면 “GoogleShape142p17.jpg” 을 찾지 못했습니다»): markitdown 은 그림을 ![이름](이름.jpg) 로 남기는데
 # 그 파일은 볼트에 없어 옵시디언이 깨진 그림 상자를 그렸고, 그림 속 글자는 색인에 없었다(색인 18개 · 194곳).
@@ -650,11 +851,8 @@ def ocr_embedded(md, sha):
 
 
 def ex_markitdown(path, origin, ext, sha):
-    global _MD
     import markitdown
-    if _MD is None:
-        _MD = markitdown.MarkItDown(enable_plugins=False)
-    t = _MD.convert(path, keep_data_uris=True).text_content or ""
+    t = md_converter().convert(path, keep_data_uris=True).text_content or ""
     if ext == ".pptx":
         t = re.sub(r"<!--\s*Slide number:\s*(\d+)\s*-->", lambda m: f"## 슬라이드 {m.group(1)}", t)
     t = CTRL.sub("", t)
@@ -821,7 +1019,7 @@ def existing_indexes():
 
 
 def canonical_key(origin):
-    return (origin.startswith("1_수집/_inbox/"), origin)   # 분류된 자리를 먼저
+    return (origin.startswith("1_수집/받은함/"), origin)   # 분류된 자리를 먼저
 
 
 def memo_of(origin):

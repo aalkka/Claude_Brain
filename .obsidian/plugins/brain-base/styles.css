@@ -43,8 +43,19 @@
 .bb-tool pre { margin: 4px 0 6px; padding: 8px 10px; max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-size: var(--font-ui-smaller); background: var(--background-secondary); border-radius: 8px; color: var(--text-normal); }
 .bb-tool-why { color: var(--color-red); font-size: var(--font-ui-smaller); white-space: pre-wrap; word-break: break-word; padding: 2px 4px 4px 23px; line-height: 1.45; }
 
+/* 대기 표시(wait.ts) — 도는 고리 · 낱말 · 경과 초 */
+.bb-wait { display: flex; align-items: center; gap: 6px; font-size: var(--font-ui-small); color: var(--text-muted); }
+.bb-wait::before, .bb-wait-ring, .bb-health-bar.is-waiting::after { content: ""; display: inline-block; flex: none; width: 12px; height: 12px; box-sizing: border-box; border: 1.5px solid currentColor; border-top-color: transparent; border-radius: 50%; opacity: 0.7; animation: bb-spin 0.8s linear infinite; }
+.bb-wait-sec { opacity: 0.7; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.bb-wait.is-center { justify-content: center; margin: 24px auto; }
+.notice .bb-wait { color: inherit; font-size: inherit; }
+.bb-activity.is-still::before { display: none; }
+.bb-health-bar.is-waiting::after { width: 10px; height: 10px; margin-left: 5px; vertical-align: -1px; }
+/* 재기 전(켠 뒤 1분) = 멈춘 고리 — 돌리지 않는다(0.38.4 · 회전은 화면 밖에서도 GPU 를 쓴다) */
+.bb-health-bar.is-pending::after { content: ""; display: inline-block; width: 10px; height: 10px; margin-left: 5px; vertical-align: -1px; box-sizing: border-box; border: 1.5px solid currentColor; border-top-color: transparent; border-radius: 50%; opacity: 0.4; }
+
 /* 지금 하는 일 — 반짝이는 한 줄 */
-.bb-activity { font-size: var(--font-ui-small); background: linear-gradient(90deg, var(--text-faint) 0%, var(--text-normal) 50%, var(--text-faint) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: bb-shimmer 1.6s linear infinite; }
+.bb-activity .bb-wait-text { background: linear-gradient(90deg, var(--text-faint) 0%, var(--text-normal) 50%, var(--text-faint) 100%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: bb-shimmer 1.6s linear infinite; }
 @keyframes bb-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @keyframes bb-spin { to { transform: rotate(360deg); } }
 
@@ -138,7 +149,7 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-health-mark { display: flex; align-items: center; }
 .bb-health-mark svg { width: 14px; height: 14px; }
 .bb-health-again { display: inline-flex; vertical-align: middle; margin-left: 6px; }
-.bb-health-again .is-spinning svg { animation: bb-spin 0.8s linear infinite; }
+.bb-health-again .is-spinning svg, .bb-home-head .is-spinning svg { animation: bb-spin 0.8s linear infinite; }
 .bb-health-bar.is-warn { color: var(--text-warning); }
 .bb-health-bar.is-bad { color: var(--text-error); }
 .bb-ledger { display: flex; flex-direction: column; gap: 2px; max-height: 62vh; overflow-y: auto; }
@@ -186,6 +197,7 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-tp-row:hover:has(.bb-tp-start) .bb-tp-flair { display: none; }
 .bb-tp-start { opacity: 0; }
 .bb-tp-row:hover .bb-tp-start, .bb-tp-start:focus { opacity: 1; }
+.bb-tp-row.is-tt .bb-tp-start { display: flex; opacity: 1; } /* 튜토리얼 연습 받은함 줄 — 제안 단추를 늘 보임(가리킴 · 0.46.3) */
 .bb-tp-check { margin: 0 2px 0 0; flex: none; }
 .bb-tp-row.is-done.bb-tp-todo .bb-tp-text { text-decoration: line-through; }
 .bb-chip-card { color: var(--interactive-accent); }
@@ -267,6 +279,8 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-tt-hole { position: fixed; z-index: 40; pointer-events: none; border-radius: 6px; box-shadow: 0 0 0 200vmax rgba(0, 0, 0, 0.42); }
 .bb-tt-ring { position: fixed; z-index: 66; pointer-events: none; border-radius: 6px; outline: 2px solid var(--interactive-accent); }
 .bb-tt-card { position: fixed; z-index: 67; width: 300px; padding: 12px 14px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28); font-size: var(--font-ui-medium); line-height: 1.5; }
+.bb-tt-card .bb-tt-say { user-select: text; -webkit-user-select: text; cursor: text; } /* 안내 글을 끌어 골라 복사(사용자 11-08) · 단추 줄은 그대로 */
+.bb-tt-foot { user-select: none; -webkit-user-select: none; }
 .bb-tt-why { margin-top: 6px; color: var(--text-muted); font-size: var(--font-ui-small); }
 .bb-tt-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: var(--font-ui-smaller); color: var(--text-faint); }
 .bb-tt-foot button { font-size: var(--font-ui-smaller); padding: 2px 10px; height: auto; }
@@ -284,6 +298,26 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-tt-name { flex: 1; }
 .bb-tt-time { font-size: var(--font-ui-smaller); color: var(--text-faint); }
 .bb-tt-clean { margin-top: 6px; color: var(--text-muted); }
+/* 카드 안(E4·E5·E6 · ttcard.ts) — 색은 옵시디언 변수만 · 글자 = 말(medium) · 보기 말(small) · 발(smaller) */
+.bb-tt-ring.is-hint { outline: 2px dashed var(--interactive-accent); opacity: 0.45; }
+.bb-tt-hole.is-hint { border-radius: 32px; opacity: 0.6; filter: blur(12px); } /* 막 그대로 옅게 · 가장자리를 흐려 구역만 */
+.theme-dark .bb-tt-hole.is-hint { opacity: 1; } /* 어두운 바탕에선 옅게 하면 안 보임 */
+.bb-tt-dots { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
+.bb-tt-dot { width: 6px; height: 6px; border-radius: 50%; box-sizing: border-box; border: 1px solid var(--text-faint); }
+.bb-tt-dot.is-past { background: var(--text-faint); border-color: transparent; }
+.bb-tt-dot.is-now { width: 14px; border-radius: 3px; background: var(--interactive-accent); border-color: transparent; }
+.bb-tt-flag { display: inline-flex; color: var(--text-faint); }
+.bb-tt-flag svg { width: 11px; height: 11px; }
+.bb-tt-flag.is-now { color: var(--interactive-accent); }
+.bb-tt-flag.is-past svg { fill: currentColor; }
+.bb-tt-card.is-c.is-check { border-color: var(--interactive-accent); }
+.bb-tt-tail { position: absolute; display: none; width: 12px; height: 12px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); transform: rotate(45deg); }
+.bb-tt-tail.is-top { top: -7px; border-right: 0; border-bottom: 0; }
+.bb-tt-tail.is-bottom { bottom: -7px; border-left: 0; border-top: 0; }
+.bb-tt-tail.is-left { left: -7px; border-right: 0; border-top: 0; }
+.bb-tt-tail.is-right { right: -7px; border-left: 0; border-bottom: 0; }
+.bb-tt-row.is-skip .bb-tt-name { color: var(--text-muted); }
+.bb-tt-list.is-c .bb-tt-row.is-skip { opacity: 0.55; }
 
 /* 상자 고르기(box.ts · 화면 초안 B) — 덮개는 튜토리얼 막(40) 위 · 테두리·카드(66·67) 밑 */
 .bb-box-cover { position: fixed; inset: 0; z-index: 60; cursor: crosshair; background: rgba(0, 0, 0, 0.18); }
@@ -301,3 +335,64 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-chip-flip svg { width: 12px; height: 12px; }
 .bb-chip-flip:hover { color: var(--text-accent); }
 .bb-chip-small { font-size: var(--font-ui-smaller); color: var(--text-warning); }
+.bb-modview.view-content { padding: 0; overflow: hidden; }
+.bb-modview iframe { display: block; width: 100%; height: 100%; border: 0; }
+.bb-modview-none { padding: 24px; color: var(--text-faint); text-align: center; }
+
+/* 기능 단계(optview.ts · 사용자 11-07 고름 = 단계 초안 A · 설정 구조 C · 이름 높음·낮음·끔)
+   한 묶음 = 제목 + 카드 한 장(옵시디언 1.15 설정 묶음 꼴) — 변수가 없는 옛 판은 카드 없이 줄 나열로 보인다. 색은 옵시디언 변수만.
+   카드 = 칩 줄 → 기능 줄(왼쪽 접기 화살표 · 이름 쪽을 누르면 펼침) → 배터리 줄 → «추천대로 바꾸기» 줄. 추천 표시 = 지금과 다른 칸만 옅은 칠. */
+.bb-opt { --bb-opt-px: var(--setting-items-padding-x, 0px); max-width: 640px; }
+.bb-opt-view .bb-opt { --bb-opt-px: min(var(--setting-items-padding-x, 0px), var(--size-4-3)); margin: 0 auto; padding: 8px 4px; }
+.vertical-tab-content .bb-opt { max-width: var(--setting-group-max-width, none); margin: 0 auto var(--size-4-6); }
+.bb-opt-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 var(--bb-opt-px); margin-bottom: 10px; }
+.vertical-tab-content .bb-opt-head { padding: 0 min(var(--size-4-4), var(--bb-opt-px)); margin-bottom: var(--size-4-4); }
+.bb-opt-title { font-size: var(--font-ui-large); font-weight: 600; }
+.vertical-tab-content .bb-opt-title { font-size: var(--setting-group-heading-size, var(--font-ui-large)); font-weight: var(--setting-group-heading-weight, 600); color: var(--setting-group-heading-color, var(--text-normal)); }
+.bb-opt-again.is-spinning svg { animation: bb-spin 0.8s linear infinite; }
+.bb-opt-again.is-spinning, .bb-opt-again.is-stale { color: var(--text-accent); }
+.bb-opt-list { background: var(--setting-items-background, transparent); border-radius: var(--setting-items-radius, 0); }
+.bb-opt-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: var(--size-4-3) var(--bb-opt-px) var(--size-4-2); }
+.bb-opt-chip { font-size: var(--font-ui-small); padding: 3px 11px; border: 1px solid var(--background-modifier-border); border-radius: 999px; color: var(--text-muted); cursor: pointer; }
+.bb-opt-chip.is-on { border-color: var(--interactive-accent); color: var(--text-normal); background: hsla(var(--interactive-accent-hsl), 0.15); }
+.bb-opt-chip.is-disabled { opacity: 0.5; cursor: default; }
+.bb-opt-row, .bb-opt-bar { position: relative; }
+.bb-opt-row::before, .bb-opt-bar::before { content: ""; position: absolute; top: 0; left: var(--bb-opt-px); right: var(--bb-opt-px); border-top: 1px solid var(--setting-items-divider-color, var(--background-modifier-border)); }
+.bb-opt-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; min-height: 44px; padding: 4px var(--bb-opt-px); }
+.bb-opt-name { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; align-self: stretch; min-width: 0; margin-inline-start: -4px; padding-inline-start: 4px; border-radius: var(--radius-s); font-size: var(--font-ui-medium); }
+.vertical-tab-content .bb-opt-name { font-size: var(--setting-item-name-size, var(--font-ui-medium)); font-weight: var(--setting-item-name-weight, normal); }
+.bb-opt-name[role="button"] { cursor: pointer; }
+.bb-opt-name[role="button"]:hover { background: var(--background-modifier-hover); }
+.bb-opt-chev { display: flex; align-items: center; justify-content: center; width: 12px; flex: none; }
+.bb-opt-chev svg.svg-icon { width: 10px; height: 10px; stroke-width: 4px; color: var(--nav-collapse-icon-color, var(--text-faint)); transition: transform 0.1s ease-in-out; }
+.bb-opt-chev.is-collapsed svg.svg-icon { transform: rotate(calc(var(--direction, 1) * -90deg)); }
+.bb-opt-mini { color: var(--text-faint); display: inline-flex; }
+.bb-opt-mini svg { width: 13px; height: 13px; }
+.bb-opt-seg { display: flex; flex: none; margin-left: auto; border: 1px solid var(--background-modifier-border); border-radius: 6px; background: var(--background-primary); }
+.bb-opt-seg button { font-size: var(--font-ui-small); height: auto; padding: 4px 10px; color: var(--text-muted); background: none; box-shadow: none; border: none; border-left: 1px solid var(--background-modifier-border); border-radius: 0; }
+.bb-opt-seg button:first-child { border-left: none; border-radius: 5px 0 0 5px; }
+.bb-opt-seg button:last-child { border-radius: 0 5px 5px 0; }
+.bb-opt-seg button.is-cur { background: var(--interactive-accent); color: var(--text-on-accent); }
+.bb-opt-seg button.is-rec { background: hsla(var(--interactive-accent-hsl), 0.16); color: var(--text-accent); }
+.bb-opt-detail { display: grid; grid-template-columns: minmax(74px, max-content) 1fr; gap: 4px 10px; margin: -2px var(--bb-opt-px) 0 calc(var(--bb-opt-px) + 18px); padding: 0 0 12px; font-size: var(--font-ui-small); line-height: 1.45; }
+.bb-opt-k, .bb-opt-v { color: var(--text-muted); }
+.bb-opt-k { white-space: nowrap; }
+.bb-opt-k.is-rec > span { background: hsla(var(--interactive-accent-hsl), 0.16); color: var(--text-accent); border-radius: 3px; padding: 0 4px; margin-inline-start: -4px; }
+.bb-opt-k.is-why { color: var(--text-accent); }
+.bb-opt-v.is-cur { color: var(--text-normal); }
+.bb-opt-hr { grid-column: 1 / 3; border-top: 1px solid var(--background-modifier-border); margin: 2px 0; }
+.bb-opt-bar { display: flex; justify-content: flex-end; padding: 10px var(--bb-opt-px); }
+.bb-opt-problem { display: flex; align-items: center; gap: 8px; font-size: var(--font-ui-small); color: var(--text-error); margin-bottom: 8px; padding: 0 var(--bb-opt-px); }
+.is-saving > .bb-opt { opacity: 0.6; pointer-events: none; }
+.bb-opt-status svg { width: 14px; height: 14px; }
+
+/* 설정 탭 묶음(main.ts settingGroup · 각 플러그인 같은 꼴) — 다시 켜야 먹는 줄의 작은 그림 · 숫자 칸 */
+.bb-set-re { display: inline-flex; margin-inline-start: 6px; color: var(--text-faint); vertical-align: -1px; }
+.bb-set-re svg.svg-icon { width: 13px; height: 13px; }
+.bb-set-num { width: 96px; text-align: end; }
+
+/* 움직임 낮음(기능 단계 ui.motion) · 윈도 «애니메이션 효과» 끔 — 기다림 표시는 그대로 두고 돌지만 않게 */
+body.bb-still [class*="bb-"], body.bb-still [class*="bb-"]::before, body.bb-still [class*="bb-"]::after, body.bb-still [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  [class*="bb-"], [class*="bb-"]::before, [class*="bb-"]::after, [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
+}

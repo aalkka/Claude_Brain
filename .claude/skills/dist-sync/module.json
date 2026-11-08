@@ -19,6 +19,8 @@
     "mcp": []
   },
   "contributes": {
+    "tutorial": ".claude/skills/dist-sync/tutorial",
+    "manual": [{"file": ".claude/skills/dist-sync/manual/설명서-dist-sync.md", "name": "업데이트", "gist": "새 판 받기 · 고친 파일 보존 · 되돌리기 · 배포판에 올리기"}],
     "doctor": ["{py}", ".claude/skills/dist-sync/scripts/doctor.py"]
   }
 }

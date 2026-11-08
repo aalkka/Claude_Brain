@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "note": "기능 단계 선언(코어) — 읽는 쪽 = 3_시스템/options.py · brain-base src/options.ts · hooks/options-level.ps1. 고른 값 = options.local.json(이 PC · git 밖). 모듈 기능은 module.json contributes.options. cells 글은 설정 화면이 누른 뒤 그대로 보인다 — 잰 값이 바뀌면 여기만 고친다.",
+  "features": [
+    {
+      "id": "search.semantic",
+      "name": "의미 찾기",
+      "levels": ["high", "low", "off"],
+      "applies": "now",
+      "owner": ["3_시스템/search.py", "3_시스템/hooks/session-start.ps1", "3_시스템/hooks/session-end.ps1"],
+      "params": {"low": {"every_hours": 6}},
+      "interacts": ["git.autocommit"],
+      "recommend": "search",
+      "cells": {
+        "high": {"값": "세션마다 재색인 · 하루 약 27번 · 한 번 ≤45초 · ≤677MB"},
+        "low": {"늦어짐": "재색인 6시간에 한 번(전원 연결 때) · 새 노트는 그때까지 뜻으로 안 잡힘(낱말은 바로)", "아낌": "재색인 하루 약 27 → 4번 이하"},
+        "off": {"잃음": "낱말만 · 뜻 찾기 12 중 11 · 의미 링크 멈춤", "아낌": "재색인·질의 때 모델 적재 전부"}
+      }
+    },
+    {
+      "id": "git.autocommit",
+      "name": "자동 커밋",
+      "levels": ["high", "low"],
+      "applies": "now",
+      "owner": ["3_시스템/hooks/stop-check.py"],
+      "params": {"low": {"min_gap_minutes": 5}},
+      "interacts": ["search.semantic"],
+      "recommend": "git",
+      "cells": {
+        "high": {"값": "턴 끝마다 커밋 · 커밋 턴 약 3.7초"},
+        "low": {"늦어짐": "마지막 커밋 뒤 5분이 지난 턴 끝 + 세션 끝에 몰아서", "낮아짐": "되돌리기 단위가 여러 턴", "아낌": "피한 커밋 하나 약 2.6초"}
+      }
+    },
+    {
+      "id": "lms.wake",
+      "name": "LMS 아침 받기",
+      "levels": ["high", "low"],
+      "applies": "reregister",
+      "owner": ["3_시스템/lms-auto.py", "3_시스템/lms-tasks.ps1"],
+      "recommend": "lms",
+      "cells": {
+        "high": {"값": "06:55 PC 를 깨워 크롬을 띄우고 25분 붙듦 · 15분마다 반영"},
+        "low": {"늦어짐": "아침 반영이 크롬을 열 때까지 · 15분 반영은 그대로", "아낌": "아침 깨움 + 크롬 25분"}
+      }
+    },
+    {
+      "id": "ui.motion",
+      "name": "움직임",
+      "levels": ["high", "low"],
+      "applies": "now",
+      "owner": [".obsidian/plugins/brain-base/main.js"],
+      "recommend": "motion",
+      "cells": {
+        "high": {"값": "기다림 회전 · 반짝임"},
+        "low": {"낮아짐": "멈춘 표시(기다림은 보이되 돌지 않음)", "아낌": "회전이 도는 동안 GPU 초당 약 0.3 CPU초"}
+      }
+    },
+    {
+      "id": "sheet.engine",
+      "name": "시트 보기",
+      "levels": ["high", "low"],
+      "applies": "next-open",
+      "ready": false,
+      "owner": [".obsidian/plugins/brain-source/main.js"],
+      "recommend": "sheet",
+      "cells": {
+        "high": {"값": "Univer 엔진으로 열고 편집 · 첫 열기 3.7초 · +160MB"},
+        "low": {"늦어짐": "편집 단추를 누를 때 엔진", "낮아짐": "보기에서 수식 계산·서식 일부", "아낌": "보기만 할 때 엔진 값 전부"}
+      }
+    }
+  ]
+}

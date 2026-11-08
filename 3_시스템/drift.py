@@ -41,7 +41,7 @@ HISTORY = re.compile(r"옛|구 |구\)|(?<![가-힣])전 |철회|폐기|폐지|�
 PATH = re.compile(r"(?<![~/\\])(?:0_작업|1_수집|2_지식|3_시스템|\.claude)[/\\][^\s`'\"<>|*,;()\[\]{}«»…]+")
 ABS = re.compile(r"[A-Z]:\\[^\s`'\"<>|*,;()\[\]{}«»…]+")
 HANGUL = re.compile(r"[가-힣]$")
-SKIP_PATH = re.compile(r"실험N|어떤노트|2_지식/참조|_index|\$|%|YYYY|XX|\.\.\.|plugins/<|NN|_promoted|Program(?: Files)?$")   # _promoted = 승격 때 생기는 자리
+SKIP_PATH = re.compile(r"실험N|어떤노트|2_지식/참조|_index|\$|%|YYYY|XX|\.\.\.|plugins/<|NN|Program(?: Files)?$")
 INDEX_LINK = re.compile(r"^- \[[^\]]+\]\(([^)]+)\)", re.M)
 
 
@@ -198,6 +198,35 @@ def ops_rows():
         if h >= COMMIT_H:
             rows.append(("운영", "git", f"마지막 커밋 {int(h)}시간 전 — 자동 커밋 확인"))
     except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    # 민감 노트가 추적되면 자동 push 로 원격에 간다 — pre-commit 은 스테이지 순간만 보고 이미 든 것은 못 뺀다(11-05 실측 7건)
+    try:
+        r = subprocess.run(["git", "-C", VAULT, "grep", "-lE", r"^sensitive:[[:space:]]*true[[:space:]]*$", "HEAD", "--", "*.md"],
+                           capture_output=True, timeout=5)
+        n = len(r.stdout.splitlines())
+        if n:
+            rows.append(("운영", "민감 노트", f"{n}건이 git 추적 중 — 자동 push 로 원격에 간다 · .gitignore 에 넣고 추적 해제"))
+    except (OSError, subprocess.SubprocessError):
+        pass
+    # Stop 훅이 커밋 뒤 스테이지가 남으면 적는 줄 — 세션 시작에 안 보여 쌓이기만 했다(07-30~11-03 157줄)
+    try:
+        with open(os.path.join(HERE, "_index", "hooks.log"), "rb") as h:
+            h.seek(0, os.SEEK_END)
+            h.seek(max(0, h.tell() - 500_000))
+            log = h.read().decode("utf-8", "replace")
+        now = time.time()
+        hits = []
+        for line in log.splitlines():
+            if "BLOCKED" in line:
+                try:
+                    t = time.mktime(time.strptime(line[:19], "%Y-%m-%d %H:%M:%S"))
+                except ValueError:
+                    continue
+                if now - t < COMMIT_H * 3600:
+                    hits.append(line[11:16])
+        if hits:
+            rows.append(("운영", "자동 커밋", f"{COMMIT_H}시간 안에 {len(hits)}회 막힘(마지막 {hits[-1]}) — 3_시스템/_index/hooks.log · 스테이지에 남은 파일 확인"))
+    except OSError:
         pass
     # 앱이 자기 프로세스에 BASE_URL=api.anthropic.com 을 넣고, 사용자 범위에 빈 값이 남기도 한다 — 값이 있고 공식 주소가 아닐 때만 위험
     found = set()

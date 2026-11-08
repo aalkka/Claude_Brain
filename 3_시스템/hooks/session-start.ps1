@@ -15,6 +15,13 @@ if ((Get-Content $claudeMd -Raw) -match '\{\{[^}]') {
     Write-Output '⚠ 개인화 미완료 — setup-interview 실행 필요 (개인 레이어 슬롯이 비어 있음)'
 }
 
+# 0.5 반쯤 된 업데이트 — 첫 업데이터 판(P0 · 진단뿐)의 README 절차는 .claude·hooks·search.py 등만 git checkout 으로 바꾼다.
+#     새 훅이 부르는 대본(roles.py·fileops.py·mdtable.py …)이 없어 Stop·PostToolUse 훅이 오류를 낸다(2026-11-09 옛 판 시험).
+#     그 볼트에서 처음 도는 새 코드가 이 훅이다 → 들어온 새 업데이터로 나머지를 들이게 한다.
+if ((Test-Path (Join-Path $vault '.claude\skills\dist-sync\known-hashes.json')) -and -not (Test-Path (Join-Path $vault '3_시스템\fileops.py'))) {
+    Write-Output '⚠ 업데이트가 반쯤 됐다 — 새 훅이 부르는 코어(3_시스템/fileops.py 등)가 없다. 사용자에게 알리고 dist-sync:update 를 한 번 더 돌린다(이제 들어온 새 스킬 절차 · 나머지 코어와 폴더 이전까지 들어온다).'
+}
+
 # 1. recent + open-loops 컨텍스트 주입
 $recent = Join-Path $vault '2_지식\recent.md'
 $loops  = Join-Path $vault '2_지식\open-loops.md'
@@ -89,12 +96,19 @@ if (Test-Path $followPy) { & py -3 $followPy --hook 2>$null }
 #    5.1s 포함)+인코딩 ≈18s를 사용자가 그대로 대기(실측 중앙값 23s·p90 84s·최대 118s, 81회).
 #    비핵심(인덱스=gitignore·검색 품질에만 영향)이고 save_index가 tmp→os.replace 원자교체라
 #    중도 kill·SessionEnd 디태치와 동시 실행에도 손상 없음(다음 reindex가 hash 불일치로 자기치유).
-#    ※ push(4)는 동기 유지 — 1.5s로 짧고, git 동시 실행은 index.lock 경합 위험(2026-07-19 사례).
+#    ※ push(4)도 디태치(11-06 시스템 재기 §3-4). push 는 index 를 안 쓴다 — 07-19 경합은 SessionEnd 커밋 둘이었다.
+#    기능 단계 «의미 찾기»(options-level.ps1): 사용 안 함이면 띄우지 않는다 · 하옵(6시간·전원)은 search.py 가 BRAIN_AUTO 를 보고 가른다.
+#    BRAIN_AUTO 는 인자가 아니라 환경 변수 — 옛 search.py 가 남은 볼트(업데이트 충돌)에서도 모르는 인자로 죽지 않고 지금처럼 돈다.
 $searchPy = Join-Path $vault '3_시스템\search.py'
-if (Test-Path $searchPy) {
+$semantic = 'high'
+$optPs = Join-Path $PSScriptRoot 'options-level.ps1'
+if (Test-Path $optPs) { . $optPs; $semantic = Get-OptionLevel $vault 'search.semantic' }
+if ((Test-Path $searchPy) -and $semantic -ne 'off') {
+    $env:BRAIN_AUTO = '1'
     Start-Process -FilePath 'py' -ArgumentList '-3', $searchPy, '--reindex' -WindowStyle Hidden -ErrorAction SilentlyContinue
 }
 
-# 4. 원격 push — 밀린 커밋 동기(셧다운이 SessionEnd를 kill해도 다음 세션 시작 때 확실히 push).
+# 4. 원격 push — 밀린 커밋을 디태치로(셧다운이 SessionEnd를 kill해도 다음 세션 시작 때 push · 기다리지 않음 · 동기 때 2~3초).
 #    개인화 완료(미치환 슬롯 없음)+원격 존재 시만. stdout 무출력(주입 컨텍스트 오염 없음). 실패 무시.
-if ((Get-Content $claudeMd -Raw) -notmatch '\{\{[^}]' -and (git -C $vault remote)) { git -C $vault push 2>$null | Out-Null }
+#    경로는 -WorkingDirectory 로 준다 — -ArgumentList 는 빈칸 든 경로를 따옴표 없이 이어 붙여 push 가 조용히 실패한다(사본 실측).
+if ((Get-Content $claudeMd -Raw) -notmatch '\{\{[^}]' -and (git -C $vault remote)) { Start-Process -FilePath 'git' -ArgumentList 'push', '-q' -WorkingDirectory $vault -WindowStyle Hidden -ErrorAction SilentlyContinue }

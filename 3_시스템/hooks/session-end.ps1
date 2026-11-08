@@ -42,7 +42,12 @@ if (-not $slotsLeft -and (git remote)) { git push 2>$null | Out-Null }
 # 4. B1 의미링크 갱신 — 맨 끝 **디태치**(비대기). reindex→link-write 1프로세스(main()이 순차 지원).
 #    비핵심(인덱스=gitignore, 링크블록=멱등·1세션 지연 무해) → 셧다운이 죽여도 다음 시작 reindex가 커버.
 #    이 훅이 여기서 절대 블록되지 않게 하는 게 목적(타임아웃 무의미화).
+#    기능 단계 «의미 찾기»: 사용 안 함이면 띄우지 않는다 · 하옵이면 search.py 가 재색인을 6시간에 한 번으로 미루고 그때만 링크를 쓴다(session-start 와 같은 꼴).
 $searchPy = Join-Path $vault '3_시스템\search.py'
-if (Test-Path $searchPy) {
+$semantic = 'high'
+$optPs = Join-Path $PSScriptRoot 'options-level.ps1'
+if (Test-Path $optPs) { . $optPs; $semantic = Get-OptionLevel $vault 'search.semantic' }
+if ((Test-Path $searchPy) -and $semantic -ne 'off') {
+    $env:BRAIN_AUTO = '1'
     Start-Process -FilePath 'py' -ArgumentList '-3', $searchPy, '--reindex', '--link-write' -WindowStyle Hidden -ErrorAction SilentlyContinue
 }

@@ -12,6 +12,7 @@
 import datetime as dt
 import os
 import re
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -68,6 +69,21 @@ def notes():
                     yield os.path.join(dp, f), d != exempt
 
 
+def module_steps():
+    """켜진 모듈이 선언한 기록 단계(module.json contributes.record) — 낸 줄이 곧 고칠 것이다. 모듈 이름을 여기 박지 않는다"""
+    out = []
+    for m in roles.modules(on_only=True):
+        try:
+            argv = ((m["json"] or {}).get("contributes") or {}).get("record")
+            if argv:
+                r = subprocess.run([sys.executable if t == "{py}" else t for t in argv], cwd=VAULT, capture_output=True, timeout=20,
+                                   env=dict(os.environ, PYTHONIOENCODING="utf-8"))
+                out += [x for x in r.stdout.decode("utf-8", "replace").splitlines() if x.strip()]
+        except (OSError, ValueError, subprocess.TimeoutExpired):
+            continue
+    return out
+
+
 def check():
     bad = []
     with open(os.path.join(VAULT, "2_지식", "MOC.md"), encoding="utf-8") as h:
@@ -93,6 +109,7 @@ def check():
                 bad.append(f"제어 문자 {n}개(역슬래시 붕괴): {f}")
     for p in (os.path.join(VAULT, "2_지식", "open-loops.md"), RECENT):
         bad += [f"{w} {t}" for _, w, t in drift.limits_of(p)]
+    bad += module_steps()
     size = os.path.getsize(os.path.join(VAULT, "2_지식", "open-loops.md"))
     if not bad:
         print(f"기록 점검 통과 · open-loops {size}바이트")

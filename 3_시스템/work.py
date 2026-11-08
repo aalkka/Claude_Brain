@@ -11,6 +11,8 @@
   py -3 3_시스템/work.py [--json]            작업마다 상태(읽기만)
   py -3 3_시스템/work.py plan [--json]       끝난 작업마다 정리 계획 → 3_시스템/_index/cleanup/작업-<날짜>-<작업>.json
                                              (승인한 것만 `fileops.py plan <계획> --apply`)
+  py -3 3_시스템/work.py sweep               보냄·끝냄은 승인 없이 바로 비움(door.py sweep 이 볼트를 켤 때 부른다 · 휴지통·장부로 되돌림)
+  py -3 3_시스템/work.py finish <작업 경로> [--by 누가]   사람이 체크한 작업을 바로 비움(홈 · 탐색기 우클릭) · 끝 줄 = JSON
 
 정리 계획 꼴(끝난 작업 하나 · 규칙 = work.json):
   보낸 파일이 있는 보냄 → 결과물 → `보냄/`(밖에서 찾은 것은 들임) · 재료(사진·측정·회로) → `보냄/<작업>/` · md → 2_지식 ·
@@ -39,6 +41,7 @@ SUBMITTED = ("submitted", "graded", "pending_review")
 OUTSIDE = [os.path.join(os.path.expanduser("~"), d) for d in ("Downloads", "Desktop")]  # 볼트 밖 후보(설계안 §11 11 · 10-31 허용)
 MARK = "작업.md"  # 작업 폴더의 사람 표시(속성) — 탐색기 우클릭 «끝냄»이 적는다
 DONE = ("보냄", "마감 지남", "끝냄")  # 끝남(멈춤은 «묻기»라 따로)
+SURE = ("보냄", "끝냄")  # 근거가 확실한 끝남 = 저절로 비운다(sweep) · 마감 지남·멈춤은 아직 하는 중일 수 있어 후보로 남는다
 # work.json 이 없거나 칸이 빠졌을 때(11-02 값)
 RULES = {
     "근거": [{"id": "표시"}, {"id": "lms", "영역": ["배움"]}, {"id": "git"}, {"id": "일정"}, {"id": "멈춤"}],
@@ -48,7 +51,7 @@ RULES = {
     "보고서": {"종류": ["학교"]},
     "다시_만듦": {"확장자": [".py", ".js", ".ts", ".mjs", ".ps1", ".sh", ".bat", ".ipynb", ".log", ".aux", ".pyc", ".tmp", ".bak"],
               "자리": ["fig", "out", "build", "__pycache__", "node_modules", ".ipynb_checkpoints"],
-              "사진": [".jpg", ".jpeg", ".heic"], "내보냄": [".docx", ".pdf", ".html", ".pptx"]},
+              "사진": [".jpg", ".jpeg", ".heic"], "내보냄": [".docx", ".pdf", ".html", ".pptx"], "제작_원본": [".typ", ".tex"]},
 }
 _RULES = None
 
@@ -402,7 +405,17 @@ def regenerable(f, base, md_stems):
         return "만든 자리(%s/)" % next(p for p in parts if p in R["자리"])
     if ext in R["내보냄"] and os.path.splitext(f)[0] in md_stems:
         return "같은 이름 md 가 원본"
+    if ext in R.get("제작_원본", ()) and made_pdf(f, base):  # 사용자 11-05 «제작에 사용한 파일은 제작 종료시 제작폴더에서 삭제»
+        return "제작에 쓴 파일(결과 PDF 있음)"
     return None
+
+
+def made_pdf(f, base):
+    """제작 원본의 결과 PDF 가 있나 — 같은 폴더(하위 폴더의 원본이면 작업 폴더 전체)에서 이 파일 뒤에 만들어진 PDF 만 친다(고치고 아직 안 만든 원본은 남긴다)."""
+    t = os.path.getmtime(f)
+    here = os.path.dirname(f)
+    where = [(here, None, os.listdir(here))] if os.path.samefile(here, base) else os.walk(base)
+    return any(n.lower().endswith(".pdf") and os.path.getmtime(os.path.join(d, n)) >= t for d, _, ns in where for n in ns)
 
 
 def docx_to_pdf_ops(r, pdf_rel, why, twin=None):
@@ -516,6 +529,77 @@ def write_plans(st):
     return res
 
 
+SWEPT = os.path.join(HERE, "_index", "work-swept.json")  # 한 번 비운 작업 — 되돌려져 돌아오면 저절로 다시 비우지 않는다(사람이 되살린 것)
+
+
+def load_swept():
+    try:
+        return json.load(open(SWEPT, encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+
+
+def save_swept(swept):
+    os.makedirs(os.path.dirname(SWEPT), exist_ok=True)
+    with open(SWEPT, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(swept, f, ensure_ascii=False, indent=0)
+
+
+def finish(path, by="script:work"):
+    """사람이 끝냄을 체크함(홈 · 탐색기 우클릭 · 사용자 11-03) → 바로 비운다 → {path, batch} · 못 하면 {error}.
+    사람이 끝났다고 했으니 근거를 묻지 않는다 — 보낸 결과물이 어딘가에 있으면 그 계획대로 · 아니면 끝냄 계획(다시 못 만드는 것은 2_지식으로)."""
+    import fileops
+    t = next((x for x in status() if x["path"] == path), None)
+    if not t:
+        return {"error": "작업 폴더의 작업이 아님: " + path}
+    if t["state"] != "보냄" or t.get("missing"):
+        t.update(state="끝냄", why="사람이 체크", deliver=[], missing=False)
+    ops, note = plan_of(t)
+    if not ops:
+        return {"error": note or "비울 것 없음"}
+    ctx = fileops.Ctx(VAULT, by=by)
+    err = None
+    try:
+        fileops.run_ops(ctx, ops, lenient=False)
+    except fileops.Stop as e:
+        err = str(e)
+    if ctx.events:
+        fileops.write_view(ctx)
+        swept = load_swept()
+        if path not in swept:
+            save_swept(swept + [path])
+    out = {"path": path, "batch": ctx.batch if ctx.events else None}
+    if err:
+        out["error"] = err
+    return out
+
+
+def sweep():
+    """끝난 작업 비우기(사용자 11-03 «작업이 진행 중일 때만 남아있고 끝나면 무조건 비운다») → 비운 작업 [{path, batch}] · door.py sweep 이 볼트를 켤 때 부른다.
+    결과물을 보관 못 하면 계획이 없어 그대로다(지우지 않는다) · 비운 작업이 되돌려져 돌아오면 다시 안 비운다."""
+    import fileops
+    swept = load_swept()
+    out = []
+    for t in status():
+        if t["state"] not in SURE or t["path"] in swept:
+            continue
+        ops = plan_of(t)[0]
+        if not ops:
+            continue
+        ctx = fileops.Ctx(VAULT, by="script:work")
+        try:
+            fileops.run_ops(ctx, ops, lenient=False)
+        except fileops.Stop as e:
+            print("못 비움 %s — %s" % (t["path"], e))
+        if ctx.events:
+            fileops.write_view(ctx)
+            swept.append(t["path"])
+            out.append({"path": t["path"], "batch": ctx.batch})
+    if out:
+        save_swept(swept)
+    return out
+
+
 def summary(st):
     """건강·홈용 — 끝남(보냄·마감 지남·끝냄) · 결과물 없음 · 멈춤 · 진행."""
     return {"끝남": sum(1 for t in st if t["state"] in DONE), "결과물없음": sum(1 for t in st if t.get("missing")),
@@ -532,6 +616,13 @@ def main(argv=None):
     a = list(sys.argv[1:] if argv is None else argv)
     as_json = "--json" in a
     a = [x for x in a if x != "--json"]
+    if a and a[0] == "finish":
+        print(json.dumps(finish(a[1], a[a.index("--by") + 1] if "--by" in a else "script:work"), ensure_ascii=False))
+        return 0
+    if a and a[0] == "sweep":
+        for r in sweep():
+            print("비움 %s · 되돌리기 = fileops.py undo %s" % (r["path"], r["batch"]))
+        return 0
     st = status()
     if a and a[0] == "plan":
         res = write_plans(st)

@@ -20,6 +20,7 @@
   "확장자": [".py", ".js", ".ts", ".mjs", ".ps1", ".sh", ".bat", ".ipynb", ".log", ".aux", ".pyc", ".tmp", ".bak"],
   "자리": ["fig", "out", "build", "__pycache__", "node_modules", ".ipynb_checkpoints"],
   "사진": [".jpg", ".jpeg", ".heic"],
-  "내보냄": [".docx", ".pdf", ".html", ".pptx"]
+  "내보냄": [".docx", ".pdf", ".html", ".pptx"],
+  "제작_원본": [".typ", ".tex"]
  }
 }

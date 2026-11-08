@@ -1,0 +1,6 @@
+{
+  "name": "collect_desk",
+  "description": "수집 관리 창 — 어떤 수집이 돌고 무엇을 받고 걸렀는지 목록과 상세로 보고, 끄고 고친다.",
+  "version": "0.2.0",
+  "author": { "name": "aalkka" }
+}
