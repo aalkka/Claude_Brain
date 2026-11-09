@@ -74,3 +74,65 @@
 .bc-colon, .bc-tilde { color: var(--text-faint); padding: 0 2px; }
 .bc-in-topic { max-width: 11em; }
 .bc-ok { color: var(--interactive-accent); }
+
+/* 0.4 반복 · 끌기 · 연필 고치기(초안 A · 11-10) — 손잡이·지우기는 마우스를 올릴 때만(폰은 늘) · 색은 상태에만 */
+.bc-grip { flex: none; width: 14px; display: flex; justify-content: center; color: var(--text-faint); opacity: 0; cursor: grab; touch-action: none; }
+.bc-grip svg { width: 14px; height: 14px; }
+.bc-row:hover .bc-grip:not(:empty), .is-mobile .bc-grip:not(:empty) { opacity: 1; }
+.bc-row { flex-wrap: wrap; }
+.bc-row .bc-text { min-width: 8em; }
+.bc-row.is-dragging { opacity: 0.35; }
+.bc-rep-ic { display: flex; flex: none; color: var(--text-faint); }
+.bc-rep-ic svg { width: 13px; height: 13px; }
+.bc-del, .bc-edit { opacity: 0; padding: 3px; }
+.bc-del svg, .bc-edit svg { width: 14px; height: 14px; }
+.bc-row:hover .bc-del, .bc-row:hover .bc-edit, .is-mobile .bc-del, .is-mobile .bc-edit { opacity: 1; }
+.bc-row.is-editing { cursor: default; background: var(--background-secondary); }
+.bc-row-edit { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bc-in-inline { flex: 1; min-width: 8em; height: auto; padding: 2px 6px; }
+.bc-time-edit { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.bc-day.is-drop { background: hsla(var(--interactive-accent-hsl), 0.15); box-shadow: inset 0 0 0 2px var(--interactive-accent); }
+.bc-ghost { position: fixed; z-index: var(--layer-tooltip); pointer-events: none; background: var(--background-primary); border: 1px solid var(--interactive-accent); border-radius: var(--radius-s); box-shadow: var(--shadow-s); padding: 3px 8px; font-size: var(--font-ui-smaller); max-width: 240px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.bc-dragging, body.bc-dragging * { user-select: none; cursor: grabbing !important; }
+.bc-toggle.is-on { color: var(--interactive-accent); background: hsla(var(--interactive-accent-hsl), 0.15); }
+
+/* 반복 줄 — 주기 · 요일 · 기간 칩 */
+.bc-rep { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.bc-rep:empty { display: none; }
+.bc-seg { display: inline-flex; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s); overflow: hidden; }
+.bc-seg button { border: 0; border-radius: 0; box-shadow: none; border-right: 1px solid var(--background-modifier-border); background: var(--background-primary); color: var(--text-muted); font-size: var(--font-ui-smaller); padding: 3px 9px; height: auto; cursor: pointer; }
+.bc-seg button:last-child { border-right: 0; }
+.bc-seg button.is-on { background: var(--interactive-accent); color: var(--text-on-accent); }
+.bc-chips { display: inline-flex; gap: 3px; }
+.bc-chip { width: 26px; height: 26px; padding: 0; border-radius: 50%; box-shadow: none; border: 1px solid var(--background-modifier-border); background: var(--background-primary); color: var(--text-muted); font-size: var(--font-ui-smaller); cursor: pointer; }
+.bc-chip.is-on { background: var(--interactive-accent); border-color: var(--interactive-accent); color: var(--text-on-accent); }
+.bc-rep-on { font-size: var(--font-ui-smaller); color: var(--text-muted); }
+.bc-period { display: inline-flex; align-items: center; gap: 5px; height: auto; padding: 3px 8px; box-shadow: none; border: 1px solid var(--background-modifier-border); background: var(--background-primary); font-size: var(--font-ui-smaller); font-variant-numeric: tabular-nums; cursor: pointer; }
+.bc-period-ic { display: flex; color: var(--text-muted); }
+.bc-period-ic svg { width: 13px; height: 13px; }
+
+/* 떠 있는 상자 — 미니 달력 · 지우기 물음 */
+.bc-pop { position: fixed; z-index: var(--layer-menu); background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); box-shadow: var(--shadow-s); padding: 8px; }
+.bc-mc { width: 232px; font-size: var(--font-ui-smaller); }
+.bc-mc-head { display: flex; align-items: center; gap: 2px; margin-bottom: 4px; }
+.bc-mc-head .bc-btn { padding: 3px; }
+.bc-mc-title { flex: 1; text-align: center; font-weight: var(--font-semibold); font-size: var(--font-ui-small); }
+.bc-mc-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; }
+.bc-mc-wd { text-align: center; color: var(--text-faint); padding: 2px 0; }
+.bc-mc-d { position: relative; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; border-radius: var(--radius-s); font-variant-numeric: tabular-nums; }
+.bc-mc-d:hover { background: var(--background-modifier-hover); }
+.bc-mc-d.is-other { color: var(--text-faint); }
+.bc-mc-d.is-today { font-weight: var(--font-bold); color: var(--text-accent); }
+.bc-mc-d.in-range { background: hsla(var(--interactive-accent-hsl), 0.15); border-radius: 0; }
+.bc-mc-d.is-start, .bc-mc-d.is-end { background: var(--interactive-accent); color: var(--text-on-accent); }
+.bc-mc-dot { position: absolute; bottom: 3px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--interactive-accent); }
+.bc-mc-d.is-start .bc-mc-dot, .bc-mc-d.is-end .bc-mc-dot { background: var(--text-on-accent); }
+.bc-mc-foot { display: flex; align-items: center; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--background-modifier-border); }
+.bc-mc-chip, .bc-mc-none { height: auto; padding: 2px 6px; box-shadow: none; font-size: var(--font-ui-smaller); font-variant-numeric: tabular-nums; cursor: pointer; }
+.bc-mc-chip { border: 1px solid var(--background-modifier-border); background: var(--background-primary); color: var(--text-muted); }
+.bc-mc-chip.is-on { border-color: var(--interactive-accent); color: var(--text-accent); }
+.bc-mc-none { border: 0; background: none; color: var(--text-muted); }
+.bc-ask { width: 240px; }
+.bc-ask-q { font-size: var(--font-ui-small); padding: 2px 2px 8px; }
+.bc-ask-b { display: flex; gap: 6px; flex-wrap: wrap; }
+.bc-ask-b button { height: auto; padding: 3px 10px; font-size: var(--font-ui-smaller); }

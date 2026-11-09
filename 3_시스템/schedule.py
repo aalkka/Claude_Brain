@@ -4,6 +4,7 @@
   py -3 3_시스템/schedule.py build          # LMS-마감.md 다시 쓰기(체크 보존 · 내용 같으면 안 씀)
   py -3 3_시스템/schedule.py check          # 일정 파일의 «- [ ]» 줄 중 형식에 안 맞는 줄 보고
   py -3 3_시스템/schedule.py week [N]       # 오늘부터 N일(기본 7) 열린 일정 — 세션 시작 주입과 같은 결과인지 대조용
+  py -3 3_시스템/schedule.py repeat         # 반복-규칙.md -> 반복-일정.md(오늘부터 AHEAD 일 · build 도 먼저 부른다 · 캘린더도 같은 글로 씀)
 세션 시작 주입은 3_시스템/hooks/session-start.ps1 이 파이썬 없이 같은 정규식으로 한다(+160ms 회피).
 """
 import glob
@@ -282,6 +283,10 @@ def post_rows(by_id, courses, man, today):
 
 
 def build():
+    try:
+        repeat()   # LMS 원시가 없거나 실패해도 반복 일정은 하루씩 민다(매일 새벽 «외부뇌 LMS 반영»)
+    except Exception as e:
+        print(f'반복 일정 실패: {e}')
     courses = load_json(COURSES, {})
     man = load_json(MANIFEST, {})
     items = man.get('items', {})
@@ -371,7 +376,7 @@ def build():
     return 0
 
 
-def write_generated(name, title, src, lines):
+def write_generated(name, title, src, lines, note=None, tag=None):
     """생성 파일 하나를 쓴다(수집 출처마다 파일 하나 · 형식 §1) — 체크는 블록 id 로 이어 받고, 내용이 같으면 안 쓴다."""
     path = os.path.join(SCHED_DIR, name)
     today = datetime.now(KST).strftime('%Y-%m-%d')
@@ -394,9 +399,9 @@ def write_generated(name, title, src, lines):
             month = m.group(2)[:7]
             body += ['', f'## {month}']
         body.append(ln.replace('- [ ]', '- [x]', 1) if m.group(6) in done else ln)
-    head = ['---', 'type: episodic', f'title: {title}', f'created: {created}', f'updated: {today}', f'tags: [일정, {title}, 생성파일]',
+    head = ['---', 'type: episodic', f'title: {title}', f'created: {created}', f'updated: {today}', f'tags: [일정, {tag or title}, 생성파일]',
             'links: ["[[외부뇌-일정-형식]]", "[[내-일정]]"]', 'status: active', 'source: claude', '---', f'# {title} (생성 파일)', '',
-            f'> `3_시스템/web-collect.py` 가 [출처]({src})에서 통째로 다시 쓴다. **체크(`- [x]`)만 남고 다른 손질은 사라진다** — 고칠 것·더할 것은 [[내-일정]]에.']
+            note or f'> `3_시스템/web-collect.py` 가 [출처]({src})에서 통째로 다시 쓴다. **체크(`- [x]`)만 남고 다른 손질은 사라진다** — 고칠 것·더할 것은 [[내-일정]]에.']
     text = '\n'.join(head + body) + '\n'
     strip = lambda s: re.sub(r'^updated: .*$', '', s, count=1, flags=re.M)
     if old and strip(old) == strip(text):
@@ -406,6 +411,128 @@ def write_generated(name, title, src, lines):
         f.write(text)
     os.replace(path + '.tmp', path)
     return f'씀 {name} {len(lines)}줄 · 체크 보존 {len(done)}'
+
+
+# 반복 일정(11-10) — 규칙 파일의 «- 매주 …» 줄을 오늘부터 AHEAD 일 동안 날짜마다 한 줄로 펼친다.
+# 일정 줄 문법은 그대로라 읽는 곳(주입·캘린더·서버·알림)은 고치지 않는다. 형식 → 외부뇌-일정-형식 §6.1
+RULE_FILE, REPEAT_FILE = '반복-규칙.md', '반복-일정.md'
+AHEAD = 366      # 매일 새벽 «외부뇌 LMS 반영»이 build 를 부를 때 하루씩 밀리고, 지난 줄은 빠진다
+# 캘린더 플러그인(brain-base calendar/src/repeat.ts)이 같은 규칙·같은 글로 이 파일을 쓴다 — 바꾸면 둘 다(대조 = test/repeat_parity.mjs)
+RULE_START = re.compile(r'^\s*- (매일|매주|격주|매달|매년)(?=\s)')
+RULE = re.compile(
+    r'^\s*- (매일|매주|격주|매달|매년)'
+    r'(?:\s+([월화수목금토일](?:\s*[,·]\s*[월화수목금토일])*)(?=\s)|\s+(\d{1,2})월\s*(\d{1,2})일(?=\s)|\s+(\d{1,2})일(?=\s))?'
+    r'(?:\s+(\d{1,2}:\d{2})(?:~(\d{1,2}:\d{2}))?(?=\s))?'
+    r'\s+(.+?)\s*$')
+DAY = re.compile(r'\d{4}-\d{2}-\d{2}')
+REPEAT_NOTE = ('> 캘린더와 `3_시스템/schedule.py repeat` 가 [[반복-규칙]]에서 오늘부터 {n}일 치를 통째로 다시 쓴다. 지난 줄은 빠진다. '
+               '**체크(`- [x]`)만 남고 다른 손질은 사라진다** — 바꿀 것·빼는 날은 [[반복-규칙]]에.')
+
+
+def fnv(s):
+    """블록 id 의 내용 해시 — FNV-1a 32비트(플러그인도 같은 값 · 폰에서 동기 계산)."""
+    h = 0x811c9dc5
+    for b in s.encode('utf-8'):
+        h = ((h ^ b) * 0x01000193) & 0xffffffff
+    return f'{h:08x}'
+
+
+def repeat_rules(path):
+    """규칙 줄 → (규칙 목록, [(줄번호, 까닭, 원문)]). 한 줄 = `- <주기> [시각] <주제 · 내용> [| 시작~끝] [| 빼기 날짜, 날짜]`."""
+    rules, bad = [], []
+    if not os.path.exists(path):
+        return rules, bad
+    with open(path, encoding='utf-8') as f:
+        src = f.read().splitlines()
+    for i, ln in enumerate(src, 1):
+        if not RULE_START.match(ln):
+            continue
+        head, *opts = [p.strip() for p in ln.split(' | ')]
+        m = RULE.match(head)
+        try:
+            if not m:
+                raise ValueError('형식 아님')
+            kind, days, ymon, yday, mday, t0, t1, text = m.groups()
+            r = {'kind': kind, 'days': {WD.index(c) for c in re.findall('[월화수목금토일]', days or '')},
+                 'mday': int(mday) if mday else None, 'md': None, 't0': t0 and t0.zfill(5), 't1': t1 and t1.zfill(5),
+                 'text': text, 'start': None, 'end': None, 'skip': set()}
+            # 검사 순서·까닭 글은 repeat.ts parseRules 와 같다
+            weekly = kind in ('매주', '격주')
+            if weekly != bool(r['days']):
+                raise ValueError('요일 없음' if weekly else '요일은 매주·격주에만')
+            if (kind == '매달') != bool(mday):
+                raise ValueError('«N일» 없음' if kind == '매달' else '«N일»은 매달에만')
+            if (kind == '매년') != bool(ymon):
+                raise ValueError('«M월 D일» 없음' if kind == '매년' else '«M월 D일»은 매년에만')
+            if mday and not 1 <= r['mday'] <= 31:
+                raise ValueError('없는 날짜')
+            if ymon:
+                try:
+                    datetime(2024, int(ymon), int(yday))   # 윤년으로 재서 2월 29일도 받는다(윤년에만 생김)
+                except ValueError:
+                    raise ValueError('없는 날짜')
+                r['md'] = f'{int(ymon):02d}-{int(yday):02d}'
+            for t in (r['t0'], r['t1']):
+                if t and not (int(t[:2]) < 24 and int(t[3:]) < 60):
+                    raise ValueError('없는 시각')
+            if r['t1'] and r['t1'] <= r['t0']:
+                raise ValueError('끝 시각은 같은 날 시작보다 뒤')
+            if ' ^' in text:
+                raise ValueError('내용에 « ^» 금지(블록 id 자리)')
+
+            def day(s):
+                try:
+                    return datetime.strptime(s, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError('없는 날짜')
+            for o in opts:
+                if o.startswith('빼기'):
+                    r['skip'] |= {day(d) for d in DAY.findall(o)}
+                elif re.fullmatch(r'(\d{4}-\d{2}-\d{2})?~(\d{4}-\d{2}-\d{2})?', o):
+                    a, b = o.split('~')
+                    r['start'] = day(a) if a else None
+                    r['end'] = day(b) if b else None
+                else:
+                    raise ValueError(f'모르는 칸 «{o}»')
+            if kind == '격주' and not r['start']:
+                raise ValueError('격주는 시작 날짜가 있어야 함(그 주가 첫 주)')
+            rules.append(r)
+        except ValueError as e:
+            bad.append((i, str(e), ln.strip()))
+    return rules, bad
+
+
+def repeat_lines(rules, today):
+    """규칙을 오늘~오늘+AHEAD 의 일정 줄로. 블록 id = rep-<내용 해시 8>-<날짜> — 체크를 이어 받는 열쇠(시각만 바꾸면 체크가 남는다)."""
+    rows, last = [], today + timedelta(days=AHEAD)
+    for r in rules:
+        key = fnv(r['text'])
+        d, end = max(today, r['start'] or today), min(last, r['end'] or last)
+        anchor = r['start'] - timedelta(days=r['start'].weekday()) if r['start'] else None
+        while d <= end:
+            hit = (r['kind'] == '매일'
+                   or (r['kind'] == '매주' and d.weekday() in r['days'])
+                   or (r['kind'] == '격주' and d.weekday() in r['days'] and (d - anchor).days // 7 % 2 == 0)
+                   or (r['kind'] == '매달' and d.day == r['mday'])
+                   or (r['kind'] == '매년' and f'{d:%m-%d}' == r['md']))
+            if hit and d not in r['skip']:
+                t = f" {r['t0']}" + (f"~{r['t1']}" if r['t1'] else '') if r['t0'] else ''
+                rows.append((d, r['t0'] or '', f"- [ ] {d:%Y-%m-%d} ({WD[d.weekday()]}){t} {r['text']} ^rep-{key}-{d:%Y%m%d}"))
+            d += timedelta(days=1)
+    rows.sort(key=lambda x: (x[0], x[1]))
+    return [x[2] for x in rows]
+
+
+def repeat():
+    """반복-규칙.md → 반복-일정.md(생성 파일). 틀린 규칙은 빼고 알린다 — 나머지는 그대로 쓴다."""
+    rules, bad = repeat_rules(os.path.join(SCHED_DIR, RULE_FILE))
+    for i, why, ln in bad:
+        print(f'{RULE_FILE}:{i} 규칙 틀림({why}): {ln[:120]}')
+    if not rules and not os.path.exists(os.path.join(SCHED_DIR, REPEAT_FILE)):
+        print('반복 규칙 없음 — 쓰지 않음')
+        return 1 if bad else 0
+    print(write_generated(REPEAT_FILE, '반복 일정', '', repeat_lines(rules, datetime.now(KST).date()), note=REPEAT_NOTE.format(n=AHEAD), tag='반복'))
+    return 1 if bad else 0
 
 
 def parse_all():
@@ -436,6 +563,9 @@ def check():
         if err:
             bad += 1
             print(f'{os.path.basename(f)}:{i} {err}: {ln.strip()[:120]}')
+    for i, why, ln in repeat_rules(os.path.join(SCHED_DIR, RULE_FILE))[1]:
+        bad += 1
+        print(f'{RULE_FILE}:{i} 규칙 틀림({why}): {ln[:120]}')
     print(f'형식 오류 {bad}')
     return 1 if bad else 0
 
@@ -495,5 +625,7 @@ if __name__ == '__main__':
         sys.exit(check())
     if cmd == 'week':
         sys.exit(week(int(sys.argv[2]) if len(sys.argv) > 2 else 7))
+    if cmd == 'repeat':
+        sys.exit(repeat())
     print(__doc__)
     sys.exit(2)
