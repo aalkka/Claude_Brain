@@ -35,7 +35,8 @@
 },
 ".claude/skills/collect_desk/scripts/collect_desk.py": {
 "2679ecd411cf": "2da29fb18fb4c145",
-"47eba9e0e411": "3dca320f3c0b37f5"
+"47eba9e0e411": "3dca320f3c0b37f5",
+"550df6050b16": "8dc80de98e4016f7"
 },
 ".claude/skills/collect_desk/skills/add/SKILL.md": {
 "ef67d912e468": "93e7bac1fde3372c"
@@ -44,6 +45,7 @@
 "e8998d3cec11": "25aab976cffdee9b"
 },
 ".claude/skills/collect_desk/view/index.html": {
+"803533a53d09": "ed004971112472ac",
 "e2aed39e6079": "3f4b230e7e7861db",
 "f80254c60cd9": "222980138b0cbb3f"
 },
@@ -876,6 +878,7 @@
 "28fb944926ab": "6779851c5d9bd84d"
 },
 "3_시스템/tutorial/8-수집.md": {
+"64457b4ef319": "3cfe08a737de575f",
 "b5a6f3426409": "2dbeeb894938b698"
 },
 "3_시스템/tutorial/연습-주제.md": {
@@ -883,6 +886,7 @@
 },
 "3_시스템/tutorial/찾아보기.md": {
 "84d78ff2587b": "67b9c8bf3c2a2e76",
+"b8772027f9be": "09877b971abf207a",
 "feaf57ffa65f": "757b2d9ed78c34af"
 },
 "3_시스템/tutorial_lint.py": {
@@ -903,7 +907,8 @@
 "e1388635903c": "3987dddc25c04839"
 },
 "3_시스템/web-collect.py": {
-"34de88eca043": "ded681fc30be2d8b"
+"34de88eca043": "ded681fc30be2d8b",
+"5d43dffbb96c": "461b8a5f933cc062"
 },
 "3_시스템/weekly.py": {
 "df0d8c674abb": "a5d2832635922875",
@@ -939,7 +944,8 @@
 "e5e7b7323a3e": "a11af08f242ab483"
 },
 "3_시스템/설명서/설명서-수집.md": {
-"1cf87a9a8b21": "94e723d670883be3"
+"1cf87a9a8b21": "94e723d670883be3",
+"d1e0485b8e1c": "60fb661af9ca792c"
 },
 "3_시스템/설명서/설명서-원본-보기와-고치기.md": {
 "5eb5cec0b5a5": "29c67b047299fbbd"
@@ -995,6 +1001,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "9f9c5db4af0f",
+"rev": "9ab1f33b5e2c",
 "schema": 1
 }
