@@ -326,8 +326,8 @@ class Chapter:
         elif verb == "이름바꾸기" and not (len(_refs(arg.split("|")[0])) == 1 and "|" in arg and arg.split("|", 1)[1].strip()):
             o.block("VOCAB", step, f"{where} 이름바꾸기 꼴 — 이름바꾸기 @<연습 파일> | <새 이름>")
         elif verb == "받은함치우기":
-            o.block("OLD", step, f"{where} «받은함치우기» — 연습 받은함은 엔진이 장 끝에 치움(진짜 받은함은 안 씀 · brain-base 0.46.3)")
-        elif verb in ("밖에두기", "받은함넣기"):  # 연습 받은함 = 볼트 밖 임시 폴더(brain-base 0.46.3 · 진짜 받은함 0)
+            o.block("OLD", step, f"{where} «받은함치우기» — 받은함에 든 연습 파일은 엔진이 «옮기기» 흉내·장 끝에 바로 지움(장부 0 · brain-base 0.46.4)")
+        elif verb in ("밖에두기", "받은함넣기"):  # 연습 파일 = 볼트 밖 임시 폴더 → 진짜 받은함(brain-base 0.46.4 · 들어올 자리를 연습 장부에 먼저 적어 정리·받는 문·따라가기가 건너뜀)
             if not arg:
                 o.block("VOCAB", step, f"{where} «{verb}» 뒤에 파일 이름이 없음")
             self.outside.add(arg)

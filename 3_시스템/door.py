@@ -243,11 +243,29 @@ def fingerprint(a):
 
 
 def names_in_inbox():
+    """받은함 항목 — 튜토리얼 연습 파일은 뺀다(정리·본 기록 0 · 엔진이 바로 지움 · fileops.practice_paths)."""
+    import fileops
     d = roles.abs("inbox")
+    base, (tt, _) = roles.path("inbox"), fileops.practice_paths(VAULT)
     try:
-        return sorted(n for n in os.listdir(d) if not n.startswith((".", "_")) and n.lower() not in JUNK)
+        return sorted(n for n in os.listdir(d) if not n.startswith((".", "_")) and n.lower() not in JUNK and not fileops.in_practice(base + "/" + n, tt))
     except OSError:
         return []
+
+
+def practice_put(a):
+    """튜토리얼 연습 파일(볼트 밖 · 연습 장부에 적힌 것)을 우클릭·단축키로 넣음 → 받은함으로 그냥 옮기고 참(brain-base 0.46.4).
+    장부 줄·장부 보기·정리·되돌리기 칸·알림을 남기지 않는다 — 엔진이 받은함에서 해시를 맞춰 바로 지운다(사용자 11-09 «로그에 안 남게»)."""
+    import fileops
+    _, out = fileops.practice_paths(VAULT)
+    if os.path.normcase(os.path.abspath(a)) not in out or not os.path.isfile(a):
+        return False
+    dst = os.path.join(roles.abs("inbox"), os.path.basename(a))
+    if os.path.exists(dst):
+        return True     # 이미 넣음(엔진 것) — 같은 이름의 사람 파일이면 엔진이 이름을 바꿔 만든다
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.move(a, dst)
+    return True
 
 
 def mark_seen(names):
@@ -351,6 +369,9 @@ def keep_undo(items):
 def put(paths):
     import fileops
     import inbox
+    paths = [p for p in paths if not practice_put(p)]     # 튜토리얼 연습 파일 — 장부·알림 없이 옮기기만
+    if not paths:
+        return 0
     with Lock():
         ctx = fileops.Ctx(VAULT, by=BY)
         got, bad, taken = [], [], set()
