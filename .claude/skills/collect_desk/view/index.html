@@ -185,7 +185,7 @@ function itemOps(x,s){
   if(x.where==='vault')return[x.mark==='헛것'?['useful','쓸모']:['useless','헛것']];
   if(x.where==='arch')return[['restore','되돌리기']];
   const ok=live?[['rescue','승인']]:[];   // 승인은 글·첨부를 받을 수 있어 끈 출처엔 없다
-  return x.where==='pend'?[['reject','거절'],...ok]:ok;   // 묻는 창·후보 줄처럼 아니오 쪽이 먼저
+  return x.where==='pend'?[...ok,['reject','거절']]:ok;   // 승인이 먼저(11-09)
 }
 function itemRow(x,s){
   const btn=(x.id?itemOps(x,s):[]).map(op=>`<button class="btn act" data-item="${esc(s.id)}" data-aid="${esc(x.id)}" data-op="${op[0]}">${op[1]}</button>`).join('');
