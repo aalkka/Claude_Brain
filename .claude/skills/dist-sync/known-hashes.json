@@ -36,7 +36,8 @@
 ".claude/skills/collect_desk/scripts/collect_desk.py": {
 "2679ecd411cf": "2da29fb18fb4c145",
 "47eba9e0e411": "3dca320f3c0b37f5",
-"550df6050b16": "8dc80de98e4016f7"
+"550df6050b16": "8dc80de98e4016f7",
+"d2277ce29d57": "a629e58dfba34cfb"
 },
 ".claude/skills/collect_desk/skills/add/SKILL.md": {
 "ef67d912e468": "93e7bac1fde3372c"
@@ -45,6 +46,7 @@
 "e8998d3cec11": "25aab976cffdee9b"
 },
 ".claude/skills/collect_desk/view/index.html": {
+"2083183f13eb": "4be91633cebad0c3",
 "5912284f32bf": "1f4cacd5d74c212e",
 "803533a53d09": "ed004971112472ac",
 "e2aed39e6079": "3f4b230e7e7861db",
@@ -304,7 +306,8 @@
 "bdcc47725953": "16b8593d82c6a166"
 },
 "3_시스템/_eval/collect_core_check.py": {
-"3ee517b301f0": "b72c2ad04bd4afec"
+"3ee517b301f0": "b72c2ad04bd4afec",
+"950610571d0d": "cc04c7376680cd0c"
 },
 "3_시스템/_eval/collect_desk_chrome_check.py": {
 "3f45e7d51000": "5abd40df76fb5482"
@@ -313,12 +316,17 @@
 "9ad80162556a": "4cae0177a14edc17"
 },
 "3_시스템/_eval/collect_desk_view_check.mjs": {
+"377768f18cb1": "e7548798e80e8ffe",
 "6eb63d340b33": "7cf0ecd4c81a7097"
+},
+"3_시스템/_eval/collect_reject_check.py": {
+"f517e094d710": "6f95e132012f15f5"
 },
 "3_시스템/_eval/door_check.py": {
 "f1437e88d6b5": "536a4c1bd8ec9ade"
 },
 "3_시스템/_eval/filter_learn_check.py": {
+"0de253efaddd": "2d34782bc5faeae1",
 "dbf9fb128bf2": "15f0b2b0f6b22b4f"
 },
 "3_시스템/_eval/follow_check.py": {
@@ -515,6 +523,7 @@
 },
 "3_시스템/actions.json": {
 "0de9a4f6ccd0": "6e60b53de55cf672",
+"36917469dc0d": "fc0c39a3ee2cf8f1",
 "55f1fb41398c": "e2ec56021102acc1",
 "7c7fb8a761fb": "ce671497eef6d498"
 },
@@ -572,6 +581,7 @@
 "c95b7ecdeb6b": "a5518a0e5ee31085"
 },
 "3_시스템/filter-learn.py": {
+"0acd373cd1b6": "8f469540c6def6d7",
 "b93b2a3d7fb8": "bedf3713ae5eff8d"
 },
 "3_시스템/follow.py": {
@@ -723,6 +733,7 @@
 "5795de089e8e": "7807fee8d4945047"
 },
 "3_시스템/notice-filter.py": {
+"645ca237d1f5": "732ccfd11965fd9c",
 "cea5b6cc4f1c": "8c15c9666c107280"
 },
 "3_시스템/options.py": {
@@ -880,7 +891,8 @@
 },
 "3_시스템/tutorial/8-수집.md": {
 "64457b4ef319": "3cfe08a737de575f",
-"b5a6f3426409": "2dbeeb894938b698"
+"b5a6f3426409": "2dbeeb894938b698",
+"c16e67524379": "b3c0ea88602b9f62"
 },
 "3_시스템/tutorial/연습-주제.md": {
 "c28905880755": "3318e5fb1faa613c"
@@ -946,6 +958,7 @@
 },
 "3_시스템/설명서/설명서-수집.md": {
 "1cf87a9a8b21": "94e723d670883be3",
+"381b60dc6f1f": "817a99eef1192ebb",
 "c62870617da2": "6a2172d33d809b6d",
 "d1e0485b8e1c": "60fb661af9ca792c"
 },
@@ -1003,6 +1016,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "a918e31def30",
+"rev": "e2e26f763a1f",
 "schema": 1
 }
