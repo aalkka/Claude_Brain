@@ -368,8 +368,12 @@ def classify_one(name, ctx):
 
 
 def items():
+    """받은함 항목 — 튜토리얼 연습 파일은 뺀다(brain-base 엔진이 해시를 맞춰 바로 지움 · 정리·장부 0 · fileops.practice_paths)."""
     d = roles.abs("inbox")
-    return sorted(p for p in os.listdir(d) if not p.startswith((".", "_"))) if os.path.isdir(d) else []
+    if not os.path.isdir(d):
+        return []
+    base, (tt, _) = roles.path("inbox"), fileops.practice_paths(VAULT)
+    return sorted(p for p in os.listdir(d) if not p.startswith((".", "_")) and not fileops.in_practice(base + "/" + p, tt))
 
 
 def index_sources(dsts):

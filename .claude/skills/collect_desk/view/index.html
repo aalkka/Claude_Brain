@@ -149,8 +149,9 @@ function ask(msg,yes,fn){
 }
 function chips(arr,src,name){
   const rx=/[\\()^$.*+?\[\]{}]/;
-  return`<div class="chips">${(arr||[]).map(w=>rx.test(w)?`<span class="chip lock">${esc(w)}</span>`:`<span class="chip">${esc(w)}<button data-src="${esc(src)}" data-f="${name}-" data-v="${esc(w)}" aria-label="빼기">×</button></span>`).join('')}<input data-chip="${esc(src)}|${name}+" aria-label="더하기" placeholder="＋"></div>`;
+  return`<div class="chips">${(arr||[]).map(w=>rx.test(w)?`<span class="chip lock">${esc(w)}</span>`:`<span class="chip">${esc(w)}<button data-src="${esc(src)}" data-f="${name}-" data-v="${esc(w)}" aria-label="빼기">×</button></span>`).join('')}<input data-chip="${esc(src)}|${name}+" aria-label="더하기" placeholder="＋"${name==='skip'?' data-tt="뺄 말"':''}></div>`;
 }
+// 튜토리얼 «뺄 말»(8장)은 칩 상자가 아니라 입력칸을 가리킨다 — 상자를 가리키면 사람이 칩을 눌러 칸 초점이 빠지고 Enter 가 갈 곳이 없었다(사용자 11-09)
 function alarmCell(a){
   if(!a)return'<span class="sm">—</span>';
   const go=t=>`<button class="link" data-note="${esc(D.alarmNote)}">${t}</button>`;
@@ -170,7 +171,7 @@ function editor(s){
   }
   if(s.fixed){r.push(`<label>주기</label><span class="sm">주간 점검 · 30일</span>`);r.push(`<label>알림</label>${alarmCell(s.alarm)}`);return`<div class="ed">${r.join('')}</div>`}
   if(s.keep)r.push(`<label>남길 말</label>${chips(s.keep,s.id,'keep')}`);
-  r.push(`<label>뺄 말</label><div data-tt="뺄 말">${chips(s.skip,s.id,'skip')}</div>`);
+  r.push(`<label>뺄 말</label><div>${chips(s.skip,s.id,'skip')}</div>`);
   if(s.target)r.push(`<label>대상</label><span class="chip" style="justify-self:start">${esc(s.target)}</span>`);
   r.push(`<label>주기</label><div class="line"><select data-hours="${esc(s.id)}" data-tt="주기" aria-label="주기">${[...new Set([...HOURS,s.hours])].sort((a,b)=>a-b).map(h=>`<option value="${h}" ${h===s.hours?'selected':''}>${h}시간</option>`).join('')}</select>${s.pages?`<span class="pair"><span class="sm">쪽</span><span class="pill"><button data-src="${esc(s.id)}" data-f="pages" data-v="${Math.max(1,s.pages-1)}" aria-label="쪽 빼기">−</button><b>${esc(s.pages)}</b><button data-src="${esc(s.id)}" data-f="pages" data-v="${Math.min(9,s.pages+1)}" aria-label="쪽 더하기">＋</button></span></span>`:''}</div>`);
   if(s.att)r.push(`<label>첨부</label><div class="line"><span class="pair">${sw(s.att.download,'첨부',s.id,'download')}<span class="sm">파일</span></span><span class="pair">${sw(s.att.images,'그림',s.id,'images')}<span class="sm">그림</span></span><span class="sm">${esc(s.att.max_mb)}MB</span></div>`);

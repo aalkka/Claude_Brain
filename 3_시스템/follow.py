@@ -73,9 +73,20 @@ def machine_dirs():
     return {roles.path("source_index"), roles.path("sources") + "/_lms", roles.path("work") + "/튜토리얼"}
 
 
+_PRACTICE = None
+
+
+def practice():
+    """튜토리얼이 맡은 자리(연습 장부 · 받은함에 넣는 연습 파일 포함 · brain-base 0.46.4) — 한 번 돌 때 한 번 읽는다."""
+    global _PRACTICE
+    if _PRACTICE is None:
+        _PRACTICE = fileops.practice_paths(VAULT)[0]
+    return _PRACTICE
+
+
 def in_scope(p):
-    if not under(p, content_roots()) or under(p, machine_dirs()):
-        return False
+    if not under(p, content_roots()) or under(p, machine_dirs()) or fileops.in_practice(p, practice()):
+        return False   # 연습 파일이 사진에 들면 엔진의 지움이 «바깥에서 지움» 장부 줄이 된다
     parts = p.split("/")
     return not any(x.startswith(".") for x in parts[:-1]) and not ignored(parts[-1])
 
@@ -128,6 +139,7 @@ def scan(base, budget=None):
     files, blind = {}, []
     left = budget
     skip = machine_dirs()
+    tt = practice()   # 튜토리얼 연습 자리(받은함에 넣는 연습 파일 포함) — 사진에 넣지 않는다
     stack = content_roots()
     while stack:
         d = stack.pop()
@@ -145,7 +157,7 @@ def scan(base, budget=None):
                     if not e.name.startswith(".") and r not in skip:
                         stack.append(r)
                     continue
-                if ignored(e.name) or not e.is_file(follow_symlinks=False):
+                if ignored(e.name) or not e.is_file(follow_symlinks=False) or (tt and fileops.in_practice(r, tt)):
                     continue
                 st = e.stat(follow_symlinks=False)
             except OSError:

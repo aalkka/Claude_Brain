@@ -951,7 +951,7 @@ def practice_inputs(now):
     day = lambda h: f'{ago(h):%Y-%m-%d}'
     notice = {'id': '연습-공지', 'name': '학과 공지', 'family': 'regex', 'page': 'https://example.org/notice', 'recheck_hours': 6, 'list': {'pages': 2},
               'attachments': {'download': True, 'images': False, 'max_mb': 20}, 'purpose': '학과 공지에서 마감·행사',
-              'filter': {'title_skip': '광고|설문', 'keep_days': 90, 'auto': True, 'schedule': '학과-일정.md'}}
+              'filter': {'title_skip': '설문', 'keep_days': 90, 'auto': True, 'schedule': '학과-일정.md'}}   # «광고»는 8장이 칸에 채워 더하는 낱말 — 미리 있으면 Enter 뒤에 바뀌는 것이 안 보인다(11-09)
     items = {'n1': {'title': '2학기 장학금 신청 안내', 'date': day(5), 'path': '2_지식/연습/장학금.md'},
              'n2': {'title': '졸업 논문 제출 일정', 'date': day(30), 'path': '2_지식/연습/논문.md'},
              'n3': {'title': '학생회 설문 참여 부탁', 'date': day(8), 'verdict': '뺌', 'why': '제목에 «설문»'},

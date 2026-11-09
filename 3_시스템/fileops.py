@@ -1138,6 +1138,33 @@ def hidden_ids(ctx):
     return {x for x in h if isinstance(x, str)} if isinstance(h, list) else set()
 
 
+def practice_paths(vault):
+    """튜토리얼 연습 장부가 맡은 자리 → (볼트 상대 경로 집합, 볼트 밖 절대 경로 집합 — normcase).
+    상대 = 엔진이 만든 연습 파일·폴더 + 사람이 받은함으로 넣을 자리(also · brain-base 0.46.4 «진짜 받은함으로 넣기» 연습).
+    받은함 정리(inbox.py)·받는 문(door.py)·따라가기(follow.py)는 이 자리를 진짜 파일로 보지 않는다 — 엔진이 해시를 맞춰 바로 지우니
+    장부 줄·휴지통·알림·되돌리기 칸을 남기면 안 된다(사용자 11-09 «로그에 안 남게»)."""
+    try:
+        with open(os.path.join(vault, *PRACTICE_BOOK.split("/")), encoding="utf-8") as f:
+            made = json.load(f).get("made")
+    except (OSError, ValueError, AttributeError):
+        return set(), set()
+    rel, out = set(), set()
+    for m in made if isinstance(made, list) else []:
+        if not isinstance(m, dict) or not isinstance(m.get("path"), str):
+            continue
+        if m.get("outside"):
+            out.add(os.path.normcase(os.path.abspath(m["path"])))
+        else:
+            rel.add(m["path"])
+        rel.update(a for a in (m.get("also") or []) if isinstance(a, str))
+    return rel, out
+
+
+def in_practice(p, rel):
+    """볼트 상대 경로 p 가 연습 자리(그 자리 또는 그 폴더 안)인가 — rel = practice_paths()[0]."""
+    return p in rel or any(p.startswith(r + "/") for r in rel)
+
+
 def op_undo(ctx, key):
     evs = load_events(ctx)
     group = [e for e in evs if e.get("id") == key] or [e for e in evs if e.get("batch") == key]
