@@ -180,16 +180,15 @@ function editor(s){
   return`<div class="ed">${r.join('')}</div>`;
 }
 const evs=s=>s.events.length?`<div class="ev">${s.events.map(e=>`<span>${esc(e.t)}</span><span class="${e.bad?'bad':e.me?'me':''}">${esc(e.s)}</span>`).join('')}</div>`:'<span class="sm">—</span>';
-function itemOp(x,s){
+function itemOps(x,s){
   const live=s.on&&!D.allOff;
-  if(x.where==='vault')return x.mark==='헛것'?['useful','쓸모']:['useless','헛것'];
-  if(x.where==='pend')return['reject','빼기'];
-  if(x.where==='arch')return['restore','되돌리기'];
-  return live?['rescue','살리기']:null;   // 살리기는 글을 받을 수 있어 끈 출처엔 없다
+  if(x.where==='vault')return[x.mark==='헛것'?['useful','쓸모']:['useless','헛것']];
+  if(x.where==='arch')return[['restore','되돌리기']];
+  const ok=live?[['rescue','승인']]:[];   // 승인은 글·첨부를 받을 수 있어 끈 출처엔 없다
+  return x.where==='pend'?[['reject','거절'],...ok]:ok;   // 묻는 창·후보 줄처럼 아니오 쪽이 먼저
 }
 function itemRow(x,s){
-  const op=x.id?itemOp(x,s):null;
-  const btn=op?`<button class="btn act" data-item="${esc(s.id)}" data-aid="${esc(x.id)}" data-op="${op[0]}">${op[1]}</button>`:'';
+  const btn=(x.id?itemOps(x,s):[]).map(op=>`<button class="btn act" data-item="${esc(s.id)}" data-aid="${esc(x.id)}" data-op="${op[0]}">${op[1]}</button>`).join('');
   const inner=`<span class="n" title="${esc(x.title)}">${esc(x.title)}</span>${x.why?`<span class="y" title="${esc(x.why)}">${esc(x.why)}</span>`:''}${x.mark?`<span class="sm">${esc(x.mark)}</span>`:''}<span class="sm">${esc((x.date||'').slice(5))}</span>${btn}`;
   return x.note?`<div class="it go" role="button" tabindex="0" data-note="${esc(x.note)}" data-tt="글">${inner}</div>`:`<div class="it" data-tt="글">${inner}</div>`;
 }

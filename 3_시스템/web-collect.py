@@ -623,7 +623,7 @@ def restore(rc, aid=None):
 
 
 def rescue(rc, aid, run):
-    """사용자가 살린 글(수집 창) — 대기 칸 글은 그대로 볼트로, 장부 글은 본문을 안 받았으니 지금 받아 들인다.
+    """사용자가 승인한 글(수집 창 «승인») — 대기 칸 글(판정 대기 포함)은 그대로 볼트로, 장부 글은 본문을 안 받았으니 지금 받아 들인다.
     «쓸모» 표시를 남겨 판정(judge_one)·보존(expire)·보관(archive)이 되돌리지 않는다. 추출이 없던 글의 마감은 다음 판정 때 잡힌다."""
     nf = filt()
     sp, st = load_state(rc)
@@ -652,7 +652,7 @@ def rescue(rc, aid, run):
     keep_raw(rc, aid, raw)
     it['files'] = take_attachments(rc, run, p, v)
     it['path'] = os.path.relpath(p, VAULT)
-    it['verdict'], it['why'] = '관심', '사용자 살림'
+    it['verdict'], it['why'] = '관심', '사용자 승인'
     it.pop('stage', None)
     it.pop('v_att', None)
     save_state(sp, st)
@@ -660,9 +660,9 @@ def rescue(rc, aid, run):
         if os.path.exists(f):
             os.remove(f)
     marks = nf.load_marks()
-    marks[f'{rc["id"]}:{aid}'] = {'평가': '쓸모', '메모': '살림', 'at': time.strftime('%Y-%m-%d %H:%M')}
+    marks[f'{rc["id"]}:{aid}'] = {'평가': '쓸모', '메모': '승인', 'at': time.strftime('%Y-%m-%d %H:%M')}
     nf.save_marks(marks)
-    log(f'{rc["id"]}: 살림 {aid} → {it["path"]}')
+    log(f'{rc["id"]}: 승인 {aid} → {it["path"]}')
     if any(x.get('path') for x in it['files']):
         ingest({os.path.join(VAULT, folder_of(rc))})
 
@@ -1448,7 +1448,7 @@ def main():
     ap.add_argument('--archive', action='store_true', help='거르는 출처: 지금 엔진이면 들이지 않았을 볼트 글을 보관 칸으로(--dry = 목록만)')
     ap.add_argument('--restore', action='store_true', help='보관 칸 → 볼트(--id 로 한 글만)')
     ap.add_argument('--expire', action='store_true', help='보존 일정표 «웹공지»: 마감 + 날이 지난 볼트 글 → 휴지통')
-    ap.add_argument('--rescue', action='store_true', help='사용자가 살린 글 → 볼트(--source · --id 필수 · 수집 창이 부른다)')
+    ap.add_argument('--rescue', action='store_true', help='사용자가 승인한 글 → 볼트(--source · --id 필수 · 수집 창이 부른다)')
     ap.add_argument('--id')
     ap.add_argument('--probe', metavar='URL', help='수집 추가 탐색: 한 쪽을 받아 draft/probe 에 두고 요약 JSON(피드 찾기·robots)')
     ap.add_argument('--preview', metavar='조리법.json', help='미리보기(저장 없음): 목록 1쪽 + 관문 결과 JSON · --view = 첫 글 하나도')
