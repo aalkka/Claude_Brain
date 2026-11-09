@@ -18,7 +18,7 @@
 없으면 그 줄이 안 나온다(출처 0 인 배포판에서도 돈다). enabled·purpose·desk.json·collect.local.json 은 있으면 읽는다(없으면 켜짐·빈칸).
 mylms 주소 = 확장 lms/manifest.json 의 host_permissions(코드에 학교를 박지 않는다).
 쓰는 곳 = 조리법의 허용 칸 · collect.local.json(전체 스위치) · lms/desk.json(mylms) · 기능 단계 «아침 받기»(깨우기 — options.py · 예약은 lms-auto.py --wake-sync) · lms/courses.json · lms/candidates.json · 대기열 한 줄 + 엔진 호출. 임시 파일 뒤 교체 · 주소·정규식·가족·계약 문구는 안 고친다.
-비밀번호를 다루지 않고 계약 없는 출처를 돌리는 길이 없다(받기·살리기는 엔진의 계약·스위치 관문을 그대로 지난다).
+비밀번호를 다루지 않고 계약 없는 출처를 돌리는 길이 없다(받기·승인은 엔진의 계약·스위치 관문을 그대로 지난다).
 """
 import argparse
 import datetime as dt
@@ -84,7 +84,7 @@ def where(it):
 
 
 def note_of(it, sid, aid):
-    """눌렀을 때 열 글 — 볼트 글 · 보관 칸 글 · 대기 칸 글(살리거나 빼기 전에 읽는다). 장부 글은 본문이 없다."""
+    """눌렀을 때 열 글 — 볼트 글 · 보관 칸 글 · 대기 칸 글(승인·거절 전에 읽는다). 장부 글은 본문이 없다."""
     idx = '3_시스템/_index/collect/'
     p = it.get('path') or (idx + 'archive/' + it['archived'] if it.get('archived') else '')
     if not p and it.get('stage'):
@@ -162,8 +162,16 @@ def web_events():
     for key, v in marks.items():
         if isinstance(v, dict) and ':' in key and v.get('at'):
             sid, aid = key.split(':', 1)
-            ev.setdefault(sid, []).append({'t': v['at'][5:], 's': v.get('메모') or v.get('평가') or '', 'me': True, 'aid': aid})
+            ev.setdefault(sid, []).append({'t': v['at'][5:], 's': said(v.get('메모') or v.get('평가') or ''), 'me': True, 'aid': aid})
     return ev
+
+
+# 단추 이름이 살리기·빼기에서 승인·거절로 바뀌기 전(11-09) 장부에 남은 낱말 — 기록은 그대로 두고 화면에서만 지금 이름으로
+SAID_NOW = {'살림': '승인', '사용자 살림': '사용자 승인', '수집 창에서 뺌': '거절', '사용자: 수집 창에서 뺌': '사용자: 거절'}
+
+
+def said(s):
+    return SAID_NOW.get(s, s)
 
 
 def titled(events, items):
@@ -230,7 +238,7 @@ def web_source(path, events, queue, cfg, now):
             if isinstance(it, dict):
                 w = where(it)
                 cnt[w] += 1
-                rows.append({'id': aid, 'title': (it.get('title') or '').strip(), 'date': (it.get('date') or '')[:10], 'where': w, 'why': (it.get('why') or '')[:70], 'note': note_of(it, sid, aid),
+                rows.append({'id': aid, 'title': (it.get('title') or '').strip(), 'date': (it.get('date') or '')[:10], 'where': w, 'why': said(it.get('why') or '')[:70], 'note': note_of(it, sid, aid),
                              'mark': (marks.get(f'{sid}:{aid}') or {}).get('평가') or ''})
         rows.sort(key=lambda x: x['date'], reverse=True)
         w = rc.get('words') or {}      # 낱말 관문(11-06) — 판정 층이 있으면 뺄 말 = 그 층의 title_skip, 없으면 words.skip · 남길 말 = words.keep
@@ -662,17 +670,17 @@ def judge_source(sid):
 
 
 def item(sid, aid, op):
-    """글 하나 — 살리기(대기 칸·장부 → 볼트) · 빼기(대기 칸 → 장부) · 되돌리기(보관 칸 → 볼트) · 헛것·쓸모 표시."""
+    """글 하나 — 승인 rescue(판정 대기·대기 칸·장부 → 볼트) · 거절 reject(판정 대기 → 장부) · 되돌리기(보관 칸 → 볼트) · 헛것·쓸모 표시."""
     recipe_of(sid)
     if aid not in ((load(SYS, '_index', 'collect', sid + '.json', default={}) or {}).get('items') or {}):
         raise Refuse(f'없는 글: {aid}')
-    with Busy(sid, {'rescue': '살리는 중'}.get(op, '고치는 중')):
+    with Busy(sid, {'rescue': '승인 중'}.get(op, '고치는 중')):
         if op == 'rescue':
             engine('web-collect.py', '--rescue', '--source', sid, '--id', aid)
         elif op == 'restore':
             engine('web-collect.py', '--restore', '--source', sid, '--id', aid)
         elif op == 'reject':
-            engine('notice-filter.py', 'reject', aid, '수집 창에서 뺌')
+            engine('notice-filter.py', 'reject', aid, '거절')
             engine('notice-filter.py', 'judge')
         elif op in ('useless', 'useful'):
             engine('notice-filter.py', 'mark', aid, '헛것' if op == 'useless' else '쓸모')
@@ -901,7 +909,7 @@ def my_events():
             act = e.get('action')
             if e.get('code'):
                 continue
-            # 살리기·빼기·헛것·쓸모는 표시 장부(평가.json)가 제목과 함께 말한다
+            # 승인·거절·헛것·쓸모는 표시 장부(평가.json)가 제목과 함께 말한다
             s = (event_word(g['field'], g['value']) if act == 'collect_desk.set' else
                  '지금 받기' if act == 'collect_desk.fetch' else
                  '판정' if act == 'collect_desk.judge' else
@@ -1019,7 +1027,7 @@ def practice_act(F, act, now):
             it['path'] = f'2_지식/연습/{g["id"]}.md'
         elif op == 'reject':
             it.pop('stage', None)
-            it.update(verdict='뺌', why='수집 창에서 뺌')
+            it.update(verdict='뺌', why='사용자: 거절')
         elif op in ('useless', 'useful'):
             F.setdefault('3_시스템/_index/collect/평가.json', {})[f'{src}:{g["id"]}'] = {'평가': '헛것' if op == 'useless' else '쓸모', 'at': f'{now:%Y-%m-%d %H:%M}'}
         else:
