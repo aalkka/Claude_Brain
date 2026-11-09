@@ -708,19 +708,21 @@ def save_marks(m):
     os.replace(MARKS + '.tmp', MARKS)
 
 
-def mark(aid, what, memo=''):
-    """볼트 글 하나에 사용자 표시 — 헛것(필요 없었음) · 쓸모(썼음). Claude 가 사용자 말을 받아 적는다. 글번호는 끝자리만 줘도 된다."""
+def mark(aid, what, memo='', **more):
+    """볼트 글 하나에 사용자 표시 — 헛것(필요 없었음) · 쓸모(썼음). Claude 가 사용자 말을 받아 적는다. 글번호는 끝자리만 줘도 된다.
+    more = 빈 값이 아닌 것만 붙는다(거절 단추: 길='단추' · 낱말=제목에서 고른 낱말 — filter-learn 이 메모 대신 이것으로 배운다)."""
     hits = [(rc['id'], k) for rc in recipes() for k in state_items(rc) if k == aid or k.endswith(aid)]
     if len(hits) != 1:
         sys.exit(f'글번호 «{aid}»: {len(hits)}건 일치 — 더 길게 적을 것')
     m = load_marks()
-    m[f'{hits[0][0]}:{hits[0][1]}'] = {'평가': what, '메모': memo, 'at': time.strftime('%Y-%m-%d %H:%M')}
+    m[f'{hits[0][0]}:{hits[0][1]}'] = {'평가': what, '메모': memo, **{k: v for k, v in more.items() if v}, 'at': time.strftime('%Y-%m-%d %H:%M')}
     save_marks(m)
     print(f'표시 {hits[0][0]} {hits[0][1]} = {what}')
 
 
-def reject(aid, why):
-    """사용자가 읽고 뺀 글 — 추출하지 않고(사용량 0) 대기 칸에서 지워 제목·근거 장부 줄만 남긴다. Claude 가 사용자 말을 받아 적는다."""
+def reject(aid, why, words=(), button=False):
+    """사용자가 읽고 뺀 글 — 추출하지 않고(사용량 0) 대기 칸에서 지워 제목·근거 장부 줄만 남긴다. Claude 가 사용자 말을 받아 적는다.
+    button = 수집 창 거절 단추(11-09) — why 는 사용자 메모(비어도 됨) · words 는 제목에서 고른 낱말. 단추가 «거절»을 까닭으로 적어 되먹임이 «까닭 안 맞음»을 내던 것을 막는다."""
     hits = [rc for rc in recipes() if aid in state_items(rc)]
     if len(hits) != 1:
         sys.exit(f'글번호 «{aid}»: {len(hits)}건 일치')
@@ -729,7 +731,9 @@ def reject(aid, why):
     st = json.load(open(sp, encoding='utf-8'))
     it = st['items'][aid]
     it.pop('stage', None)
-    it.update(verdict='비해당', why=f'사용자: {why}')
+    words = [w for w in dict.fromkeys(w.strip() for w in words) if w]
+    said = ' · '.join([f'«{w}»' for w in words] + ([why] if why else []))
+    it.update(verdict='비해당', why=f'사용자: {said or "거절"}')
     with open(sp + '.tmp', 'w', encoding='utf-8', newline='\n') as f:
         json.dump(st, f, ensure_ascii=False, indent=1)
     os.replace(sp + '.tmp', sp)
@@ -737,7 +741,7 @@ def reject(aid, why):
         f = os.path.join(STAGE, rc['id'], f'{aid}.{k}')
         if os.path.exists(f):
             os.remove(f)
-    mark(aid, '헛것', why)
+    mark(aid, '헛것', why, 길='단추' if button else '', 낱말=words)
     print(f'뺌 {rc["id"]} {it.get("title", "")[:50]}')
 
 
@@ -897,7 +901,10 @@ def write_schedule(rows, SCHED, label):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('cmd', choices=['extract', 'judge', 'mark', 'miss', 'reject'])
-    ap.add_argument('args', nargs='*', help='mark <글번호> 헛것|쓸모 [메모] · miss "<무엇>" [주소]')
+    ap.add_argument('args', nargs='*', help='mark <글번호> 헛것|쓸모 [메모] · miss "<무엇>" [주소] · reject <글번호> <까닭> | reject <글번호> --button [--word 낱말]… [--memo 메모]')
+    ap.add_argument('--button', action='store_true', help='reject: 수집 창 거절 단추(까닭 = 고른 낱말·메모 · 둘 다 비어도 됨)')
+    ap.add_argument('--word', action='append', default=[], help='reject --button: 제목에서 고른 낱말(여럿)')
+    ap.add_argument('--memo', default='', help='reject --button: 사용자 메모')
     ap.add_argument('--max', type=int, default=60)
     ap.add_argument('--refresh', action='store_true', help='첨부 글자가 새로 생긴 «첨부에만» 공지를 다시 뽑는다')
     ap.add_argument('--again', nargs='+', default=[], metavar='글번호', help='캐시가 있어도 이 글을 다시 뽑는다(첨부 색인을 고친 공고)')
@@ -911,9 +918,12 @@ def main():
             sys.exit('mark <글번호> 헛것|쓸모 [메모]')
         mark(a.args[0], a.args[1], ' '.join(a.args[2:]))
     elif a.cmd == 'reject':
-        if len(a.args) < 2:
-            sys.exit('reject <글번호> <까닭>')
-        reject(a.args[0], ' '.join(a.args[1:]))
+        if a.button and len(a.args) == 1:
+            reject(a.args[0], a.memo.strip(), a.word, button=True)
+        elif not a.button and len(a.args) >= 2:
+            reject(a.args[0], ' '.join(a.args[1:]))
+        else:
+            sys.exit('reject <글번호> <까닭> | reject <글번호> --button [--word 낱말]… [--memo 메모]')
     elif a.cmd == 'miss':
         if not a.args:
             sys.exit('miss "<무엇>" [주소]')

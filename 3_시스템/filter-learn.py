@@ -244,7 +244,7 @@ def learn(dry=False, quiet=False):
     say = (lambda *a: None) if quiet else print
     marks = nf.load_marks()
     me = nf.card()
-    done = {'쓸모 표시': 0, '제외어': 0, '풀림': 0, '까닭 안 맞음': 0, '재단': 0}
+    done = {'쓸모 표시': 0, '제외어': 0, '풀림': 0, '까닭 안 맞음': 0, '거절 메모': 0, '재단': 0}
     changed_marks, changed_card = False, False
     items = list(all_items())
     # ③ 손 노트 → 암묵 쓸모 · 손으로 수집한 같은 글(1_수집 의 같은 제목 파일 · 엔진이 쓴 파일이 아닌 것)도 신호다
@@ -269,29 +269,48 @@ def learn(dry=False, quiet=False):
                 changed_marks = True
     # ② 뺀 글 → 까닭 대조 → 제외어
     index = {f'{rc["id"]}:{aid}': (rc, aid, it) for rc, aid, it in items}
+
+    def skip_word(rc, key, word):
+        """제목 낱말 하나 → 사용자 뺌 묶음(남길 글에 걸리면 보류). 결과 한 줄."""
+        nonlocal changed_card
+        if word in '|'.join(words(rc['filter'].get('title_skip')) + [w for w, _ in nf.card_words(me)]):
+            return f'이미 제외어 «{word}»'
+        hits, prot = protected_hits(re.escape(word), key)
+        if prot:
+            return f'보류 — «{word}» 가 남길 글 {len(prot)}건에 걸림'
+        done['제외어'] += 1
+        if not dry:
+            rule_group(me, '사용자 뺌', '사용자가 뺀 글의 까닭(평가.json)')['말'].append(re.escape(word))
+            changed_card = True
+        return f'제외어 «{word}» · 다른 글 {len(hits)}건 · 손실 0'
+
     for key, m in list(marks.items()):
         if key.startswith('_') or m.get('평가') != '헛것' or m.get('되먹음') or key not in index:
             continue
         rc, aid, it = index[key]
         title = it.get('title') or ''
-        toks = reason_tokens(m.get('메모'))
+        memo = (m.get('메모') or '').strip()
+        result = ''
+        if m.get('길') == '단추' or memo in ('거절', '수집 창에서 뺌'):
+            # 수집 창 거절 단추(11-09) — 낱말은 사용자가 제목에서 골랐다(대조 불필요) · 메모는 글자 대조하지 않고 카드 조건 후보로 대기열에 · 옛 단추 기록(«거절»)은 까닭 없음
+            memo = '' if memo in ('거절', '수집 창에서 뺌') and not m.get('길') else memo
+            got = [skip_word(rc, key, w) for w in m.get('낱말') or [] if w in title]
+            if memo:
+                done['거절 메모'] += 1
+                got.append('메모 → 대기열')
+                if not dry:
+                    queue('filter-learn', f'거절 메모 — 자격 카드 조건으로 올릴지 사용자에게 확인: «{memo[:60]}» · {title[:50]} (`{key}`)')
+            result = ' · '.join(got) or '거절 · 까닭 없음(대조 안 함)'
+            say(f'뺀 글 {title[:36]} → {result}')
+            if not dry:
+                m['되먹음'] = result
+                changed_marks = True
+            continue
+        toks = reason_tokens(memo)
         in_title = [w for w in toks if w in title]
         text = body_of(rc, aid, it)
-        result = ''
         if in_title:
-            word = max(in_title, key=len)
-            already = word in '|'.join(words(rc['filter'].get('title_skip')) + [w for w, _ in nf.card_words(me)])
-            hits, prot = protected_hits(re.escape(word), key)
-            if already:
-                result = f'이미 제외어 «{word}»'
-            elif prot:
-                result = f'보류 — «{word}» 가 남길 글 {len(prot)}건에 걸림'
-            else:
-                result = f'제외어 «{word}» · 다른 글 {len(hits)}건 · 손실 0'
-                done['제외어'] += 1
-                if not dry:
-                    rule_group(me, '사용자 뺌', '사용자가 뺀 글의 까닭(평가.json)')['말'].append(re.escape(word))
-                    changed_card = True
+            result = skip_word(rc, key, max(in_title, key=len))
         elif toks and not any(w in text for w in toks):
             result = '까닭 안 맞음 — 까닭의 말이 글에 없음'
             done['까닭 안 맞음'] += 1

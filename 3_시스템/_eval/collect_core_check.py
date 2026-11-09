@@ -5,7 +5,7 @@
 
 ① views.json 꼴 — 수집 화면 선언 하나 · html·data 대본이 볼트 안 · 대화 입구 = /collect_desk: · contract(touches·reads·forbids)
 ② 모듈 아님(4단계 뒤) — module.json 없음 · 모듈 목록에 없음 · 명령 이름 그대로 · 장 = 코어 8장(머리 «화면:»·«옛 id:») · 설명서 = 코어 자리 · 모듈 자리 장·설명서·옛 사본 없음
-③ 행위 — collect_desk.* 10 이 코어 actions.json 에 한 번씩 · brain.py 가 겹침 없이 읽음 · 화면·스킬이 부르는 id 가 다 있음
+③ 행위 — collect_desk.* 11 이 코어 actions.json 에 한 번씩 · brain.py 가 겹침 없이 읽음 · 화면·스킬이 부르는 id 가 다 있음
    · 예약·홈이 부르는 collect.lms·collect.lms.wake·collect.web 이 코어에 그대로
 ④ 1_수집 — collect_desk.py·화면에 1_수집 글자 0 · contract·watch 가 1_수집 에 안 닿고 forbids 에 1_수집/**
 ⑤ 전체 스위치(switch_cases) — 엔진 셋(web-collect·lms-auto·filter-learn)과 창 대본이 같은 규칙 · 창 set 이 새 자리에 쓰고 옛 자리 같은 칸을 걷음
@@ -27,7 +27,7 @@ VAULT = os.path.dirname(SYS)
 MOD = os.path.join(VAULT, '.claude', 'skills', 'collect_desk')
 DESK_PY = os.path.join(MOD, 'scripts', 'collect_desk.py')
 OWNER = 'collect_desk'
-IDS = [OWNER + '.' + x for x in ('set', 'fetch', 'judge', 'item', 'open', 'contract', 'probe', 'try', 'add', 'fix')]
+IDS = [OWNER + '.' + x for x in ('set', 'fetch', 'judge', 'item', 'open', 'contract', 'probe', 'try', 'add', 'fix', 'reject')]
 KEEP = ('collect.lms', 'collect.lms.wake', 'collect.web')     # 예약(lms-tasks.ps1)·홈 «수집» 칸이 부르는 id — 바뀌면 15분 확인·아침 깨우기가 선다
 SWITCH = '3_시스템/collect.local.json'
 res = []

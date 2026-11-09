@@ -30,6 +30,12 @@ select{border:1px solid var(--line2);border-radius:5px;background:var(--bg);colo
 .dlg>div{background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:16px 18px;max-width:340px}
 .dlg p{margin:0 0 14px}
 .dlg .row{display:flex;justify-content:flex-end;gap:6px}
+.rj{width:340px}.rj .q{margin:0 0 3px}
+.rj .t{margin:0 0 12px;font-size:11.5px;color:var(--tx3);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.wd{border:1px solid var(--line2);background:none;border-radius:4px;padding:0 7px;font-size:12px;line-height:20px;cursor:pointer}
+.wd:hover{background:var(--bg3)}.wd.on{background:var(--err2);border-color:transparent;color:var(--err);text-decoration:line-through;text-decoration-thickness:1.5px}
+.rj .memo{display:block;width:100%;margin:12px 0 16px;border:0;border-bottom:1px solid var(--line2);background:none;outline:0;font:inherit;color:inherit;padding:2px 0}
+.rj .memo:focus{border-bottom-color:var(--accent)}
 .btn{border:1px solid var(--line2);background:var(--bg);border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px}
 .btn.warn{background:var(--warn2);border-color:transparent;color:var(--warn);font-weight:600}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
@@ -147,6 +153,21 @@ function ask(msg,yes,fn){
   el.onclick=e=>{e.stopPropagation();if(e.target.closest('[data-y]'))fn();if(e.target.closest('[data-y],[data-n]')||e.target===el)el.remove()};
   document.body.append(el);
 }
+// 거절(11-09) — 제목 낱말을 누르면 그 말이 든 글을 다음부터 거름(filter-learn) · 메모는 Claude 가 자격 카드에 올릴지 사용자에게 묻는다 · 둘 다 비워도 거절됨
+function rejectBox(s,x){
+  const el=document.createElement('div');el.className='dlg';
+  el.innerHTML=`<div class="rj"><p class="q">거절하시겠습니까?</p><p class="t">${esc(x.title)}</p><div class="chips">${(x.words||[]).map(w=>`<button class="wd" data-w="${esc(w)}" aria-pressed="false">${esc(w)}</button>`).join('')}</div><input class="memo" aria-label="메모" placeholder="메모" maxlength="200"><div class="row"><button class="btn" data-n>취소</button><button class="btn warn" data-y>거절</button></div></div>`;
+  const go=()=>{el.remove();send({t:'act',id:'collect_desk.reject',args:{source:s.id,id:x.id,words:[...el.querySelectorAll('.wd.on')].map(b=>b.dataset.w).join('|'),memo:el.querySelector('.memo').value.trim()}})};
+  el.onclick=e=>{
+    e.stopPropagation();
+    const w=e.target.closest('.wd');
+    if(w){w.classList.toggle('on');w.setAttribute('aria-pressed',String(w.classList.contains('on')));return}
+    if(e.target.closest('[data-y]'))return go();
+    if(e.target.closest('[data-n]')||e.target===el)el.remove();
+  };
+  el.onkeydown=e=>{e.stopPropagation();if(e.key==='Escape')el.remove();else if(e.key==='Enter'&&e.target.classList.contains('memo'))go()};
+  document.body.append(el);el.querySelector('.memo').focus();
+}
 function chips(arr,src,name){
   const rx=/[\\()^$.*+?\[\]{}]/;
   return`<div class="chips">${(arr||[]).map(w=>rx.test(w)?`<span class="chip lock">${esc(w)}</span>`:`<span class="chip">${esc(w)}<button data-src="${esc(src)}" data-f="${name}-" data-v="${esc(w)}" aria-label="빼기">×</button></span>`).join('')}<input data-chip="${esc(src)}|${name}+" aria-label="더하기" placeholder="＋"${name==='skip'?' data-tt="뺄 말"':''}></div>`;
@@ -254,6 +275,7 @@ document.addEventListener('click',e=>{
   if('add' in d)return send({t:'chat',entry:'add'});
   if('options' in d)return send({t:'options'});
   if(d.fix){const s=S(d.fix);return send({t:'chat',entry:'fix',args:{source:d.fix},detail:`${s.name} · ${(s.problems||[]).map(p=>p.t+' '+p.s).join(' / ')}`})}
+  if(d.item&&d.op==='reject'){const s=S(d.item),x=s&&(s.items||[]).find(y=>y.id===d.aid);if(x)return rejectBox(s,x)}
   if(d.item)return send({t:'act',id:'collect_desk.item',args:{source:d.item,id:d.aid,op:d.op}});
   if(d.open)return send({t:'act',id:'collect_desk.open',args:{source:d.open}});
   if(d.fetch)return send({t:'act',id:'collect_desk.fetch',args:{source:d.fetch}});

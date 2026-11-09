@@ -1,7 +1,8 @@
 """filter-learn.py·notice-filter.py 제목 규칙·일정 묶기 시험 — 격리(임시 폴더의 카드·조리법·평가·상태 사본 · 볼트 파일을 안 건드림). 2026-11-05.
 잰다: 카드 규칙이 조리법 복사 없이 걸림 · 거르기 없는 출처·관심 주제·깨진 낱말은 안 뺌 · 살린 글 → 낱말 풀림 → 제목 관문 통과 ·
      뺀 까닭이 글에 없으면 규칙 안 올리고 대기열 · 까닭이 맞으면 전 출처 제외어 · 카드 조건이 깨지면 묶음이 꺼짐 · 다시볼날 → 대기열 ·
-     대기 칸 판정 전 글 → 장부 · 제외 문장 근거는 빼지 않음 · 출처 여럿이 일정 파일 하나를 나눠 씀(덮어쓰기·겹침·체크 번짐 없음)."""
+     대기 칸 판정 전 글 → 장부 · 제외 문장 근거는 빼지 않음 · 출처 여럿이 일정 파일 하나를 나눠 씀(덮어쓰기·겹침·체크 번짐 없음) ·
+     거절 단추(11-09): 고른 낱말 = 대조 없이 제외어 · 메모 = 대기열(글자 대조 안 함) · 까닭 없음·옛 «거절» 기록 = 경고 없음."""
 import importlib.util
 import json
 import os
@@ -50,17 +51,27 @@ try:
         'p2': {'title': '관정재단 신규장학생 선발', 'date': '2026-10-02', 'path': 'v/p2.md', 'hash': 'b'},     # «저소득 아님»으로 뺐으나 글에 그 말이 없음
         'p3': {'title': '통영시 희망재단 대학생 장학금', 'date': '2026-10-03', 'path': 'v/p3.md', 'hash': 'c'},  # «희망재단 아님» → 제목에 있음 → 제외어
         'p4': {'title': '겨울 공연 안내', 'date': '2026-10-03', 'path': 'v/p4.md', 'hash': 'e'},                # 사용자가 살림 → 카드 낱말 공연 풀림
+        'b1': {'title': '[쿠카이브] 비교과 만족도 조사', 'date': '2026-10-06', 'path': 'v/b1.md', 'hash': 'f'},   # 단추 · 낱말 쿠카이브 → 제외어
+        'b2': {'title': '[SSC] 수요조사 참여 이벤트', 'date': '2026-10-06', 'path': 'v/b2.md', 'hash': 'g'},       # 단추 · 까닭 없음 → 경고 없음
+        'b3': {'title': '태재연구재단 연구지원금 선발', 'date': '2026-10-06', 'path': 'v/b3.md', 'hash': 'h'},     # 단추 · 메모만 → 거절 메모 대기열
+        'b4': {'title': '[기아] 설비기술인력 채용', 'date': '2026-10-06', 'path': 'v/b4.md', 'hash': 'i'},          # 옛 단추 기록(메모 «거절») → 경고 없음
         's1': {'title': '삼성 신입사원 채용', 'date': '2026-10-04', 'stage': True, 'hash': 'd', 'url': 'http://x/s1'},   # 대기 칸 판정 전 → 장부
     }
     json.dump({'items': items}, open(os.path.join(T, 'state', 'src-a.json'), 'w', encoding='utf-8'), ensure_ascii=False)
     open(os.path.join(T, 'state', 'stage', 'src-a', 's1.md'), 'w', encoding='utf-8').write('# 삼성 신입사원 채용\n\n---\n본문')
     os.makedirs(os.path.join(T, 'v'))
+    for k in ('b1', 'b2', 'b3', 'b4'):
+        open(os.path.join(T, 'v', k + '.md'), 'w', encoding='utf-8').write(f'# {items[k]["title"]}\n\n---\n본문')
     for k, body in (('p1', '# 2026 학생 공모전 안내\n\n---\n본문'), ('p2', '# 관정재단 신규장학생 선발\n\n---\n성적우수 장학금 본문'), ('p3', '# 통영시 희망재단\n\n---\n본문'), ('p4', '# 겨울 공연 안내\n\n---\n본문')):
         open(os.path.join(T, 'v', k + '.md'), 'w', encoding='utf-8').write(body)
     json.dump({'src-a:p1': {'평가': '쓸모', '메모': '사용자 살림'},
                'src-a:p4': {'평가': '쓸모', '메모': '사용자 살림'},
                'src-a:p2': {'평가': '헛것', '메모': '저소득 아님 — 10분위 넘음'},
-               'src-a:p3': {'평가': '헛것', '메모': '희망재단 아님'}}, open(marks, 'w', encoding='utf-8'), ensure_ascii=False)
+               'src-a:p3': {'평가': '헛것', '메모': '희망재단 아님'},
+               'src-a:b1': {'평가': '헛것', '메모': '', '길': '단추', '낱말': ['쿠카이브']},
+               'src-a:b2': {'평가': '헛것', '메모': '', '길': '단추'},
+               'src-a:b3': {'평가': '헛것', '메모': '대학원생 연구자용', '길': '단추'},
+               'src-a:b4': {'평가': '헛것', '메모': '거절'}}, open(marks, 'w', encoding='utf-8'), ensure_ascii=False)
     nf.CARD, nf.RECIPES, nf.STATE, nf.STAGE, nf.CACHE, nf.MARKS, nf.QUEUE, nf.VAULT, nf.ARCH = cf, os.path.join(T, 'collect'), os.path.join(T, 'state'), os.path.join(T, 'state', 'stage'), os.path.join(T, 'state', '조건'), marks, q, T, os.path.join(T, 'arch')
     nf.REPORT, nf.STATUS, nf.LMS_PENDING = os.path.join(T, 'state', '판정.md'), os.path.join(T, 'state', '.status.txt'), os.path.join(T, '없음.json')
     nf._card.clear()
@@ -101,6 +112,13 @@ try:
     qt = open(q, encoding='utf-8').read()
     ok('까닭 안 맞음(관정재단): 규칙 안 올리고 대기열', r['까닭 안 맞음'] == 1 and '관정재단' in qt and nf.gate(rc2, row('저소득 장학 안내')) is None)
     ok('까닭 맞음: 사용자 뺌 묶음 → 전 출처 제외어', nf.gate({'id': '다른', 'filter': {'kind': '자격'}}, row('희망재단 장학')) == ('비해당', '제목 규칙(사용자 뺌)'))
+    mk = json.load(open(marks, encoding='utf-8'))
+    ok('단추 낱말: 제외어로(대조 없이)', nf.gate({'id': '다른', 'filter': {'kind': '자격'}}, row('[쿠카이브] 다른 조사')) == ('비해당', '제목 규칙(사용자 뺌)'))
+    ok('단추 까닭 없음: 경고 없음 · 되먹음 적힘', 'SSC' not in qt and '까닭 없음' in mk['src-a:b2']['되먹음'])
+    ok('단추 메모: «거절 메모» 대기열 · 까닭 안 맞음 아님', r['거절 메모'] == 1 and '거절 메모' in qt and '대학원생 연구자용' in qt and '태재연구재단' in qt and '태재연구재단 연구지원금 선발 (`src-a:b3`)' in qt.split('까닭이 글과 안 맞음')[0] + qt)
+    ok('단추 메모: 낱말 규칙은 안 올림', nf.gate({'id': '다른', 'filter': {'kind': '자격'}}, row('대학원생 연구 안내')) is None)
+    ok('옛 단추 기록(«거절»): 경고 없음', '기아' not in qt and '까닭 없음' in mk['src-a:b4']['되먹음'])
+    ok('까닭 안 맞음은 관정재단 하나뿐', qt.count('까닭이 글과 안 맞음') == 1)
     r2 = fl.learn(quiet=True)
     ok('되풀이해도 또 안 함', not any(r2.values()))
 
@@ -136,6 +154,25 @@ try:
     nf.judge(quiet=True)
     L = [ln for ln in open(sf, encoding='utf-8').read().splitlines() if ln.startswith('- [')]
     ok('나눠 쓰기: 체크가 남고 같은 번호 다른 출처로 안 번짐', any(x.startswith('- [x]') and x.endswith('^sch-src-b-7') for x in L) and any(x.startswith('- [ ]') and x.endswith('^sch-src-c-7') for x in L))
+    # 거절 단추가 쓰는 기록(notice-filter reject --button)
+    stf = os.path.join(T, 'state', 'src-a.json')
+    st = json.load(open(stf, encoding='utf-8'))
+    st['items']['r1'] = {'title': '[학생지원] 외국인 유학생 장학 안내', 'date': '2026-10-07', 'stage': True, 'hash': 'r', 'url': 'http://x/r1'}
+    st['items']['r2'] = {'title': '교내 설문 조사', 'date': '2026-10-07', 'stage': True, 'hash': 's', 'url': 'http://x/r2'}
+    json.dump(st, open(stf, 'w', encoding='utf-8'), ensure_ascii=False)
+    nf.reject('r1', '-국내 학생 아님', ['외국인', '유학생', '외국인'], button=True)
+    nf.reject('r2', '', [], button=True)
+    st = json.load(open(stf, encoding='utf-8'))['items']
+    mk = json.load(open(marks, encoding='utf-8'))
+    ok('reject 단추: 장부 근거 = 고른 낱말 + 메모', st['r1']['why'] == '사용자: «외국인» · «유학생» · -국내 학생 아님' and not st['r1'].get('stage'))
+    ok('reject 단추: 표시 = 길·낱말(겹친 말 하나)·메모', mk['src-a:r1']['길'] == '단추' and mk['src-a:r1']['낱말'] == ['외국인', '유학생'] and mk['src-a:r1']['메모'] == '-국내 학생 아님')
+    ok('reject 단추 빈칸: 근거 «거절» · 표시에 낱말 칸 없음', st['r2']['why'] == '사용자: 거절' and mk['src-a:r2']['길'] == '단추' and '낱말' not in mk['src-a:r2'])
+    q0 = open(q, encoding='utf-8').read()
+    r3 = fl.learn(quiet=True)
+    q1 = open(q, encoding='utf-8').read()
+    new = q1[len(q0):]
+    ok('reject 단추 → 되먹임: 낱말 둘 제외어 · 메모 대기열 · 경고 0', r3['제외어'] == 2 and r3['거절 메모'] == 1 and '까닭이 글과 안 맞음' not in new and '국내 학생 아님' in new)
+    ok('되먹임 뒤 비슷한 글이 걸림', nf.gate({'id': '다른', 'filter': {'kind': '자격'}}, row('외국인 교환학생 모집')) == ('비해당', '제목 규칙(사용자 뺌)'))
 finally:
     shutil.rmtree(T, ignore_errors=True)
 

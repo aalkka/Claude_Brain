@@ -278,7 +278,15 @@ try {
   await until(() => has('[data-aid="zz201"][data-op="reject"]'));
   ok("대기 칸 글을 읽을 수 있다", await inFrame(`return (document.querySelector('.it.go')?.dataset.note ?? '').endsWith('stage/${LOCAL}/zz201.md')`));
   await click('[data-aid="zz201"][data-op="reject"]');
-  ok("빼기 = 장부로 · 대기 칸 파일 지움", await until(() => ST().zz201.verdict === "비해당" && !ST().zz201.stage && !fs.existsSync(path.join(TV, `3_시스템/_index/collect/stage/${LOCAL}/zz201.md`))));
+  // 거절 창(11-09) — 제목 낱말 단추(흔한 말 «안내» 뺌) · 고르면 가로선 · 메모 · 거절 = 고른 낱말·메모가 근거·표시로
+  ok("거절 = 창 · 제목 낱말 단추(글 제목 «글 zz201 제목» · 한 글자 «글» 뺌)", await until(() => inFrame(`return [...document.querySelectorAll('.dlg .wd')].map((b) => b.textContent).join('|') === 'zz201|제목'`)));
+  await click('.dlg .wd[data-w="제목"]');
+  ok("낱말 고름 = 가로선", await inFrame(`return getComputedStyle(document.querySelector('.dlg .wd[data-w="제목"]')).textDecorationLine.includes('line-through')`));
+  await inFrame(`document.querySelector('.dlg .memo').value = '시험 메모'; return 1`);
+  await click(".dlg [data-y]");
+  ok("빼기 = 장부로 · 대기 칸 파일 지움 · 근거 = 낱말·메모", await until(() => ST().zz201.verdict === "비해당" && ST().zz201.why === "사용자: «제목» · 시험 메모" && !ST().zz201.stage && !fs.existsSync(path.join(TV, `3_시스템/_index/collect/stage/${LOCAL}/zz201.md`))), JSON.stringify(ST().zz201));
+  const mk = J("3_시스템/_index/collect/평가.json")[`${LOCAL}:zz201`] || {};
+  ok("거절 표시 = 단추 · 낱말 · 메모(되먹임이 대조 없이 씀)", mk.평가 === "헛것" && mk.길 === "단추" && JSON.stringify(mk.낱말) === '["제목"]' && mk.메모 === "시험 메모", JSON.stringify(mk));
   await until(() => has('[data-seg="ledger"]'));
   await click('[data-seg="ledger"]');
   await until(() => has('[data-aid="zz301"][data-op="rescue"]'));
