@@ -34,7 +34,8 @@
 "5ced40d0c1c5": "492ede645cb67584"
 },
 ".claude/skills/collect_desk/scripts/collect_desk.py": {
-"2679ecd411cf": "2da29fb18fb4c145"
+"2679ecd411cf": "2da29fb18fb4c145",
+"47eba9e0e411": "3dca320f3c0b37f5"
 },
 ".claude/skills/collect_desk/skills/add/SKILL.md": {
 "ef67d912e468": "93e7bac1fde3372c"
@@ -43,6 +44,7 @@
 "e8998d3cec11": "25aab976cffdee9b"
 },
 ".claude/skills/collect_desk/view/index.html": {
+"e2aed39e6079": "3f4b230e7e7861db",
 "f80254c60cd9": "222980138b0cbb3f"
 },
 ".claude/skills/deep-loop/SKILL.md": {
@@ -157,6 +159,7 @@
 },
 ".claude/skills/module-forge/skills/check/SKILL.md": {
 "3c2153428327": "325f96fbd9a29012",
+"6e73db5fea8d": "a59182c158df22c2",
 "aa504828a317": "b1f5db558a14954b",
 "d261de1eede9": "5b9ceb7e1a18910e"
 },
@@ -550,6 +553,7 @@
 },
 "3_시스템/door.py": {
 "76d60f5ed74e": "d8f21bfc591c337d",
+"ad6598199803": "ff329eead0881809",
 "e2c8c74591dd": "55dae4f056510da5"
 },
 "3_시스템/drift.py": {
@@ -558,6 +562,7 @@
 "974b679fca90": "44a29db818a07216"
 },
 "3_시스템/fileops.py": {
+"0046d8298c38": "b68c84f227d24e74",
 "645883f87e40": "daf54046f14968cd",
 "8a795dae360c": "41b9d120b35b956f",
 "91a00a384791": "c6849edd8801ef49",
@@ -569,7 +574,8 @@
 "3_시스템/follow.py": {
 "460729f56658": "7438b11e200b81f3",
 "6e409a099207": "203e2c0537c913cc",
-"827f9e125975": "364b829c28a8485b"
+"827f9e125975": "364b829c28a8485b",
+"8abf2cd95712": "e4f94878cfe44efd"
 },
 "3_시스템/graph_topics.py": {
 "29a7115eb25c": "84b01d5d066af720"
@@ -690,6 +696,7 @@
 },
 "3_시스템/inbox.py": {
 "bcd05573216d": "99e07832c561b0e7",
+"d1e7d678609b": "50cb72f450304127",
 "e42b778bcf82": "0fc700396ef42936"
 },
 "3_시스템/ingest.py": {
@@ -845,6 +852,7 @@
 },
 "3_시스템/tutorial/2-자료-넣기.md": {
 "034cd65c57b6": "c7b90674fe72df96",
+"2736ddf68a75": "c500613e8ef272ed",
 "de4656710e17": "3248a7cfae156819"
 },
 "3_시스템/tutorial/3-보면서-묻기.md": {
@@ -878,7 +886,8 @@
 "feaf57ffa65f": "757b2d9ed78c34af"
 },
 "3_시스템/tutorial_lint.py": {
-"ea7690a42a6a": "02a3e0714580e8fc"
+"ea7690a42a6a": "02a3e0714580e8fc",
+"f933fa91d077": "ae73e225b367daf3"
 },
 "3_시스템/vault-chat/상시.md": {
 "2364cb730ed3": "5677e381dfd7e7f4",
@@ -986,6 +995,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "5f3c6d8b3524",
+"rev": "9f9c5db4af0f",
 "schema": 1
 }
