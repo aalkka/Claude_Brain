@@ -7,6 +7,7 @@
   py -3 collect_desk.py fetch <출처 | mylms>              # 지금 받기 · 웹 = 그 자리에서 · mylms = 다음 15분 확인 때
   py -3 collect_desk.py judge <출처 | mylms>              # 판정(구독 사용량) · 누를 때만
   py -3 collect_desk.py item <출처> <글번호> <rescue|reject|restore|useless|useful>
+  py -3 collect_desk.py reject <출처> <글번호> <낱말|낱말…> <메모>   # 거절 단추(11-09) — 제목에서 고른 낱말(| 로 이음)·메모 · 둘 다 빈칸이어도 됨
   py -3 collect_desk.py open <출처 | mylms | 후보 id>      # 사이트를 연다(화면은 sandbox 라 링크가 안 열린다)
   py -3 collect_desk.py contract <후보 id> <계약|안 함>    # 계약 = 대기열 한 줄 · 조리법은 Claude 가 탐색 뒤 쓴다
   py -3 collect_desk.py probe <주소>                       # 수집 추가(11-06 · 대화창 스킬 add·fix 가 부른다) — 한 쪽 탐색(피드 찾기·robots)
@@ -44,6 +45,16 @@ LMS_LATE_H = 48            # 전 과목 20시간(신호 안 되면 12시간)의 
 LMS_SID = 'lms-post'       # notice-filter 의 LMS 글 출처 이름
 BUSY_STALE = 30 * 60       # 받기·판정이 죽어 남은 표시를 이 뒤로는 안 믿는다(초)
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+# 거절 창의 낱말 단추 — 제목 낱말 중 고르면 공지 거의 다를 막는 말·날짜는 안 띄운다(고른 낱말은 전 출처 제외어가 된다 · filter-learn)
+COMMON = {'안내', '모집', '공고', '공지', '알림', '신청', '선발', '개최', '참여', '관련', '실시', '진행', '결과', '일정', '변경', '연장', '추가', '접수', '마감', '대상', '대상자', '학생', '학부', '학부생', '재학생'}
+
+
+def title_words(title):
+    out = []
+    for w in re.findall(r'[가-힣A-Za-z0-9]{2,}', title or ''):
+        if w not in COMMON and not re.fullmatch(r'제?\d+(?:년|학년도|학기|차|월|일|회|기|시|명)?', w) and w not in out:
+            out.append(w)
+    return out[:12]
 
 
 def load(*p, default=None):
@@ -240,6 +251,8 @@ def web_source(path, events, queue, cfg, now):
                 cnt[w] += 1
                 rows.append({'id': aid, 'title': (it.get('title') or '').strip(), 'date': (it.get('date') or '')[:10], 'where': w, 'why': said(it.get('why') or '')[:70], 'note': note_of(it, sid, aid),
                              'mark': (marks.get(f'{sid}:{aid}') or {}).get('평가') or ''})
+                if w == 'pend':
+                    rows[-1]['words'] = title_words(it.get('title'))
         rows.sort(key=lambda x: x['date'], reverse=True)
         w = rc.get('words') or {}      # 낱말 관문(11-06) — 판정 층이 있으면 뺄 말 = 그 층의 title_skip, 없으면 words.skip · 남길 말 = words.keep
         s.update(group=rc.get('group') or ('공지' if flt else '구독'), cnt=cnt, skip=words(flt.get('title_skip') if flt else w.get('skip')),
@@ -679,14 +692,31 @@ def item(sid, aid, op):
             engine('web-collect.py', '--rescue', '--source', sid, '--id', aid)
         elif op == 'restore':
             engine('web-collect.py', '--restore', '--source', sid, '--id', aid)
-        elif op == 'reject':
-            engine('notice-filter.py', 'reject', aid, '거절')
+        elif op == 'reject':      # 까닭 없는 거절(옛 꼴 · 창은 reject 를 부른다)
+            engine('notice-filter.py', 'reject', aid, '--button')
             engine('notice-filter.py', 'judge')
         elif op in ('useless', 'useful'):
             engine('notice-filter.py', 'mark', aid, '헛것' if op == 'useless' else '쓸모')
             engine('notice-filter.py', 'judge')
         else:
             raise Refuse(f'모르는 동작: {op}')
+
+
+def reject(sid, aid, picked, memo):
+    """거절 단추(11-09) — 판정 대기 → 장부 · 까닭 = 제목에서 고른 낱말(되먹임이 제외어로) + 메모(대기열로 · 카드 조건 후보). 둘 다 빈칸이면 까닭 없이 뺀다."""
+    recipe_of(sid)
+    it = ((load(SYS, '_index', 'collect', sid + '.json', default={}) or {}).get('items') or {}).get(aid)
+    if not isinstance(it, dict):
+        raise Refuse(f'없는 글: {aid}')
+    if where(it) != 'pend':
+        raise Refuse('판정 대기 글만 거절')
+    title = it.get('title') or ''
+    picked = [w for w in dict.fromkeys(x.strip() for x in picked.split('|')) if w]
+    if any(w not in title for w in picked):
+        raise Refuse('제목에 없는 낱말')
+    with Busy(sid, '고치는 중'):
+        engine('notice-filter.py', 'reject', aid, '--button', *[f'--word={w}' for w in picked], f'--memo={memo.strip()[:200]}')
+        engine('notice-filter.py', 'judge')
 
 
 def open_site(sid):
@@ -1032,6 +1062,16 @@ def practice_act(F, act, now):
             F.setdefault('3_시스템/_index/collect/평가.json', {})[f'{src}:{g["id"]}'] = {'평가': '헛것' if op == 'useless' else '쓸모', 'at': f'{now:%Y-%m-%d %H:%M}'}
         else:
             raise Refuse(f'모르는 동작: {op}')
+    elif aid == 'collect_desk.reject':
+        it = (st.get('items') or {}).get(g.get('id', ''))
+        if not isinstance(rc, dict) or not isinstance(it, dict):
+            raise Refuse(f'없는 글: {g.get("id")}')
+        picked = [w for w in g.get('words', '').split('|') if w]
+        if any(w not in (it.get('title') or '') for w in picked):
+            raise Refuse('제목에 없는 낱말')
+        it.pop('stage', None)
+        said = ' · '.join([f'«{w}»' for w in picked] + ([g['memo'].strip()] if g.get('memo', '').strip() else []))
+        it.update(verdict='뺌', why=f'사용자: {said or "거절"}')
     elif aid in ('collect_desk.fetch', 'collect_desk.judge'):
         if sw.get('all_off') is True or (lms and desk.get('enabled') is False) or (not lms and (not isinstance(rc, dict) or rc.get('enabled') is False)):
             raise Refuse('꺼진 출처')
@@ -1120,6 +1160,11 @@ def main():
     it.add_argument('source')
     it.add_argument('id')
     it.add_argument('op')
+    rj = sub.add_parser('reject')
+    rj.add_argument('source')
+    rj.add_argument('id')
+    rj.add_argument('words')
+    rj.add_argument('memo')
     c = sub.add_parser('contract')
     c.add_argument('id')
     c.add_argument('answer')
@@ -1146,6 +1191,8 @@ def main():
             judge_source(a.source)
         elif a.cmd == 'item':
             item(a.source, a.id, a.op)
+        elif a.cmd == 'reject':
+            reject(a.source, a.id, a.words, a.memo)
         elif a.cmd == 'open':
             open_site(a.source)
         elif a.cmd == 'contract':
