@@ -78,22 +78,32 @@
 },
 ".claude/skills/dist-sync/.claude-plugin/plugin.json": {
 "3b0f426e2321": "471a3c503e442202",
+"508baef7f34e": "d7aa9a8743780757",
 "8982d19e7aa6": "42803efd33ff68ae",
 "b7d8d711ef84": "816428bfea7432d4"
 },
 ".claude/skills/dist-sync/README.md": {
 "075c2af054d5": "69d4b7a3d884a906",
+"305539f715d0": "28566e58489d909e",
 "77e74afd57bd": "69f9c0ae6f0b2817",
 "d56f6baca481": "2dc7207dbd5b4e02"
 },
+".claude/skills/dist-sync/external.json": {
+"20cd292dc761": "ea8f5cf6ad0a9bf9"
+},
 ".claude/skills/dist-sync/manual/설명서-dist-sync.md": {
-"6550858ec4f9": "00bcc8dee695987e"
+"6550858ec4f9": "00bcc8dee695987e",
+"be3bcd439ef7": "bb9be40d8541ebca"
 },
 ".claude/skills/dist-sync/module.json": {
 "10f8bf523d5c": "22a1e9e10f0cc2c3",
 "396ce5b2e4d5": "6fa62cdff2c2aea0",
 "c1a6a7b1f3a7": "e7de3540165e4037",
+"c41db71d164c": "5da5d6e2c10f2aca",
 "d7189c38d662": "fd7ce028d99b551d"
+},
+".claude/skills/dist-sync/scripts/dist-check.py": {
+"ffa4bdeb3f36": "17c825d593f0f861"
 },
 ".claude/skills/dist-sync/scripts/dist-diff.py": {
 "18421fabb136": "3d665993529d05a1",
@@ -108,10 +118,21 @@
 "fce4ab3c9346": "343e7e2f7f3ca3bd"
 },
 ".claude/skills/dist-sync/scripts/doctor.py": {
+"36fe5fb4a9c1": "657ccb83b04688e6",
 "b78ee88c3022": "e6457bfdbc634088"
+},
+".claude/skills/dist-sync/scripts/external.py": {
+"92cc8ee90a63": "bc0dcea1fa6a1498"
+},
+".claude/skills/dist-sync/scripts/test_dist_check.py": {
+"d84dafb8d9aa": "cefecc403de852f8"
+},
+".claude/skills/dist-sync/skills/outside/SKILL.md": {
+"2d4e37f082b6": "cd9d7038070e721c"
 },
 ".claude/skills/dist-sync/skills/publish/SKILL.md": {
 "2b4af894f663": "644b8e53821ad2a4",
+"51c7af4b5d9f": "173ffda0da20c277",
 "7d3aca584536": "3de822b39fd05f21",
 "98683c724762": "038464d1d9a94cb4",
 "a03cea231509": "1d3e9f6e1df1791c",
@@ -122,7 +143,8 @@
 "353286b86633": "431e11de8d1b93a3",
 "5a8cabbb97d0": "a238fdfc7cd2ae2a",
 "6ddcefa1fe88": "7229c8df15b8a041",
-"81eb4dcc0c2d": "23d7034c24865af2"
+"81eb4dcc0c2d": "23d7034c24865af2",
+"fdc2bb7474ff": "8b443fd6212fd825"
 },
 ".claude/skills/dist-sync/tutorial/1-업데이트.md": {
 "2a41f2886487": "ed2817d075f62cd2"
@@ -868,6 +890,7 @@
 "3_시스템/tutorial/2-자료-넣기.md": {
 "034cd65c57b6": "c7b90674fe72df96",
 "2736ddf68a75": "c500613e8ef272ed",
+"cce1359a50aa": "c6da81e49d213328",
 "de4656710e17": "3248a7cfae156819"
 },
 "3_시스템/tutorial/3-보면서-묻기.md": {
@@ -902,6 +925,7 @@
 "3_시스템/tutorial/찾아보기.md": {
 "259faa54dae0": "120f77e81f9cbe14",
 "84d78ff2587b": "67b9c8bf3c2a2e76",
+"9515b012ef0c": "44a82657068a2875",
 "b8772027f9be": "09877b971abf207a",
 "feaf57ffa65f": "757b2d9ed78c34af"
 },
@@ -951,17 +975,21 @@
 "d9c512a89b33": "9acdfd7f61041131"
 },
 "3_시스템/설명서/설명서-문제-해결.md": {
+"711e1cb14fe5": "31f8c2f7a9d2b088",
 "c423ec4cf2f4": "89a5ab76a95f4325"
 },
 "3_시스템/설명서/설명서-사용법.md": {
+"9c501f67cb03": "8f38289539144d92",
 "a32d78ddb528": "f10dd53ca832794a"
 },
 "3_시스템/설명서/설명서-설정과-표.md": {
+"33e99739e52e": "6caf5287217db0c6",
 "e5e7b7323a3e": "a11af08f242ab483"
 },
 "3_시스템/설명서/설명서-수집.md": {
 "1cf87a9a8b21": "94e723d670883be3",
 "381b60dc6f1f": "817a99eef1192ebb",
+"74cc6e8b6f21": "26111448aeeb0b99",
 "c62870617da2": "6a2172d33d809b6d",
 "d1e0485b8e1c": "60fb661af9ca792c"
 },
@@ -973,7 +1001,8 @@
 "096e8ce9cf5d": "f95e234bea04b5af"
 },
 "3_시스템/설명서/설명서-자료-받기.md": {
-"2cfcff3e4378": "c876d2a69cf0eb44"
+"2cfcff3e4378": "c876d2a69cf0eb44",
+"6d63da4915da": "b60b27cea41b8230"
 },
 "3_시스템/설명서/설명서-작업과-기록.md": {
 "ceebef4c77a5": "c9802139bc0e4dba"
@@ -982,10 +1011,12 @@
 "fcf4608f9f65": "273ae58da152a4a0"
 },
 "3_시스템/설명서/설명서-화면과-층.md": {
-"1b4fcd003def": "11bd94c5856518bf"
+"1b4fcd003def": "11bd94c5856518bf",
+"4f3261acb616": "5c37dce2fff9b02b"
 },
 "3_시스템/설명서/설명서-활용법.md": {
-"324d751b9264": "4857b960e67361a9"
+"324d751b9264": "4857b960e67361a9",
+"7ae52b88921b": "674e13ef683f03cb"
 },
 "CLAUDE.md": {
 "1408be2df1a5": "5827b49fa6261711",
@@ -1016,10 +1047,11 @@
 "7334d2716038": "d8f0922a3a13d803",
 "77dd0ae978ec": "4c37890ca3b34ed3",
 "797189d72698": "b7b9f500d0692258",
+"82561a69123a": "d8c9ace8dfce0cfa",
 "8eb97a2da247": "37fb5daf58893a44",
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "ddf88ae92b71",
+"rev": "d3dbc5889662",
 "schema": 1
 }
