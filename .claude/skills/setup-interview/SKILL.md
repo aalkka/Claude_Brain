@@ -36,6 +36,8 @@ description: 신규 설치 개인최적화. 첫 실행 시 또는 "/재보정" �
    **주의(정직히 안내)**: 클라우드 에이전트는 개인 repo를 clone해 돌리므로 **커밋된 내용만** 봄(로컬 전용 `_index`·미커밋 세션은 없음). 골든셋 재측정은 클라우드서 `sentence-transformers` 설치 필요(느림) → 무거우면 그 스텝은 스킵하고 통찰합성·open-loops 정리만 시켜도 됨. 산출은 push로 다음 세션에 반영됨.
    **해제/변경**: `/재보정` 또는 `schedule` 스킬로 cron 갱신·삭제.
 
-산출: settings.local.json 옵션R(autoMemoryDirectory) + CLAUDE.md §0 슬롯 치환 + `2_지식/profile.md` 채움 + `2_지식/open-loops.md` 초기화 + search.py 모델 config 기입 + 기능 단계(`3_시스템/options.local.json`) + 개인 repo origin 설정 + (선택)weekly-review 클라우드 cron 등록.
+11. 볼트 밖 설정 점검(마지막): `dist-sync:outside` 절차 — `py -3 .claude/skills/dist-sync/scripts/external.py check` 로 파이썬 꾸러미·Git for Windows·git 이름·훅·Claude 로그인·옵시디언 제한 모드 등을 재고, Claude 가 할 수 있는 것은 묻고 대신 하고(설치는 내려받기라 꼭 승인), 사람이 할 것은 한 번에 한 단계씩 안내한 뒤 다시 잰다. 선택 항목은 쓸지 먼저 묻는다. 남은 것은 산출 보고에 적는다.
+
+산출: settings.local.json 옵션R(autoMemoryDirectory) + CLAUDE.md §0 슬롯 치환 + `2_지식/profile.md` 채움 + `2_지식/open-loops.md` 초기화 + search.py 모델 config 기입 + 기능 단계(`3_시스템/options.local.json`) + 개인 repo origin 설정 + (선택)weekly-review 클라우드 cron 등록 + 볼트 밖 설정 점검 결과.
 원칙: 코어 규약(§1~§3)은 안 건드림. 개인 레이어만. 재실행(/재보정) 시 diff 제시 → 확인 후 적용(사용자 저작물 불가침).
 (예시 캘리브레이션은 승격 — 슬롯2 필수. 나머지 강화 5수단[역질문 검증·주기 재보정 자동화 등]은 DEFERRED — 인터뷰 산출물은 사용 중 자연 교정됨[세션서 톤 지적→profile 갱신], 선불 정교화 ROI 낮음.)
