@@ -4,7 +4,8 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 
 ## 필수 요건
 - **Windows** (훅이 PowerShell — 현재 Windows 전용. 타 OS는 훅 스크립트 포팅 필요)
-- git · Claude Code v2.1.59+ · Obsidian
+- **Git for Windows**(Git Bash 포함 — 훅 하나가 Bash 문법) · Claude Code v2.1.59+(구독 로그인) · Obsidian
+- 선택: Node.js(웹페이지 읽기 도구 `defuddle`) · MS Word(docx 를 PDF 로) · 크롬(수집 창이 글을 여는 브라우저)
 - **Python 3.10+** + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
   첫 검색 시 임베딩 모델(기본 `intfloat/multilingual-e5-small`, ~470MB)을 자동 내려받아 로컬 인덱스를 만든다.
 
@@ -15,26 +16,31 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
    cd <내볼트경로>
    git switch -c main
    ```
-2. **git 훅 활성**(secret 차단 게이트):
+2. **git 훅 활성**(secret 차단 게이트) **+ 이름·메일**(자동 커밋에 필요 · 이 볼트에만):
    ```
    git config core.hooksPath 3_시스템/hooks
+   git config user.name "<이름>"
+   git config user.email "<메일>"
    ```
-   (미실행 시 secret-scan 안 돎.)
+   (훅을 안 켜면 secret-scan 이 조용히 안 돈다 — 건강 줄이 «볼트 밖 설정 안 됨»으로 알린다.)
 3. **Python 의존성**:
    ```
    py -3 -m pip install sentence-transformers "markitdown[docx,pptx,xlsx]" pypdfium2 pillow olefile
    ```
-   (`sentence-transformers`=하이브리드 검색 · 나머지 = `3_시스템/ingest.py` 원본 색인(PDF 글자·쪽 그림 · docx·pptx·xlsx · hwp). 그림 쪽 글자는 윈도우 내장 OCR 로 읽는다(설치 없음). 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
+   (`sentence-transformers`=하이브리드 검색 · 나머지 = `3_시스템/ingest.py` 원본 색인(PDF 글자·쪽 그림 · docx·pptx·xlsx · hwp). 그림 쪽 글자는 윈도우 내장 OCR 로 읽는다(한국어 윈도우면 설치 없음 · 아니면 설정 › 시간 및 언어 › 언어 추가 › 한국어 · «광학 문자 인식» 체크). 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
    `py -3 -m pip install torch --index-url https://download.pytorch.org/whl/cu121`)
 4. **첫 인덱스 빌드**(최초 1회 수동 — 모델 ~470MB 다운로드 + 임베딩이 세션 훅 타임아웃을 넘길 수 있어 수동 권장):
    ```
    py -3 3_시스템/search.py --rebuild
    ```
 5. Obsidian에서 이 폴더를 볼트로 열기. «제한 모드 끄기(커뮤니티 플러그인 켜기)»를 고르면 동봉 플러그인 **Brain Source**가 켜진다 — 원본(PDF·docx·pptx·xlsx·hwp·csv·html)을 옵시디언 안에서 보고 고치고, 엑셀식 `.sheet` 를 편집하고, 같은 이름 md 를 원본 아래 메모 칸으로 붙인다. 원본은 기본으로 보호(읽기 전용) 상태로 열린다.
-6. 폴더에서 `claude` 실행 → 트러스트 수락.
+   (선택) 옵시디언 설정 › 일반 › «명령줄 인터페이스» 켜기 — 파일을 옮길 때 옵시디언이 링크를 함께 고친다.
+6. 폴더에서 `claude` 실행 → 트러스트 수락(«Yes, proceed») → `/login` 으로 Claude 구독 계정 로그인(API 키 환경 변수는 두지 않는다).
 7. 첫 세션에 "⚠ 개인화 미완료" → `setup-interview` 실행(~10분). **네이티브 메모리 볼트 리다이렉트(옵션R)**·호칭·언어·톤·하드웨어(임베딩 모델 자동)·**개인 백업 repo 연결**.
    → **개인 repo를 연결하기 전까지 자동 push는 비활성**(개인정보 보호). 인터뷰가 `origin`을 개인 repo로 설정한다.
-8. 끝. 옵시디언에서 **홈 › 관리 › 튜토리얼**로 실제 화면에서 한 단계씩 익힌다. 재보정은 언제든 `/재보정`.
+8. **볼트 밖 설정 점검** — Claude 에게 «바깥 설정 점검». 빠진 설치·설정을 재서 Claude 가 할 수 있는 것은 묻고 대신 하고, 사람이 할 것(앱 화면·로그인·관리자 권한)은 한 단계씩 안내한다. 목록 = `.claude/skills/dist-sync/external.json`.
+   이 판에 없는 것: 받는 문(탐색기 우클릭·`Ctrl+Alt+B` — 실행 파일 없음 · 대신 옵시디언 `1_수집/받은함` 폴더로 끌기) · 학교 LMS 수집 · 웹 공지 정기 받기(수집 창 «지금 받기»로 받는다).
+9. 끝. 옵시디언에서 **홈 › 관리 › 튜토리얼**로 실제 화면에서 한 단계씩 익힌다. 재보정은 언제든 `/재보정`.
 
 ## 업데이트 — 새 배포판이 나왔을 때
 
