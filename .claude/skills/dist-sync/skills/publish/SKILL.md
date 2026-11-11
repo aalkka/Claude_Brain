@@ -73,6 +73,14 @@ py -3 <배포판 worktree>/.claude/skills/dist-sync/scripts/dist-diff.py --build
 
 공개 저장소 전송이다. 커밋까지 하고 **멈춰서 확인을 받는다.**
 
+### 8. 남은 어긋남을 센다
+
+```bash
+py -3 .claude/skills/dist-sync/scripts/dist-check.py --fetch
+```
+
+«안 올린 고침»은 0 이어야 한다. 남은 것은 싣거나, 일부러 안 싣는 것이면 `--ack <경로>` 로 적는다(다시 고치면 다시 잡힌다). push 를 기다리는 동안은 «push 안 함»이 건강 줄에 남는 것이 맞다.
+
 ## 하지 않는 것
 
 - **개인 층을 배포판으로 옮기지 않는다** — `1_수집/**` · 역할 `notes`·`sessions`·`decisions`·`modules`·`canvas` 자리(설계노트·사용자설명서 제외 · 목록 = `dist-diff.py` `PERSONAL`) · `_index/` · `_claude-memory/`.

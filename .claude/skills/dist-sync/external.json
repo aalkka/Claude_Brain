@@ -1,0 +1,326 @@
+{
+ "설명": "볼트 밖 설정 목록 — external.py check 가 이 PC 에서 됐는지 재고, 안 된 것은 Claude 가 하거나(하기 · 사람 승인 뒤) 사람을 한 단계씩 안내한다(안내). scan 은 코어가 볼트 밖을 건드리는데 여기 없는 곳을 낸다. 확인 = PowerShell 한 줄 · 볼트 폴더에서 · 종료 0 = 됨 · 읽기만 · 무거운 꾸러미는 불러오지 않고 있는지만 본다. 명령으로 못 재는 것은 확인 대신 «화면 확인».",
+ "항목": [
+  {
+   "id": "python",
+   "이름": "파이썬 3.10 이상(py 실행기 포함)",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": ["3_시스템/brain.py", ".claude/settings.json"],
+   "필수": true,
+   "까닭": "훅·검색·색인·건강 줄 등 볼트의 대본이 모두 `py -3` 로 돈다.",
+   "확인": "py -3 -c \"import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)\"",
+   "하기": "winget install --id Python.Python.3.12 -e --accept-source-agreements --accept-package-agreements",
+   "안내": [
+    "브라우저에서 python.org/downloads 를 연다(Microsoft Store 판은 py 실행기가 없어 쓰지 않는다).",
+    "노란 «Download Python» 단추로 받은 파일을 실행한다.",
+    "첫 화면 맨 아래 «Add python.exe to PATH» 칸에 체크하고 «Install Now» 를 누른다.",
+    "«Setup was successful» 이 뜨면 «Close» 를 누르고, 열려 있던 Claude·터미널 창을 모두 닫았다가 다시 연다."
+   ]
+  },
+  {
+   "id": "pip-core",
+   "이름": "파이썬 꾸러미(검색·원본 색인)",
+   "종류": ["파이썬 패키지"],
+   "쓰는 곳": ["3_시스템/search.py", "3_시스템/ingest.py"],
+   "필수": true,
+   "까닭": "찾기(하이브리드 검색)와 PDF·Office·한글 원본 색인에 쓴다.",
+   "확인": "py -3 -c \"import importlib.util as u, sys; sys.exit(0 if all(u.find_spec(m) for m in ('sentence_transformers','markitdown','pypdfium2','PIL','olefile')) else 1)\"",
+   "하기": "py -3 -m pip install sentence-transformers \"markitdown[docx,pptx,xlsx]\" pypdfium2 pillow olefile",
+   "안내": [
+    "Claude 에게 «파이썬 꾸러미 설치해 줘» 라고 하면 하기 명령을 대신 돌린다(몇 분).",
+    "직접 하려면 시작 메뉴에서 «터미널» 을 열고 하기 명령을 붙여 넣은 뒤 Enter."
+   ]
+  },
+  {
+   "id": "embed-model",
+   "이름": "검색 모델과 첫 색인(약 470MB)",
+   "종류": ["파이썬 패키지"],
+   "쓰는 곳": ["3_시스템/search.py"],
+   "필수": true,
+   "까닭": "뜻으로 찾기에 쓰는 모델을 사용자 폴더(.cache\\huggingface)에 받고 볼트 색인을 처음 만든다.",
+   "확인": "if (Test-Path \"$HOME\\.cache\\huggingface\\hub\\models--intfloat--multilingual-e5-small\") { exit 0 } else { exit 1 }",
+   "하기": "py -3 3_시스템/search.py --rebuild",
+   "안내": [
+    "파이썬 꾸러미가 먼저 있어야 한다.",
+    "Claude 에게 «첫 색인 만들어 줘» 라고 하면 하기 명령을 대신 돌린다(인터넷으로 모델을 받아 몇 분 걸린다)."
+   ]
+  },
+  {
+   "id": "cuda-torch",
+   "이름": "GPU 가속 검색(CUDA torch)",
+   "종류": ["파이썬 패키지"],
+   "쓰는 곳": ["3_시스템/search.py", "3_시스템/options.py"],
+   "필수": false,
+   "까닭": "그래픽 카드(VRAM 8GB 이상)가 있을 때 큰 검색 모델(bge-m3)을 빠르게 돌린다. 없어도 작은 모델로 돈다.",
+   "확인": "py -3 -c \"import importlib.metadata as m, sys; sys.exit(0 if '+cu' in m.version('torch') else 1)\"",
+   "하기": "py -3 -m pip install torch --index-url https://download.pytorch.org/whl/cu121",
+   "안내": [
+    "setup-interview 의 하드웨어 단계가 그래픽 카드를 재서 필요할 때만 권한다.",
+    "Claude 에게 «GPU 검색 켜 줘» 라고 하면 하기 명령을 대신 돌린다(약 2.5GB)."
+   ]
+  },
+  {
+   "id": "git",
+   "이름": "Git for Windows(Git Bash 포함)",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": [".claude/settings.json", "3_시스템/hooks/*"],
+   "필수": true,
+   "까닭": "기록(자동 커밋)·업데이트·비밀값 차단이 git 으로 돌고, 훅 하나는 Git Bash 문법을 쓴다.",
+   "확인": "if ((Get-Command git -ErrorAction SilentlyContinue) -and (Test-Path \"$env:ProgramFiles\\Git\\bin\\bash.exe\")) { exit 0 } else { exit 1 }",
+   "하기": "winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements",
+   "안내": [
+    "브라우저에서 git-scm.com/download/win 을 열면 받기가 저절로 시작된다.",
+    "받은 파일을 실행하고 모든 화면에서 고치지 말고 «Next» 만 누르다가 마지막에 «Install».",
+    "끝나면 Claude·터미널 창을 닫았다가 다시 연다."
+   ]
+  },
+  {
+   "id": "git-identity",
+   "이름": "git 이름·메일",
+   "종류": ["git 설정"],
+   "쓰는 곳": ["3_시스템/hooks/*"],
+   "필수": true,
+   "까닭": "자동 커밋에 이름·메일이 있어야 한다. 비어 있으면 기록이 멈춘다. 이 볼트에만 쓰이고 공개되지 않는다(개인 저장소에만 올라감).",
+   "확인": "if ((git config user.name) -and (git config user.email)) { exit 0 } else { exit 1 }",
+   "하기": "git config user.name \"<이름>\" ; git config user.email \"<메일>\" (사람에게 이름·메일을 물어 넣는다 · 이 볼트에만)",
+   "안내": [
+    "Claude 가 이름과 메일을 물으면 답한다(실명이 아니어도 된다).",
+    "Claude 가 이 볼트에만 넣는다."
+   ]
+  },
+  {
+   "id": "git-branch",
+   "이름": "main 가지 만들기",
+   "종류": ["git 설정"],
+   "쓰는 곳": ["3_시스템/hooks/*"],
+   "필수": true,
+   "까닭": "템플릿을 태그로 받으면 가지가 없는 상태라 기록이 고아가 되고 올리기가 늘 실패한다.",
+   "확인": "git symbolic-ref -q HEAD",
+   "하기": "git switch -c main",
+   "안내": [
+    "Claude 에게 «main 가지 만들어 줘» 라고 하면 하기 명령을 대신 돌린다.",
+    "직접 하려면 볼트 폴더에서 터미널을 열고 하기 명령을 붙여 넣은 뒤 Enter."
+   ]
+  },
+  {
+   "id": "git-hooks",
+   "이름": "git 훅 켜기(비밀값 차단)",
+   "종류": ["git 설정"],
+   "쓰는 곳": ["3_시스템/hooks/*"],
+   "필수": true,
+   "까닭": "커밋에 비밀번호·키가 섞이면 막는 검사가 이 설정이 있어야 돈다. 빠뜨려도 아무 말이 없어 여기서 잰다.",
+   "확인": "if ((git config core.hooksPath) -eq '3_시스템/hooks') { exit 0 } else { exit 1 }",
+   "하기": "git config core.hooksPath 3_시스템/hooks",
+   "안내": [
+    "Claude 에게 «git 훅 켜 줘» 라고 하면 하기 명령을 대신 돌린다.",
+    "직접 하려면 볼트 폴더에서 터미널을 열고 하기 명령을 붙여 넣은 뒤 Enter."
+   ]
+  },
+  {
+   "id": "git-remote",
+   "이름": "개인 비공개 저장소(자동 백업)",
+   "종류": ["git 설정"],
+   "쓰는 곳": [".claude/skills/setup-interview/SKILL.md"],
+   "필수": false,
+   "까닭": "기록을 내 비공개 저장소에 올려 PC 가 망가져도 남게 한다. 없으면 이 PC 에만 남는다.",
+   "확인": "git ls-remote origin HEAD",
+   "하기": "git remote add origin <주소> (setup-interview 9번)",
+   "안내": [
+    "github.com 에 로그인하고 오른쪽 위 «+» › «New repository» 를 누른다.",
+    "Repository name 에 아무 이름이나 쓰고 «Private» 를 고른 뒤 «Create repository».",
+    "뜬 화면 맨 위의 https://github.com/… 주소를 복사해 Claude 에게 붙여 넣는다.",
+    "첫 올리기 때 GitHub 로그인 창이 뜨면 «Sign in with your browser» 로 로그인한다."
+   ]
+  },
+  {
+   "id": "claude-cli",
+   "이름": "Claude Code(2.1.59 이상)",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": ["3_시스템/claude_bin.py"],
+   "필수": true,
+   "까닭": "볼트를 다루는 Claude 자신과, 그림 읽기·판정 같은 대본이 부르는 claude 실행 파일.",
+   "확인": "py -3 3_시스템/claude_bin.py",
+   "안내": [
+    "claude.com/download 에서 데스크톱 앱을 받아 설치하거나, 터미널에서 Claude Code 설치 명령(claude.com 안내)을 돌린다.",
+    "설치 뒤 Claude·터미널 창을 닫았다가 다시 연다."
+   ]
+  },
+  {
+   "id": "claude-login",
+   "이름": "Claude 로그인(구독)",
+   "종류": ["Claude 사용자 설정"],
+   "쓰는 곳": ["3_시스템/ingest_vision.py"],
+   "필수": true,
+   "까닭": "API 키 없이 구독으로 돈다. 로그인이 안 되면 대화·그림 읽기·판정이 멈춘다.",
+   "화면 확인": "Claude 에게 아무 말이나 했을 때 답이 오면 됨.",
+   "안내": [
+    "볼트 폴더에서 터미널을 열고 `claude` 를 친 뒤 Enter.",
+    "«/login» 을 치고 Enter — 브라우저가 열리면 Claude 계정으로 로그인하고 «Authorize» 를 누른다.",
+    "터미널에 «Login successful» 이 뜨면 된다."
+   ]
+  },
+  {
+   "id": "claude-trust",
+   "이름": "볼트 폴더 신뢰",
+   "종류": ["Claude 사용자 설정"],
+   "쓰는 곳": [".claude/settings.json"],
+   "필수": true,
+   "까닭": "신뢰하지 않은 폴더에서는 볼트의 훅(기록·일정·안전 검사)이 돌지 않는다.",
+   "화면 확인": "볼트 폴더에서 claude 를 켰을 때 «Do you trust the files in this folder?» 가 더 묻지 않으면 됨.",
+   "안내": [
+    "볼트 폴더에서 claude 를 처음 켜면 «Do you trust the files in this folder?» 가 뜬다.",
+    "«Yes, proceed» 를 고르고 Enter."
+   ]
+  },
+  {
+   "id": "claude-memory",
+   "이름": "Claude 기억을 볼트 안으로",
+   "종류": ["Claude 사용자 설정"],
+   "쓰는 곳": [".claude/skills/setup-interview/SKILL.md"],
+   "필수": false,
+   "까닭": "Claude 가 배운 것을 볼트 안(3_시스템/_claude-memory)에 적어 사람이 읽고 검색·백업되게 한다(권장).",
+   "확인": "py -3 -c \"import json,sys; d=json.load(open('.claude/settings.local.json',encoding='utf-8')); sys.exit(0 if '_claude-memory' in d.get('autoMemoryDirectory','') else 1)\"",
+   "하기": "setup-interview 0번(.claude/settings.local.json 에 autoMemoryDirectory 병합)",
+   "안내": [
+    "Claude 에게 «개인화 시작» 이라고 하면 setup-interview 가 첫 단계에서 대신 설정한다.",
+    "끝나면 Claude 창을 닫았다가 다시 연다."
+   ]
+  },
+  {
+   "id": "claude-home-read",
+   "이름": "Claude 대화 기록 읽기(설정 아님)",
+   "종류": ["Claude 사용자 설정"],
+   "쓰는 곳": [".claude/skills/deep-loop/scripts/launch-audit.py", "3_시스템/drift.py", "3_시스템/skillstat.py", "3_시스템/hooks/core-gate-decide.ps1", "3_시스템/claude_bin.py", "3_시스템/ingest_vision.py"],
+   "필수": false,
+   "할 일 없음": "사용자 폴더의 .claude(대화 기록·예약 지시문)와 claude 실행 파일 자리를 읽기만 한다 — Claude Code 를 쓰면 이미 있다.",
+   "확인": "if (Test-Path \"$env:USERPROFILE\\.claude\") { exit 0 } else { exit 1 }",
+   "안내": []
+  },
+  {
+   "id": "no-api-env",
+   "이름": "API 키 환경 변수 없음",
+   "종류": ["레지스트리"],
+   "쓰는 곳": ["3_시스템/drift.py"],
+   "필수": true,
+   "까닭": "사용자 환경 변수에 ANTHROPIC_API_KEY 등이 있으면 구독 대신 종량 요금으로 돌 수 있다. 볼트는 읽어서 경고만 한다.",
+   "확인": "if ([Environment]::GetEnvironmentVariable('ANTHROPIC_API_KEY','User') -or [Environment]::GetEnvironmentVariable('ANTHROPIC_AUTH_TOKEN','User')) { exit 1 } else { exit 0 }",
+   "안내": [
+    "시작 메뉴에 «환경 변수» 를 쳐서 «계정의 환경 변수 편집» 을 연다.",
+    "위쪽 «사용자 변수» 칸에서 ANTHROPIC_ 으로 시작하는 줄을 골라 «삭제» 를 누른다(다른 줄은 건드리지 않는다).",
+    "«확인» 을 누르고 Claude·터미널 창을 닫았다가 다시 연다."
+   ]
+  },
+  {
+   "id": "obsidian-app",
+   "이름": "옵시디언 설치·볼트 열기",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": [".obsidian/community-plugins.json", "3_시스템/restructure.py"],
+   "필수": true,
+   "까닭": "홈·수집 창·원본 보기 같은 화면이 옵시디언 안에서 돈다.",
+   "확인": "if (Test-Path \"$env:APPDATA\\obsidian\\obsidian.json\") { exit 0 } else { exit 1 }",
+   "하기": "winget install --id Obsidian.Obsidian -e --accept-source-agreements --accept-package-agreements (볼트 열기는 사람)",
+   "안내": [
+    "obsidian.md 에서 «Download» 로 받은 파일을 실행해 설치한다.",
+    "옵시디언 첫 화면에서 «폴더를 보관함으로 열기(Open folder as vault)» › «열기» 를 누른다.",
+    "볼트 폴더를 골라 «폴더 선택» 을 누른다."
+   ]
+  },
+  {
+   "id": "obsidian-restricted-off",
+   "이름": "옵시디언 제한 모드 끄기(동봉 플러그인 켜기)",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": [".obsidian/community-plugins.json"],
+   "필수": true,
+   "까닭": "외부뇌 홈·원본 보기·캘린더가 동봉 플러그인이라 제한 모드에서는 꺼져 있다.",
+   "화면 확인": "옵시디언 왼쪽 띠에 외부뇌 홈 아이콘이 보이면 됨.",
+   "안내": [
+    "볼트를 처음 열면 «이 보관함의 작성자를 신뢰합니까?» 가 뜬다 — «신뢰하고 플러그인 켜기(Trust author and enable plugins)» 를 누른다.",
+    "그 창을 놓쳤으면: 왼쪽 아래 톱니(설정) › «커뮤니티 플러그인» › «제한 모드 끄기(Turn on community plugins)».",
+    "같은 화면 «설치된 플러그인» 에서 Brain Base·Brain Source·Brain Calendar 스위치가 켜졌는지 본다."
+   ]
+  },
+  {
+   "id": "obsidian-cli",
+   "이름": "옵시디언 CLI 켜기",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": ["3_시스템/brain.py", "3_시스템/fileops.py"],
+   "필수": false,
+   "까닭": "파일을 옮길 때 옵시디언에게 맡겨 링크를 함께 고친다. 없으면 볼트 자체 엔진이 옮긴다.",
+   "확인": "if (Get-Command obsidian -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }",
+   "안내": [
+    "옵시디언 왼쪽 아래 톱니(설정) › «일반(General)» 을 연다.",
+    "«명령줄 인터페이스(Command line interface)» 스위치를 켜고 뜨는 창에서 «등록(Register)» 을 누른다(항목이 없으면 옵시디언을 최신으로 올린다).",
+    "Claude·터미널 창을 닫았다가 다시 연다."
+   ]
+  },
+  {
+   "id": "ocr-ko",
+   "이름": "윈도우 한국어 글자 읽기(OCR)",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": ["3_시스템/ingest.py"],
+   "필수": false,
+   "까닭": "그림·스캔 쪽의 글자를 윈도우 내장 OCR 로 읽는다. 한국어 윈도우면 이미 있다.",
+   "확인": "$null=[Windows.Media.Ocr.OcrEngine,Windows.Media,ContentType=WindowsRuntime]; $null=[Windows.Globalization.Language,Windows.Globalization,ContentType=WindowsRuntime]; if ([Windows.Media.Ocr.OcrEngine]::IsLanguageSupported([Windows.Globalization.Language]::new('ko'))) { exit 0 } else { exit 1 }",
+   "안내": [
+    "시작 › 설정 › «시간 및 언어» › «언어 및 지역» 을 연다.",
+    "«언어 추가» 를 눌러 «한국어» 를 고르고 «다음».",
+    "«광학 문자 인식(OCR)» 이 체크된 것을 보고 «설치» (관리자 확인 창이 뜨면 «예»)."
+   ]
+  },
+  {
+   "id": "ms-word",
+   "이름": "MS Word(docx 를 PDF 로)",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": ["3_시스템/docpdf.py"],
+   "필수": false,
+   "까닭": "끝난 작업의 docx 를 PDF 로 바꿀 때 Word 를 빌린다. 없으면 그 변환만 안 된다.",
+   "확인": "if (Test-Path 'Registry::HKEY_CLASSES_ROOT\\Word.Application') { exit 0 } else { exit 1 }",
+   "안내": [
+    "Microsoft 365(학교·회사 계정이면 무료인 경우가 많다)를 office.com 에서 로그인해 «Office 설치» 로 설치한다.",
+    "Word 를 한 번 켜서 라이선스 동의 창을 닫는다."
+   ]
+  },
+  {
+   "id": "defuddle",
+   "이름": "웹페이지 읽기 도구(defuddle)",
+   "종류": ["node 도구"],
+   "쓰는 곳": [".claude/skills/defuddle/SKILL.md"],
+   "필수": false,
+   "까닭": "웹페이지를 광고·메뉴 없이 읽는다. 없으면 Claude 가 기본 웹 읽기로 대신한다.",
+   "확인": "if (Get-Command defuddle -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }",
+   "하기": "npm install -g defuddle (Node.js 가 있어야 함)",
+   "안내": [
+    "Node.js 가 없으면: nodejs.org 에서 «LTS» 단추로 받은 파일을 실행해 «Next» 만 눌러 설치한다.",
+    "Claude·터미널 창을 닫았다가 다시 열고 Claude 에게 «defuddle 설치해 줘» 라고 한다."
+   ]
+  },
+  {
+   "id": "chrome",
+   "이름": "크롬(수집 창이 글을 여는 브라우저)",
+   "종류": ["브라우저", "레지스트리"],
+   "쓰는 곳": [".claude/skills/collect_desk/scripts/collect_desk.py"],
+   "필수": false,
+   "까닭": "수집 창에서 글을 크롬으로 연다(크롬 설치 자리를 레지스트리에서 읽기만). 없으면 기본 브라우저로 연다.",
+   "확인": "if (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe') { exit 0 } else { exit 1 }",
+   "하기": "winget install --id Google.Chrome -e --accept-source-agreements --accept-package-agreements",
+   "안내": [
+    "google.com/chrome 을 열고 «Chrome 다운로드» 를 누른다.",
+    "받은 파일을 실행하면 저절로 설치된다."
+   ]
+  },
+  {
+   "id": "door",
+   "이름": "받는 문(탐색기 우클릭·단축키로 받은함에 넣기)",
+   "종류": ["레지스트리"],
+   "쓰는 곳": ["3_시스템/door.py"],
+   "필수": false,
+   "까닭": "탐색기 우클릭 «외부뇌 받은함으로»·Ctrl+Alt+B·알림 이름을 이 사용자 레지스트리(HKCU)에 등록한다(관리자 권한 없음).",
+   "확인": "py -3 3_시스템/door.py status",
+   "하기": "py -3 3_시스템/door.py install (실행 파일 brain-key.exe 가 3_시스템/door-app 에 있어야 함)",
+   "안내": [
+    "⚠ 지금 배포판에는 실행 파일(3_시스템/door-app 의 brain-key.exe·dll)이 없다 — 이 판에서는 켤 수 없다고 알린다.",
+    "실행 파일이 실린 판이 나오면 Claude 에게 «받는 문 켜 줘» 라고 한다."
+   ]
+  }
+ ]
+}

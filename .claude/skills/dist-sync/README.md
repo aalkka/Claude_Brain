@@ -17,6 +17,8 @@ py -3 .claude/skills/dist-sync/scripts/dist-diff.py --a <원본볼트> --b <대�
 
 사용자가 고친 코어는 판 해시 표(`known-hashes.json` · publish 때 `--build-known`)로 가려서 덮어쓰지 않는다. 합치고, 못 합치면 그대로 두고 묻는다. 근거 = ADR-030.
 
+배포판 최신 점검(제작자 · LLM 0) = `py -3 .claude/skills/dist-sync/scripts/dist-check.py [--fetch]` — 안 올린 고침 · push 안 함 · 받을 것. 건강 줄(`doctor.py`)이 같은 것을 한 줄로 낸다. 시험 = `scripts/test_dist_check.py`.
+
 시험 = `py -3 3_시스템/_eval/update_sim.py --dist <배포판 worktree> --old <옛 판>` — 옛 판을 clone 한 가짜 사용자 볼트를 안내문의 명령 그대로 올린다.
 
 ## 왜 `git pull`이 아닌가
