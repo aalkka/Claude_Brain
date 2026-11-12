@@ -40,6 +40,9 @@ PEND_MIN_REQ   = 10       # 최소 규모(하한). 실질 필터는 아래 SYS_R
 #   볼트 편집 0인 세션에 노트를 쓴 것은 31건 중 1건뿐.
 # 여행계획·전시·운동·물리문제 같은 질의응답은 산출물 노트가 결론 전부라 세션노트가 중복이다.
 SYS_RX = re.compile(r"^(3_시스템/|\.claude/|CLAUDE\.md)")   # 이걸 건드린 세션만 대상
+# 세이브포인트(idle-save 가 시킨 `_index/stubs/<id>.save.md` Write)는 시스템 작업이 아니다 — 11-13 실측: 시스템 편집이
+# 이 쓰기 하나뿐인 세션 32개 중 7개가 기록 질문에 올라 «넘어가기»로 답을 받았다(깨움이 기록 질문을 새로 만들었다).
+SAVE_REL = "3_시스템/_index/stubs/"
 PEND_SKIP = ".pending-skip.txt"       # 사용자가 "넘어가"라 한 세션 id (거부 채널)
 PEND_MAX_AGE_D = 30       # mtime 선필터. 트랜스크립트 보존과 맞춘다(파싱량 상수 유지)
 PEND_FILE = ".pending-sessions.txt"   # Stop이 쓰고 SessionStart가 읽는다(생산자-소비자)
@@ -416,7 +419,7 @@ def scan_pending(outdir, cur_short, tdir):
         if len(st.get("seen", [])) < PEND_MIN_REQ:
             continue
         # 결론이 대화에만 남는 세션인가 — 시스템/코어를 건드렸는지로 가른다.
-        if not any(e[1] in ("신규", "수정") and SYS_RX.match(e[2]) for e in ev):
+        if not any(e[1] in ("신규", "수정") and SYS_RX.match(e[2]) and not e[2].startswith(SAVE_REL) for e in ev):
             continue
         done = False
         for e in ev:
