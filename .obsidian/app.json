@@ -3,6 +3,6 @@
   "trashOption": "local",
   "promptDelete": false,
   "userIgnoreFilters": [
-    "3_\uc2dc\uc2a4\ud15c/"
+    "/^3_\uc2dc\uc2a4\ud15c\\/(?!\uc124\uba85\uc11c\\/)/"
   ]
 }
