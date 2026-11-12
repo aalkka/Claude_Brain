@@ -2,9 +2,11 @@
 
   py -3 .claude/skills/dist-sync/scripts/test_dist_check.py
 
+새 파일 = 배포판에 없는 코어는 배포 커밋보다 먼저 생겨도 1건 → ack 해야만 빠짐
 0 = 어긋남 없는 사본 → 0건(익명화로 늘 다른 파일·시각만 바뀐 파일은 안 잡힘)
 ① 볼트만 고침 → 안 올린 고침 1 · ② 배포판 커밋 push 안 함 → 1 · ③ 원격만 앞섬 → 받을 것 1
 덤: 볼트에서 지운 코어 · 배포판 worktree 의 커밋 안 한 고침 · 안 싣기로 적은 판(ack)
+안 보던 자리: 옵시디언 설정·스니펫·새 플러그인(폴더째 ack · 까닭) · «필요 ←»(배포판 코어가 부름) · 안 싣기로 했는데 부름
 """
 import importlib.util
 import os
@@ -22,6 +24,7 @@ spec.loader.exec_module(dc)
 FAIL = []
 TASK = "3_시스템/demo-task.ps1"  # mf:allow-path  (임시 저장소 안 · 볼트 밖 설정 추적 시험)
 PY = "3_시스템/search.py"  # mf:allow-path  (임시 사본 안의 코어 자리 — 진짜 볼트는 안 건드림)
+OBS_APP = ".obsidian/app.json"  # mf:allow-path  (임시 사본 안 — 배포판에 손으로 넣은 옵시디언 설정 자리)
 
 
 def run(cwd, *args, env=None):
@@ -127,6 +130,7 @@ def main():
             put(A, rel, txt)
         put(A, "README.md", "제작자 안내\n")
         put(A, ".claude/skills/demo/old.md", "볼트에만 · 오래됨\n")
+        put(A, OBS_APP, '{"a": 1}\n')
         run(A, "add", ".")
         when = "@%d +0900" % (time.time() - 200)
         run(A, "commit", "-m", "vault", env={"GIT_COMMITTER_DATE": when, "GIT_AUTHOR_DATE": when})
@@ -135,6 +139,7 @@ def main():
         for rel, txt in files.items():
             put(B, rel, txt)
         put(B, "README.md", "사용자 안내\n")
+        put(B, OBS_APP, '{"a": 1}\n')                                     # 배포판에 손으로 넣은 옵시디언 설정
         run(B, "add", ".")
         run(B, "commit", "-m", "sync(dist): 처음")
         run(A, "remote", "add", "dist", R)
@@ -147,6 +152,10 @@ def main():
 
         if dc.find_dist(A) != os.path.abspath(B):
             FAIL.append("배포판 worktree 찾기")
+        r = dc.check(A, B)              # 배포판에 없는 새 파일은 배포 커밋보다 먼저 생겼어도 센다(11-13 draft·gpu_guard 가 조용히 빠졌다)
+        expect("새 파일 — 배포 커밋 앞에 생김", r, (1, 0, 0, 0)) and r["unsynced"][0]["path"] == ".claude/skills/demo/old.md" \
+            and r["unsynced"][0]["what"] == "새 파일" or FAIL.append("새 파일 칸")
+        dc.ack(A, [".claude/skills/demo/old.md"])                         # 안 싣기로 적어야만 빠진다
         r = dc.check(A, None, True)
         expect("0 어긋남 없는 사본", r, (0, 0, 0, 0))
         doc = load_doctor(A, os.path.join(tmp, "check.json"))
@@ -199,6 +208,29 @@ def main():
         expect("덤 안 싣기로 적음", dc.check(A, B), (0, 0, 1, 1))
         put(A, PY, "print(3)\n", time.time() + 100)
         expect("덤 적은 뒤 다시 고침", dc.check(A, B), (1, 0, 1, 1))
+
+        # 층 규칙이 안 보는 자리 — 옵시디언 설정·스니펫·새 플러그인 · 배포판 코어가 부르는 새 파일 · 안 싣기로 했는데 부름
+        NEED = ".claude/skills/demo/need.md"
+        put(A, OBS_APP, '{"a": 2}\n')
+        put(A, ".obsidian/snippets/x.css", "p{}\n")
+        put(A, ".obsidian/plugins/foo/manifest.json", '{"id": "foo"}\n')
+        put(A, NEED, "새 문서\n")
+        put(B, "README.md", "사용자 안내 · %s 를 본다\n" % NEED)
+        got = {x["path"]: x for x in dc.check(A, B)["unsynced"]}
+        ok = (got.get(OBS_APP, {}).get("what") == "옵시디언 설정 다름" and got.get(".obsidian/snippets/x.css", {}).get("what") == "새 스니펫"
+              and got.get(".obsidian/plugins/foo/", {}).get("what") == "새 플러그인"
+              and got.get(NEED, {}).get("why", [""])[0].startswith("필요 ← README.md"))
+        dc.ack(A, [OBS_APP, ".obsidian/snippets/x.css", ".obsidian/plugins/foo"], "시험")
+        put(A, ".obsidian/plugins/foo/manifest.json", '{"id": "foo", "version": "2"}\n')    # 플러그인은 판을 올려도 안 깨어남
+        left = {x["path"] for x in dc.check(A, B)["unsynced"]}
+        ok = ok and not left & {OBS_APP, ".obsidian/snippets/x.css", ".obsidian/plugins/foo/"} \
+            and dc.load_ack(A)[".obsidian/plugins/foo/"] == {"판": "플러그인", "까닭": "시험"}
+        dc.ack(A, [NEED])
+        back = {x["path"]: x["what"] for x in dc.check(A, B)["unsynced"]}
+        ok = ok and back.get(NEED) == "안 싣기로 했는데 배포판이 부름"
+        print("%s 안 보던 자리·가를 까닭 — 처음 %s · 적은 뒤 남음 %s · 부르는데 안 실음 %s" % ("✓" if ok else "✗", sorted(got), sorted(left), back.get(NEED)))
+        if not ok:
+            FAIL.append("안 보던 자리")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("통과" if not FAIL else "실패: " + ", ".join(FAIL))

@@ -1,0 +1,5 @@
+/* 원본 색인 폴더(1_수집/_색인 — 3_시스템/ingest.py 자동 생성)를 파일 탐색기에서 숨긴다.
+   검색·백링크·Bases 에는 그대로 남는다(탐색기 표시만 가림). 끄면 폴더가 다시 보인다. 근거 = ADR-013. */
+.nav-folder:has(> .nav-folder-title[data-path="1_수집/_색인"]) {
+  display: none;
+}

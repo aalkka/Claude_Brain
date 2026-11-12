@@ -1,0 +1,11 @@
+/* 꽁돈 황금 태그 — notice-filter.py 가 장학 일정 줄에 붙이는 #꽁돈 (11-10) */
+a.tag[href="#꽁돈"],
+.cm-hashtag.cm-tag-꽁돈 {
+  background: linear-gradient(135deg, #ffe08a 0%, #f2b705 55%, #c98a00 100%);
+  color: #3a2700;
+  font-weight: 700;
+  border: 1px solid #b07800;
+}
+a.tag[href="#꽁돈"] { border-radius: 999px; padding: 0 0.55em; }
+.cm-hashtag-begin.cm-tag-꽁돈 { border-right: none; border-radius: 999px 0 0 999px; padding-left: 0.45em; }
+.cm-hashtag-end.cm-tag-꽁돈 { border-left: none; border-radius: 0 999px 999px 0; padding-right: 0.45em; }
