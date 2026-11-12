@@ -136,3 +136,29 @@ body.bc-dragging, body.bc-dragging * { user-select: none; cursor: grabbing !impo
 .bc-ask-q { font-size: var(--font-ui-small); padding: 2px 2px 8px; }
 .bc-ask-b { display: flex; gap: 6px; flex-wrap: wrap; }
 .bc-ask-b button { height: auto; padding: 3px 10px; font-size: var(--font-ui-smaller); }
+
+/* 0.5 검색·필터(초안 A «단추 둘» · 11-12) — 머리에 검색 칸 · 필터 상자 · 켜진 필터 = 단추 점 · 결과 = 오른쪽 목록 자리 */
+.bc-head .bc-btn { position: relative; }
+.bc-btn.is-on { color: var(--interactive-accent); }
+.bc-btn.is-on::before { content: ""; position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--interactive-accent); }
+.bc-q { flex: 1; min-width: 6em; display: flex; align-items: center; gap: 2px; margin: 0 4px; }
+.bc-q input { flex: 1; min-width: 0; }
+.bc-q input::-webkit-search-cancel-button { display: none; }
+.bc-hit { font-weight: var(--font-bold); color: var(--text-normal); }
+.bc-brief .bc-rd { width: auto; min-width: 4.6em; }
+.bc-brief .bc-rt { flex: none; font-size: var(--font-ui-smaller); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.bc-sec.is-past .bc-rt, .bc-more-row .bc-text { color: var(--text-faint) !important; }
+@container (max-width: 760px) { .bc-cols.is-search .bc-side { order: -1; } }
+.bc-flt { width: 220px; font-size: var(--font-ui-small); }
+.bc-f-row { display: flex; align-items: center; gap: 8px; padding: 3px 6px; border-radius: var(--radius-s); cursor: pointer; }
+.bc-f-row:hover { background: var(--background-modifier-hover); }
+.bc-f-row input { margin: 0; flex: none; }
+.bc-f-name { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bc-f-row.is-off .bc-f-name { color: var(--text-faint); }
+.bc-f-only { opacity: 0; height: auto; padding: 0 4px; border: 0; box-shadow: none; background: none; color: var(--text-accent); font-size: var(--font-ui-smaller); cursor: pointer; }
+.bc-f-row:hover .bc-f-only, .is-mobile .bc-f-only { opacity: 1; }
+.bc-f-sep { height: 1px; background: var(--background-modifier-border); margin: 6px 0; }
+.bc-f-foot { display: flex; justify-content: flex-end; padding: 4px 2px 0; }
+.bc-f-foot button { height: auto; padding: 2px 8px; border: 0; box-shadow: none; background: none; color: var(--text-muted); font-size: var(--font-ui-smaller); cursor: pointer; }
+.bc-f-foot button:disabled { opacity: 0.4; cursor: default; }
+.bc-flt:focus { outline: none; }
