@@ -1,7 +1,7 @@
 {
   "id": "brain-base",
   "name": "Brain Base",
-  "version": "0.46.4",
+  "version": "0.48.4",
   "minAppVersion": "1.5.0",
   "description": "외부뇌 바탕 — 옵시디언 안 Claude 대화창 · 자체 탐색기(파일·주제) · 주제 패널 · 홈 · 외부뇌 행위 · 장부.",
   "author": "External Brain",

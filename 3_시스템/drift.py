@@ -249,6 +249,20 @@ def ops_rows():
         found.add("ANTHROPIC_BASE_URL")
     if found:
         rows.append(("운영", "환경 변수", " · ".join(sorted(found)) + " 있음 — claude -p 가 구독을 벗어나 과금될 수 있다"))
+    try:                                # 서버 자동 커밋(11-12 안 A) — 막힘은 위 «자동 커밋»(hooks.log BLOCKED)이 센다 · 그 밖의 실패만
+        a = json.load(open(os.path.join(HERE, "_index", "server", "autocommit.json"), encoding="utf-8"))
+        if a.get("fail_at") and a.get("result") != "막힘":
+            rows.append(("운영", "자동 커밋(서버)", f"{a.get('result')} — {time.strftime('%m-%d %H:%M', time.localtime(a['fail_at']))} · 3_시스템/_index/server/server.log"))
+    except (OSError, ValueError, KeyError):
+        pass
+    try:                                # 구독 끊김(11-11 · claude_bin 상태 파일) — 적혀 있을 때만 다시 잰다(다시 구독했으면 여기서 풀림 · 평소 비용 0)
+        import claude_bin
+        bare = {k: v for k, v in os.environ.items() if not re.match(r"CLAUDECODE|CLAUDE_CODE|CLAUDE_AGENT|ANTHROPIC_", k)}   # 세션 안이면 앱이 넣은 BASE_URL 이 «과금 길»로 읽혀 끊김이 안 풀린다
+        if claude_bin.lapsed() and not claude_bin.check(bare)["ok"] and claude_bin.lapsed():
+            d = claude_bin.lapsed()
+            rows.append(("운영", "구독", f"{d.get('kind')} — {time.strftime('%m-%d %H:%M', time.localtime(d.get('since') or 0))}부터 · 구독이 필요한 기능 멈춤(대화창·그림 읽기·공지 판정·폰 RC) · 다시 구독·로그인하면 풀림"))
+    except Exception:                   # 건강 점검이 이것 때문에 죽지 않게
+        pass
     return rows
 
 

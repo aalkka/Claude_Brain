@@ -9,7 +9,7 @@ import { launch, sleep, TV, OUT } from "file:///C:/brain-base/test/obs_cdp.mjs";
 const cwd = path.resolve(".").replace(/\\/g, "/");
 if (cwd.startsWith("C:/Claude_Brain") || cwd.startsWith("C:/brain-base")) throw new Error("임시 폴더에서 돌릴 것");
 process.env.DESK_NO_OPEN = "1"; // 시험에서는 브라우저를 안 띄운다
-const PORT = 9377;
+const PORT = +(process.env.BB_PORT ?? 9377);   // 시험마다 다른 포트를 줄 수 있다(동시에 도는 시험끼리 겹치지 않게)
 const REAL = "C:/Claude_Brain";
 const MOD = ".claude/skills/collect_desk";
 const SWF = "3_시스템/collect.local.json"; // 전체 스위치 all_off·auto_judge(수집 본체 통합 11-07) — 진짜 볼트 것은 안 옮긴다(기본 = 없음)
@@ -119,6 +119,8 @@ const until = async (fn, ms = 15000) => {
 };
 const q = (s) => JSON.stringify(s);
 const clickF = (src, f) => inFrame(`document.querySelector('[data-src="${src}"][data-f="${f}"]').click(); return 1`);
+// 전체·자동 판정·크롬 열기·PC 깨우기는 톱니 작은 창 안(11-12 안 3 가) — 열려 있지 않으면 연다
+const openPop = () => inFrame(`if(!document.querySelector('.pop'))document.querySelector('[data-pop]').click(); return 1`);
 const select = (id) => inFrame(`document.querySelector('[data-sel="${id}"]').click(); return 1`);
 const click = (sel) => inFrame(`document.querySelector(${q(sel)}).click(); return 1`);
 const has = (sel) => inFrame(`return !!document.querySelector(${q(sel)})`);
@@ -172,10 +174,8 @@ try {
   ok("mylms 알림", tm.includes(`${m.alarm.days.join("·")}일 전 ${m.alarm.at.join(" ")}`));
   ok("확장 칸 = 새 판 · 옛 판 표시 없음", tm.includes(extNew) && !tm.includes("옛 판"));
   ok("지금 받기 단추 있음", await has('[data-fetch="mylms"]'));
-  ok("깨우기 옆 단계 낱말 = 높음·낮음", await until(async () => /^(높음|낮음)$/.test(await inFrame(`return document.querySelector('[data-options]')?.textContent ?? ''`))));
-  await inFrame(`document.querySelector('[data-options]').click(); return 1`);
-  ok("단계 낱말을 누르면 기능 단계 탭", await until(() => ev(`return app.workspace.getLeavesOfType("brain-options").length > 0`)));
-  await ev(`app.workspace.getLeavesOfType("brain-options").forEach((l) => l.detach()); return 1`);
+  await openPop();
+  ok("톱니 작은 창 = PC 깨우기·크롬 열기·자동 판정·전체", await until(async () => (await inFrame(`return [...document.querySelectorAll('.pop span')].map(x=>x.textContent).join('·')`)) === "PC 깨우기·크롬 열기·자동 판정·전체"));
   fs.writeFileSync(path.join(runsDir, "lms-run-시험판.json"), JSON.stringify({ kind: "status", login: "ok", at: Date.now(), version: "0.0.1" }));
   ok("옛 판 = 표시 · 지금 받기 단추 없음", await until(async () => (await text()).includes("옛 판") && !(await has('[data-fetch="mylms"]'))));
   fs.writeFileSync(path.join(runsDir, "lms-run-시험판.json"), JSON.stringify({ kind: "status", login: "ok", at: Date.now(), version: extNew }));
@@ -225,16 +225,17 @@ try {
   await click('[data-f="skip-"][data-v="지울말"]');
   ok("뺄 말 뺌", await until(() => !J(RC).filter.title_skip.includes("지울말")));
 
+  await click(`[data-edit="${SCI}"]`);   // 받기 칸 연필(11-12) — 주기 고르기는 바꾸기 칸 안
+  await until(() => has(`[data-hours="${SCI}"]`));
   await inFrame(`const t=document.querySelector('[data-hours="${SCI}"]'); t.value='12'; t.dispatchEvent(new Event('change',{bubbles:true})); return 1`);
   ok("주기", await until(() => J(RC).recheck_hours === 12));
   await until(() => inFrame(`return document.querySelector('[data-hours="${SCI}"]').value === '12'`));
-  const pg = J(RC).list.pages;
-  await click(`[data-src="${SCI}"][data-f="pages"][aria-label="쪽 더하기"]`);
-  ok("쪽", await until(() => J(RC).list.pages === pg + 1));
+  ok("쪽·첨부 칸 없음(Claude 몫 · 11-12)", !(await has(`[data-src="${SCI}"][data-f="pages"]`)) && !(await has(`[data-src="${SCI}"][data-f="download"]`)));
   await inFrame(`const t=document.querySelector('[data-purpose="${SCI}"]'); t.value='시험 목적'; t.dispatchEvent(new Event('change',{bubbles:true})); return 1`);
   ok("목적", await until(() => J(RC).purpose === "시험 목적"));
   // 전체 «자동 판정»(collect.local.json auto_judge · 기본 끔) — 켜야 출처별 칸이 보인다. 켤 때 묻는 창 · 취소 = 안 씀 · 없으면 끔
   ok("전체 자동 판정 = 기본 끔 · 출처별 칸은 안 보임", !(fs.existsSync(path.join(TV, SWF)) && J(SWF).auto_judge) && !(await has(`[data-src="${SCI}"][data-f="auto"]`)));
+  await openPop();
   await clickF("*", "auto_judge");
   ok("전체 자동 판정 = 묻는 창이 먼저", await until(() => inFrame(`return document.querySelector('.dlg p')?.textContent === '구독 사용량을 씁니다. 자동 판정을 켜시겠습니까?'`)));
   await click(".dlg [data-n]");
@@ -328,7 +329,9 @@ try {
   await until(() => inFrame(`return document.querySelector('[data-src="mylms"][data-f="enabled"]').dataset.v === 'false'`));
   await clickF("mylms", "enabled");
   ok("mylms 끄기 = desk + known paused", await until(() => J("3_시스템/lms/desk.json").enabled === false && J("3_시스템/lms/known.json").paused === true));
-  ok("mylms 끔 = 깨우기 스위치 잠김", await until(() => inFrame(`return document.querySelector('[data-f="wake"]').disabled`)));
+  await openPop();
+  ok("mylms 끔 = 크롬 열기 스위치 잠김", await until(() => inFrame(`return document.querySelector('.pop [data-f="wake"]').disabled`)));
+  await inFrame(`document.querySelector('[data-pop]').click(); return 1`);
   await until(() => inFrame(`return document.querySelector('[data-src="mylms"][data-f="enabled"]').dataset.v === 'true'`));
   await clickF("mylms", "enabled");
   ok("mylms 켜기 = known paused 풀림", await until(() => J("3_시스템/lms/known.json").paused === false));
@@ -351,6 +354,7 @@ try {
   ok("안 함 = 줄이 사라짐 · 대기열 안 씀", await until(async () => !(await has(`[data-sel="cand:${c1.id}"]`))) && !fs.readFileSync(path.join(TV, "3_시스템/_index/수집-대기열.md"), "utf8").includes(c1.id));
 
   // ── 전체 ──
+  await openPop();
   await clickF("*", "all_off");
   ok("전체 끄기 = 묻는 창", await until(() => inFrame(`return document.querySelector('.dlg p')?.textContent === '모든 수집을 끄시겠습니까?'`)));
   await click(".dlg [data-y]");

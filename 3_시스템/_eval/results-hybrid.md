@@ -37,6 +37,7 @@ source: session
 
 ## Phase 4 재측정 (PDF 1편 인제스트 후 — 교차언어 가설 확증)
 MemGPT PDF(영어) → 한국어 통찰노트(`2_지식/notes/MemGPT.md`) 인제스트 + golden의 MemGPT 답 교체:
+
 | 골든셋 | 인제스트 전 hybrid | 인제스트 후 hybrid |
 |---|---|---|
 | literal 30 | 90.0% | 93.3% |
@@ -48,6 +49,7 @@ MemGPT PDF(영어) → 한국어 통찰노트(`2_지식/notes/MemGPT.md`) 인제
 지적: grep/lexical=literal 29/30인데 hybrid 28 → 융합이 강한 arm 희석 = 비효율?
 **진단:** literal서 hybrid가 지는 질의 = **딱 1개(context_managing1)**. 랭크 L=5(hit)·V=20(쓰레기)·H=13(miss). 약한 vector가 강한 lexical을 문턱 밖으로 끌어냄.
 **융합 변형 실측(추측 금지):**
+
 | 융합 | literal | 패러프레이즈 | 합 |
 |---|---|---|---|
 | RRF k60(현행) | 28 | **8** | 36 |

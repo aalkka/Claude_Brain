@@ -16,10 +16,12 @@ terminal·transcript 표시 경로가 없다(anthropics/claude-code#47117).
 
 계약: stdout = JSON 한 덩어리만. 미완료 0건이면 `{}`. 어떤 예외에도 `{}`(fail-open).
 """
-import json, os, re, sys
+import json, os, re, sys, time
 
 PEND = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                     "..", "_index", ".pending-sessions.txt")
+HEALTH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "_index", "health.json")
+LIVE = {"git 잠금"}   # 운영 위험(drift.ops_rows)이 지금 재는 줄 — 지난 잼을 겹쳐 넣지 않는다
 CAP = 10_000          # 문서상 훅 출력 문자열 상한
 
 
@@ -59,6 +61,26 @@ def ops():
     if not rows:
         return None
     return "⚠ 운영 위험 — 사람과 대화하는 세션이면 첫 응답에 한 줄로 알린다\n" + "\n".join("   - {}: {}".format(w, t) for _, w, t in rows)
+
+
+def health():
+    """볼트 건강 — brain.py doctor 가 남긴 마지막 잼을 읽기만 한다(5초 · 여기서 재지 않음). 문제가 있을 때만.
+    △ 는 줄 이름만(어느 영역인지 알면 요청과 닿는지 가른다 · 자세한 값과 고치는 길은 다시 잴 때 — 주입 값은 낡을 수 있다),
+    ✗ 는 드물고 알려야 하므로 내용까지(11-12 사용자 «내용 다 vs 유무만» → 판단). 건강 창 «고치기»가 연 대화도 이 줄로 안다."""
+    try:
+        with open(os.path.normpath(HEALTH), encoding="utf-8") as fh:
+            d = json.load(fh)
+        rows = [r for r in d["rows"] if r.get("name") not in LIVE]
+        bad = [r for r in rows if r.get("status") == "bad"][:6]
+        warn = [str(r.get("name")) for r in rows if r.get("status") == "warn"][:12]
+        when = time.strftime("%m-%d %H:%M", time.localtime(d["at"]))
+    except Exception:
+        return None
+    out = ["[볼트 건강] ✗ {}: {} ({} 잼) — 사람과 대화하는 세션이면 첫 응답에 한 줄로 알린다".format(r["name"], r["line"], when) for r in bad]
+    if warn:
+        out.append("[볼트 건강] △{} {} — {} 잼 · 자세히·고치는 길 = py -3 3_시스템/brain.py doctor · 요청과 닿을 때만 말함".format(
+            len(warn), " · ".join(warn), when))
+    return "\n".join(out) or None
 
 
 def hook_input():
@@ -103,14 +125,18 @@ def main():
         if inp.get("source") not in ("compact", "resume"):
             msg = build(str(inp.get("session_id", ""))[:8])
             risk = ops()
+            hl = health()
             if os.environ.get("CLAUDE_CODE_ENTRYPOINT") == "claude-desktop":
-                ctx = "\n".join(x for x in (risk, DESKTOP_DIRECTIVE + msg if msg else None) if x)
-                if ctx:
-                    out = {"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ctx}}
+                ctx = "\n".join(x for x in (risk, hl, DESKTOP_DIRECTIVE + msg if msg else None) if x)
             else:
+                # CLI·대화창(`claude -p` = sdk-cli) — systemMessage 는 사람 화면용이라 Claude 가 못 본다(대화창은 그리지도 않음).
+                # 운영 위험·볼트 건강은 Claude 가 알아야 하므로 진입점과 상관없이 맥락에도 넣는다(11-12).
                 text = "\n".join(x for x in (risk, msg) if x)
                 if text:
-                    out = {"systemMessage": text}
+                    out["systemMessage"] = text
+                ctx = "\n".join(x for x in (risk, hl) if x)
+            if ctx:
+                out["hookSpecificOutput"] = {"hookEventName": "SessionStart", "additionalContext": ctx[:CAP]}
     except Exception:
         out = {}
     sys.stdout.write(json.dumps(out, ensure_ascii=False))

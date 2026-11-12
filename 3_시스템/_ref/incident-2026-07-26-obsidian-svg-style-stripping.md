@@ -16,7 +16,7 @@ study-helper `illustrate`가 만든 인라인 `<svg>`(class + `<style>` 블록 �
 
 ## 해결
 - **`<style>`·class 전면 제거 → 모든 `fill`·`stroke`·`stroke-width`·`font-size`를 요소마다 인라인 presentation 속성**으로. (마커 fill도 인라인.) → Obsidian이 안 지움.
-- **`@media prefers-color-scheme` 못 씀**(<style> 제거되니) → **테마-강건 팔레트**: 밝은 채움(`#eef2f7` 등) + 어두운 글자(`#0f172a`) → 라이트·다크 배경 양쪽서 읽힘.
+- **`@media prefers-color-scheme` 못 씀**(`<style>` 제거되니) → **테마-강건 팔레트**: 밝은 채움(`#eef2f7` 등) + 어두운 글자(`#0f172a`) → 라이트·다크 배경 양쪽서 읽힘.
 - **`<svg width="100%" viewBox=...>`**(고정 width 금지) → 반응형, 가로 클리핑 방지.
 - **긴 텍스트 = tspan 2줄 분할**, viewBox 폭 안으로.
 

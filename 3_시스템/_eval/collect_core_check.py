@@ -144,7 +144,8 @@ def main():
     ps = os.path.join(SYS, 'lms-tasks.ps1')
     if os.path.exists(ps):
         used = set(re.findall(r'\brun (collect\.[a-z.]+)', read(ps)))
-        ok('예약 명령 줄(lms-tasks.ps1)이 부르는 id 가 코어에 있음', {'collect.lms', 'collect.lms.wake'} <= used and all(got.get(i) == 'core' for i in used), used)
+        used |= set(re.findall(r"\['(collect\.[a-z.]+)'[\],]", read(os.path.join(SYS, 'lms-auto.py'))))     # 시각 예약 명령 줄은 lms-auto.py desired_tasks 가 짓는다(11-11)
+        ok('예약 명령 줄(lms-tasks.ps1 · lms-auto.py 시각 예약)이 부르는 id 가 코어에 있음(옛 깨우기 예약의 collect.lms.wake 는 KEEP 이 지킴)', 'collect.lms' in used and all(got.get(i) == 'core' for i in used), used)
     else:
         print('  (lms-tasks.ps1 없음 — 이 예약이 없는 판 · 건너뜀)')
     txt = read(os.path.join(MOD, 'view', 'index.html')) + ''.join(read(p) for p in sorted(__import__('glob').glob(os.path.join(MOD, 'skills', '*', 'SKILL.md'))))
@@ -294,10 +295,8 @@ def mylms_url(root):
     put(man, None)
 
 
-FAKE_TASKS = """param([switch]$Remove, [switch]$WakeOnly, [switch]$DryRun)
-$s = (& py -3 (Join-Path $PSScriptRoot 'lms-auto.py') --wake-state 2>$null | Select-Object -Last 1)
-Add-Content -Path (Join-Path $PSScriptRoot 'tasks-calls.log') -Value ("WakeOnly={0} DryRun={1} state={2}" -f $WakeOnly, $DryRun, $s)
-"""
+MY_ON = '시험: 외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)'      # 시각 예약 맞추기(lms-auto.py --sync-tasks · 시험이면 dry) 한 줄 — 11-11 수집 설정
+NONE = '시각 예약: 없음'
 STUB = """function Register-ScheduledTask {{ Add-Content -Path '{log}' -Value ('등록 ' + ($args -join ' ')) }}
 function Unregister-ScheduledTask {{ Add-Content -Path '{log}' -Value ('지움 ' + ($args -join ' ')) }}
 function Get-ScheduledTask {{ $null }}
@@ -311,9 +310,7 @@ def wake_cases(root):
     tv, ts = os.path.join(root, 'vault'), os.path.join(root, 'vault', '3_시스템')
     env = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', LMS_AUTO_STATE=os.path.join(root, 'lms-state'), DESK_NO_OPEN='1')
     new, old, opt = os.path.join(ts, 'collect.local.json'), os.path.join(ts, 'lms', 'desk.json'), os.path.join(ts, 'options.local.json')
-    calls = os.path.join(ts, 'tasks-calls.log')
-    with open(os.path.join(ts, 'lms-tasks.ps1'), 'w', encoding='utf-8-sig') as f:     # 가짜 예약 대본 — 불린 인자와 그때 값만 적는다
-        f.write(FAKE_TASKS)
+    calls = os.path.join(root, 'lms-state', 'tasks-sync.log')     # 시험이면 맞추기가 할 일을 여기 한 줄씩(예약은 안 건드림)
     for p in (new, old, opt, calls):
         put(p, None)
     run = lambda *a: subprocess.run([sys.executable, *a], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
@@ -327,50 +324,50 @@ def wake_cases(root):
     put(old, {'wake': False})
     ok('[깨우기] desk.json 옛 wake 칸은 안 읽음(값은 기능 단계 하나)', state() == 'on' and wake_on() is True, (state(), wake_on()))
     r = dk('set', 'mylms', 'wake', 'false')
-    ok('[깨우기] 창에서 끔 = 기능 단계 low · 옛 칸 걷음 · 예약 맞추기(-WakeOnly -DryRun) 한 번 · off level_low',
-       r.returncode == 0 and level() == 'low' and load(old) == {} and last() == 'WakeOnly=True DryRun=True state=off level_low' and wake_on() is False and state() == 'off level_low',
+    ok('[깨우기] 창에서 끔 = 기능 단계 low · 옛 칸 걷음 · 시각 예약 맞추기(시험) 한 번 · mylms 예약 없음 · off level_low',
+       r.returncode == 0 and level() == 'low' and load(old) == {} and last() == NONE and wake_on() is False and state() == 'off level_low',
        (r.returncode, r.stderr[-200:], level(), load(old), last(), wake_on()))
     r = dk('set', 'mylms', 'wake', 'true')
-    ok('[깨우기] 창에서 켬 = 기능 단계 high · 예약 맞추기 · on', r.returncode == 0 and level() == 'high' and last().endswith('state=on') and wake_on() is True,
+    ok('[깨우기] 창에서 켬 = 기능 단계 high · 예약 맞추기 · on', r.returncode == 0 and level() == 'high' and last() == MY_ON and wake_on() is True,
        (r.returncode, r.stderr[-200:], level(), last()))
     n0 = len(read(calls).splitlines())
     r = dk('set', '*', 'all_off', 'true')
-    ok('[깨우기] 전체 끔 = 같은 길로 예약 맞추기 · off all_off(헛깨우기 막음) · 고른 단계는 그대로', r.returncode == 0 and last().endswith('state=off all_off') and level() == 'high',
+    ok('[깨우기] 전체 끔 = 같은 길로 예약 맞추기 · off all_off(헛깨우기 막음) · 고른 단계는 그대로', r.returncode == 0 and last() == NONE and state() == 'off all_off' and level() == 'high',
        (r.returncode, r.stderr[-200:], last(), level()))
     r = dk('set', '*', 'all_off', 'false')
-    ok('[깨우기] 전체 켬 = 예약 다시 맞춤 · on', r.returncode == 0 and last().endswith('state=on'), (r.returncode, last()))
+    ok('[깨우기] 전체 켬 = 예약 다시 맞춤 · on', r.returncode == 0 and last() == MY_ON, (r.returncode, last()))
     r = dk('set', 'mylms', 'enabled', 'false')
-    ok('[깨우기] mylms 끔 = 예약 맞추기 · off source_off', r.returncode == 0 and last().endswith('state=off source_off'), (r.returncode, last()))
+    ok('[깨우기] mylms 끔 = 예약 맞추기 · off source_off', r.returncode == 0 and last() == NONE and state() == 'off source_off', (r.returncode, last()))
     r = dk('set', 'mylms', 'enabled', 'true')
     r2 = dk('set', '*', 'auto_judge', 'true')
-    ok('[깨우기] mylms 켬 = on · 자동 판정은 예약을 안 건드림', r.returncode == 0 and r2.returncode == 0 and last().endswith('state=on') and len(read(calls).splitlines()) == n0 + 4,
+    ok('[깨우기] mylms 켬 = on · 자동 판정은 예약을 안 건드림', r.returncode == 0 and r2.returncode == 0 and last() == MY_ON and len(read(calls).splitlines()) == n0 + 4,
        (r.returncode, r2.returncode, last(), len(read(calls).splitlines()) - n0))
     put(new, {'all_off': True})
     call = ("import importlib.util as u,sys;s=u.spec_from_file_location('la',r'%s');m=u.module_from_spec(s);s.loader.exec_module(m);"
             "m.hold_awake=lambda:print('HOLD');sys.argv=['x','--wake'];m.main()") % os.path.join(ts, 'lms-auto.py')
     r = run('-c', call)
-    ok('[깨우기] 꺼진 날 아침 깨우기 = 크롬 안 띄움 · 예약을 값대로 맞춤(다음 날부터 안 깨움)', 'HOLD' not in r.stdout and last().endswith('state=off all_off'), (r.stdout[-200:], last()))
+    ok('[깨우기] 꺼진 날 아침 깨우기 = 크롬 안 띄움 · 예약을 값대로 맞춤(다음 날부터 안 깨움)', 'HOLD' not in r.stdout and last() == NONE, (r.stdout[-200:], last()))
     put(new, None)
     put(old, None)
     put(calls, None)
-    os.remove(os.path.join(ts, 'lms-tasks.ps1'))
 
     # 진짜 lms-tasks.ps1 — 시험 볼트에 다른 이름으로 두고 -DryRun + 예약 명령 대체 함수(두 겹)로만 돌린다. 예약은 PC 전체 것이라 진짜로 불리면 안 된다.
     real = os.path.join(SYS, 'lms-tasks.ps1')
     if not os.path.exists(real):
         return print('  (lms-tasks.ps1 없음 — 진짜 예약 대본 시험 건너뜀)')
     src = read(real)
-    i_gate, i_wake, i_tick = src.find('if ($DryRun) { exit 0 }'), src.find('Register-ScheduledTask -TaskName $names[0]'), src.find('Register-ScheduledTask -TaskName $names[1]')
-    guarded = (src.count('Unregister-ScheduledTask') == 1 and 'if ($DryRun) { Write-Output "시험: $n 지움"; return }' in src     # 지우기는 Drop-Task 한 곳뿐
-               and 0 < src.find('if ($DryRun) { Write-Output "시험: $($names[0]) 등록') < i_wake < i_gate < i_tick and src.count('Register-ScheduledTask -TaskName') == 2)
-    ok('진짜 lms-tasks.ps1 — 지우기는 Drop-Task(시험이면 안 지움) · 시험이면 15분 등록 전에 끝남', guarded, '대본 꼴이 바뀜 — 시험을 다시 볼 것')
+    dry_rm = 'if ($DryRun) { Write-Output "시험: $n 지움"; return }'
+    i_gate, i_tick = src.find('if ($DryRun -or $WakeOnly) { exit 0 }'), src.find('Register-ScheduledTask -TaskName $tick')
+    guarded = (src.count('Unregister-ScheduledTask') == 1 and 0 < src.find(dry_rm) < src.find('Unregister-ScheduledTask')     # 15분 지우기는 한 곳 · 시험이면 그 앞에서 끝
+               and 0 < src.find('--sync-tasks') < i_gate < i_tick and src.count('Register-ScheduledTask -TaskName') == 1)      # 시각 예약은 lms-auto.py --sync-tasks 한 곳(시험이면 --dry)
+    ok('진짜 lms-tasks.ps1 — 지우기는 Drop-Task 한 곳(시험이면 안 지움) · 시각 예약은 --sync-tasks · 시험·-WakeOnly 면 15분 등록 전에 끝남', guarded, '대본 꼴이 바뀜 — 시험을 다시 볼 것')
     if not guarded:
         return
     ps = os.path.join(ts, 'lms-tasks-시험.ps1')
     shutil.copy2(real, ps)
     stub_log = os.path.join(root, 'stub.log')
     wrap = os.path.join(root, 'wrap.ps1')
-    for name, sw, want in (('켬', None, '등록'), ('전체 끔', {'all_off': True}, '지움')):
+    for name, sw, want in (('켬', None, MY_ON), ('전체 끔', {'all_off': True}, NONE)):
         put(new, sw)
         put(stub_log, None)
         with open(wrap, 'w', encoding='utf-8-sig') as f:
@@ -378,7 +375,7 @@ def wake_cases(root):
         r = subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', wrap], cwd=tv, env=env,
                            capture_output=True, encoding='utf-8', errors='replace', timeout=120, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         out = r.stdout
-        ok(f'진짜 lms-tasks.ps1 -WakeOnly -DryRun · {name} = «시험: … {want}» · 예약 명령 0회', r.returncode == 0 and f'시험: 외부뇌 LMS 깨우기 {want}' in out and not os.path.exists(stub_log)
+        ok(f'진짜 lms-tasks.ps1 -WakeOnly -DryRun · {name} = «{want}» · 예약 명령 0회', r.returncode == 0 and want in out and not os.path.exists(stub_log)
            and '반영' not in out, (r.returncode, out[-300:], r.stderr[-200:], read(stub_log)))
     put(new, None)
 

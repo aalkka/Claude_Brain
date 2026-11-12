@@ -12,7 +12,8 @@
     L2 색인 = ingest(첨부·그림 글자 · OCR) · L3 지식 = 수요가 있을 때.
 받기만: 네트워크 함수는 GET 하나뿐이다(요청 본문을 보내는 길 자체가 없다). 첨부는 격리 → lms-intake 검사 → 통과만 들인다.
 
-  py -3 3_시스템/web-collect.py                        # 모든 조리법(20시간 안에 돌았으면 건너뜀)
+  py -3 3_시스템/web-collect.py                        # 모든 조리법(받을 차례만 — 조리법 at 시각이 지났거나 · 없으면 recheck_hours(기본 20)가 지남)
+  py -3 3_시스템/web-collect.py --source <id> --due    # 그 출처를 받을 차례일 때만(시각 예약 «외부뇌-수집 <id>» → lms-auto.py --at)
   py -3 3_시스템/web-collect.py --force                # 시간 무시
   py -3 3_시스템/web-collect.py --source <id> --dry    # 무엇을 받을지만(아무것도 안 씀)
   py -3 3_시스템/web-collect.py --source <id> --check  # 조리법 검증: 받은 글 몇 편을 다시 읽어 제목·날짜가 그대로 나오는지
@@ -1157,7 +1158,53 @@ ROBOTS_TTL = 86400
 BOT = 'BrainCollector'                      # UA 의 이름 조각 — robots.txt 의 User-agent 대조용
 SITE_GAP = float(os.environ.get('COLLECT_SITE_GAP', 60))    # 탐색·미리보기는 같은 사이트를 이 간격(초) 안에 다시 받지 않는다 — 남은 만큼 기다렸다 받음(시험은 0)
 HITS = os.path.join(DRAFT, 'hits.json')     # 사이트별 마지막 탐색·미리보기 시각(프로세스를 건너 지킨다)
-FREE = ('name', 'purpose', 'recheck_hours', 'folder', 'first_since', 'explored', 'robots_note', 'group')   # 미리보기 결과에 안 닿는 칸
+FREE = ('name', 'purpose', 'recheck_hours', 'folder', 'first_since', 'explored', 'robots_note', 'group', 'at', 'at_since')   # 미리보기 결과에 안 닿는 칸
+AT_MAX = 4                                  # 하루 시각 칸 수(수집 창 «시각»)
+
+
+def at_times(v):
+    """조리법·desk.json 의 «시각»(11-11 수집 설정) — ['HH:MM', …] 를 고르고 정렬 · 틀린 꼴은 ValueError(엔진은 그 출처를 주기로 돌린다)."""
+    if v in (None, '', []):
+        return []
+    if not isinstance(v, list) or len(v) > AT_MAX:
+        raise ValueError(f'at = HH:MM 목록 {AT_MAX}개까지')
+    out = []
+    for t in v:
+        m = re.fullmatch(r'([01]\d|2[0-3]):([0-5]\d)', str(t))
+        if not m:
+            raise ValueError(f'at 꼴 HH:MM: {t!r}')
+        if t not in out:
+            out.append(t)
+    return sorted(out)
+
+
+def last_slot(at, now=None, since=0):
+    """가장 최근에 지난 시각(초) — 오늘 것이 아직이면 어제 것. since(시각을 정한 때)보다 앞이면 0(정하기 전 시각을 따라잡지 않는다)."""
+    now = now or time.time()
+    lt = time.localtime(now)
+    best = 0
+    for t in at:
+        h, m = map(int, t.split(':'))
+        s = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, h, m, 0, 0, 0, -1))
+        if s > now:
+            s = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday - 1, h, m, 0, 0, 0, -1))
+        best = max(best, s)
+    return best if best >= (since or 0) else 0
+
+
+def due(rc, d, now=None):
+    """이번 돌림에 받을 차례인가 — 시각이 있으면 지난 시각 뒤 아직 안 받았을 때(예약 «외부뇌-수집 <id>»가 제때 · 15분 확인은 놓친 것만 따라잡음),
+    없으면 recheck_hours(기본 20) 가 지났을 때. 둘 다 실패 뒤 한 시간은 안 두드린다."""
+    now = now or time.time()
+    last_run, last_try = d.get('last_run') or 0, d.get('last_try') or 0
+    try:
+        at = at_times(rc.get('at'))
+    except ValueError:
+        at = []
+    if at:
+        slot = last_slot(at, now, rc.get('at_since') or 0)
+        return bool(slot) and last_run < slot and (last_try < slot or now - last_try >= 3600)
+    return now - last_run >= float(rc.get('recheck_hours', 20)) * 3600 and now - last_try >= 3600
 
 
 def site_wait(url):
@@ -1323,6 +1370,10 @@ def validate(rc):
     h = rc.get('recheck_hours', 20)
     if not isinstance(h, (int, float)) or not 1 <= h <= 24:
         bad.append('recheck_hours = 1~24')
+    try:
+        at_times(rc.get('at'))
+    except ValueError as e:
+        bad.append(str(e))
     return bad
 
 
@@ -1417,7 +1468,7 @@ def switches():
         except (OSError, ValueError):
             continue
         if isinstance(d, dict):
-            out.update((k, d[k]) for k in ('all_off', 'auto_judge') if k in d)
+            out.update((k, d[k]) for k in ('all_off', 'auto_judge', 'wake_pc') if k in d)
     return out
 
 
@@ -1442,6 +1493,7 @@ def main():
     ap.add_argument('--source')
     ap.add_argument('--dry', action='store_true')
     ap.add_argument('--force', action='store_true')
+    ap.add_argument('--due', action='store_true', help='--source 와 함께: 받을 차례일 때만(시각 예약 · lms-auto.py --at 이 부른다)')
     ap.add_argument('--check', action='store_true')
     ap.add_argument('--backfill', action='store_true')
     ap.add_argument('--settle', action='store_true')
@@ -1519,11 +1571,8 @@ def main():
         except Exception as e:      # 보존 하나가 받기를 세우지 않게
             queue(rc['id'], f'보존 예외 `{e!r}`'[:300])
         sp = os.path.join(STATE_DIR, rc['id'] + '.json')
-        if not (a.force or a.dry or a.source) and os.path.exists(sp):
-            d = json.load(open(sp, encoding='utf-8'))
-            if time.time() - (d.get('last_run') or 0) < float(rc.get('recheck_hours', 20)) * 3600:     # 조리법 recheck_hours(기본 20) — lms-auto 가 15분마다 부른다
-                continue
-            if time.time() - (d.get('last_try') or 0) < 3600:       # 실패했으면 15분마다 두드리지 않고 한 시간 뒤
+        if not (a.force or a.dry or (a.source and not a.due)) and os.path.exists(sp):
+            if not due(rc, json.load(open(sp, encoding='utf-8'))):     # 시각(at) 또는 recheck_hours — lms-auto 가 15분마다 · 시각 예약이 제때 부른다
                 continue
         if not a.dry:
             _, st0 = load_state(rc)

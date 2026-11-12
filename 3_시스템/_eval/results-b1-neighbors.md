@@ -13,6 +13,7 @@ source: session
 
 ## 블로커 (인계 경고 실측 확증)
 e5-small 임베딩 **이방성**(anisotropy) → 전 노트쌍 max-chunk-cos가 좁은 원뿔에 압착:
+
 | N=1326쌍 | min | p25 | median | p75 | p90 | p99 | max |
 |---|---|---|---|---|---|---|---|
 | max-chunk-cos | **0.802** | 0.857 | 0.880 | 0.916 | 0.935 | 0.965 | 1.000 |
@@ -34,6 +35,7 @@ labeled neighbor 골든 없음 → **기존 수동 [[링크]] 57엣지를 인간
 
 ### max-pool vs mean-pool(centroid)
 neighbors는 "노트전체 유사도"라 mean-pool이 이론상 나을 수 있어 측정:
+
 | pool | k=3 recall | 제작가이드 허브차수 | 스팟체크 |
 |---|---|---|---|
 | max-chunk | 51% | 14 | paper→paper 깔끔 |
@@ -82,6 +84,7 @@ neighbors는 "노트전체 유사도"라 mean-pool이 이론상 나을 수 있�
 **재평가**: 센터링을 빌드 때 **recall 기준**으로 기각했으나 **precision(노이즈 절단)은 미평가**. 현 증상은 precision 문제 → 재측정.
 
 **측정** (손라벨 엣지 골든: 확신 GOOD 14·SPUR 10; 이방성이라 자작 불가피):
+
 | 방법 | GOOD 보존 | SPUR 제거 | 고립 |
 |---|---|---|---|
 | raw floor(구) | 14/14 | 6~9/10(평지형 잔존) | 0 |

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>모아보기</title>
+<style>
+/* .moa 화면 · 색은 옵시디언 값(modview THEME)만 — 금색 하나는 «꽁돈» 상태 · 글자 3종(12·13·15) · 굵기 2 · 표(머리 글 정렬 · ▾ 거르기) + 누르면 줄 아래 세부(11-12 사용자 안 1) */
+:root{--fs1:12px;--fs2:13px;--fs3:15px;--w2:600;--r:6px}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--tx);font:400 var(--fs2)/1.5 var(--font);word-break:keep-all;overflow-wrap:anywhere}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+#app{padding:14px 20px 32px}
+.hd{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;margin:0 0 12px}
+.hd b{font-size:var(--fs3);font-weight:var(--w2)}
+.hd .cnt{font-size:var(--fs1);color:var(--tx3)}
+.fchip{font-size:var(--fs1);color:var(--accent);border:1px solid var(--line);border-radius:999px;padding:0 8px}
+.fchip:hover{border-color:var(--accent)}
+/* 표 */
+.main{display:flex;gap:20px;align-items:flex-start}
+.tw{flex:1;min-width:0;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{position:sticky;top:0;z-index:1;background:var(--bg);text-align:left;font-weight:400;font-size:var(--fs1);color:var(--tx3);padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th .h{cursor:pointer}
+th .h:hover,th.s .h{color:var(--tx)}
+th .a{font-size:10px;margin-left:2px}
+th .f{margin-left:4px;padding:0 2px;font-size:10px;color:var(--tx3);cursor:pointer}
+th .f:hover{color:var(--tx)}
+th .f.on{color:var(--accent)}
+/* 칸 너비 끌기(11-12 사용자) — 머리 칸 오른쪽 끝을 끈다 · 끌면 모든 칸 너비를 그 자리에서 굳히고 표 너비 = 칸 합(다른 칸은 안 움직임) · 두 번 누르면 처음대로 */
+th .rz{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;touch-action:none}
+th .rz:hover,th .rz.on{box-shadow:inset -2px 0 var(--accent)}
+table.fx{table-layout:fixed}
+table.fx th,table.fx td{overflow:hidden;text-overflow:ellipsis}
+body.rzing,body.rzing *{cursor:col-resize!important;user-select:none}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+tr.row{cursor:pointer}
+tr.row:hover td,tr.row.sel td{background:var(--bg2)}
+tr.row.sel td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+tr.row.gold td:first-child{box-shadow:inset 2px 0 0 #f2b705}
+tr.row.dim{opacity:.5}
+td.t{min-width:220px}
+table.fx td.t{min-width:0}
+td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+td.d b{font-weight:var(--w2);margin-right:6px;color:var(--tx2)}
+td.d b.hot{color:var(--err)}td.d b.warm{color:var(--warn)}
+td.d span,.mut{color:var(--tx3);font-size:var(--fs1)}
+td.x{max-width:220px;color:var(--tx2)}
+.gold-p{background:linear-gradient(135deg,#ffe58f,#f2b705 55%,#c48600);color:#3a2700;font-weight:var(--w2);font-size:var(--fs1);border-radius:999px;padding:0 8px;line-height:1.6;white-space:nowrap}
+.mine{font-size:var(--fs1);border:1px solid var(--line);border-radius:999px;padding:0 9px;line-height:1.7;white-space:nowrap;color:var(--tx3)}
+.mine.set{color:var(--tx);border-color:var(--line2)}
+.mine:hover{border-color:var(--accent)}
+/* 세부 */
+tr.det td{background:var(--bg2);padding:4px 14px 14px 22px;cursor:default}
+.det-b{display:grid;gap:10px;padding-top:6px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0}
+dt{color:var(--tx3);font-size:var(--fs1);padding-top:1px}
+dd{margin:0}
+q{display:block;color:var(--tx3);font-size:var(--fs1);quotes:"«" "»"}
+.conds{display:grid;gap:5px;margin:0;padding:0;list-style:none}
+.conds li{display:grid;grid-template-columns:16px auto 1fr;gap:2px 8px;align-items:baseline}
+.conds .m{font-weight:var(--w2)}
+.conds .ok{color:var(--ok)}.conds .no{color:var(--err)}.conds .un{color:var(--warn)}
+.conds q{grid-column:3}
+.sec{font-size:var(--fs1);color:var(--tx3);margin:2px 0 -4px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font-size:var(--fs1);border:1px solid var(--line);border-radius:var(--r);padding:3px 12px;background:var(--bg)}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.seg button{font-size:var(--fs1);padding:2px 10px;color:var(--tx3);border-left:1px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button.on{color:var(--tx);background:var(--bg2);font-weight:var(--w2)}
+/* 고르기 창 */
+.menu{position:fixed;z-index:9;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 6px 20px rgba(0,0,0,.14);padding:4px;min-width:140px;max-height:60vh;overflow:auto}
+.menu label,.menu button{display:flex;gap:8px;align-items:center;width:100%;padding:4px 8px;font-size:var(--fs1);border-radius:4px;cursor:pointer}
+.menu label:hover,.menu button:hover{background:var(--bg2)}
+#more{margin:12px 10px 0;font-size:var(--fs1);color:var(--tx3)}
+#more:hover{color:var(--tx)}
+.empty{padding:36px 10px;text-align:center;color:var(--tx3)}
+.err{color:var(--err);font-size:var(--fs1);white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="menu" class="menu" hidden></div>
+<script>
+const S={v:null,key:null,rev:false,f:{},open:null,past:false,menu:null,w:null,dw:null,drag:null,pend:false};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const send=m=>parent.postMessage(m,'*');
+const WD='일월화수목금토';
+const NONE='(없음)';
+const val=(r,k)=>{const x=r[k];return Array.isArray(x)?(x.length?x.join('·'):null):(x===''||x===undefined?null:x)};
+const key=(r,k)=>{const x=val(r,k);return x===null?NONE:typeof x==='boolean'?(x?'예':'아니오'):String(x)};
+const due=r=>{if(!r['마감'])return null;const d=new Date(r['마감']+'T00:00:00'),n=r.D;return{tag:n<0?'지남':n===0?'오늘':'D-'+n,date:`${d.getMonth()+1}/${d.getDate()} (${WD[d.getDay()]})`,cls:n>=0&&n<=3?'hot':n>=0&&n<=7?'warm':''}};
+const mineCols=()=>S.v.columns.filter(c=>c.kind==='mine');
+function num(x){const m=String(x).replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*(만|억)?/);return m?parseFloat(m[1])*(m[2]==='억'?1e4:1):NaN}
+function sorted(rows){const k=S.key,has=rows.filter(r=>val(r,k)!==null),no=rows.filter(r=>val(r,k)===null);
+  has.sort((a,b)=>{let x=val(a,k),y=val(b,k);if(k==='금액'){x=num(x);y=num(y);if(isNaN(x))x=-1;if(isNaN(y))y=-1}else if(typeof x==='boolean'){x=+x;y=+y}return(x<y?-1:x>y?1:0)*(S.rev?-1:1)});return has.concat(no)}
+function shown(){return sorted(S.v.rows.filter(r=>Object.entries(S.f).every(([k,set])=>!set.size||set.has(key(r,k)))))}
+function cell(c,r){const x=r[c.id];
+  if(c.kind==='gold')return`<td>${x?'<span class="gold-p">꽁돈</span>':''}</td>`;
+  if(c.id==='제목')return`<td class="t">${esc(x)}</td>`;
+  if(c.kind==='date'){const d=due(r);return`<td class="d">${d?`<b class="${d.cls}">${d.tag}</b><span>${d.date}</span>`:'<span>—</span>'}</td>`}
+  if(c.kind==='mine')return`<td><button class="mine${x?' set':''}" data-mine="${esc(c.id)}" data-id="${esc(r.id)}">${esc(x||'—')}</button></td>`;
+  if(c.id==='의무')return`<td class="x">${x&&x.length?esc(x.join('·')):'<span class="mut">없음</span>'}</td>`;
+  const v=val(r,c.id);return`<td class="x">${v===null?'':esc(v)}</td>`}
+const MARK={'충족':['✓','ok'],'불충족':['✕','no'],'모름':['?','un']};
+function detail(r){const s=r['세부']||{},d=due(r),o=[];
+  const facts=[];
+  if(s['요약'])facts.push(['요약',esc(s['요약'])]);
+  if(d)facts.push(['마감',`${esc(d.tag)} · ${esc(d.date)}`]);
+  if(r['금액'])facts.push(['금액',esc(r['금액'])]);
+  if(s['지급'])facts.push(['지급',esc(s['지급']['형태'])+(s['지급']['근거']?`<q>${esc(s['지급']['근거'])}</q>`:'')]);
+  if(s['의무']&&s['의무'].length)facts.push(['의무',s['의무'].map(x=>`${esc(x['종류'])}${x['근거']?`<q>${esc(x['근거'])}</q>`:''}`).join('')]);
+  else if(s['지급'])facts.push(['의무','<span class="mut">없음</span>']);
+  if(s['소득심사'])facts.push(['소득 심사',`<q>${esc(s['소득심사'])}</q>`]);
+  facts.push(['판정',esc(r['판정'])+(s['첨부에만']?' <span class="mut">첨부에만</span>':'')]);
+  facts.push(['출처',`${esc(r['출처'])} <span class="mut">${esc(r['날짜'])}</span>`]);
+  o.push(`<dl>${facts.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`);
+  if(s['조건']&&s['조건'].length)o.push(`<div class="sec">자격</div><ul class="conds">${s['조건'].map(c=>{const[m,cl]=MARK[c['결과']]||['·',''];return`<li><span class="m ${cl}">${m}</span><span>${esc(c['축'])}</span><span>${esc(c['값'])}</span>${c['근거']?`<q>${esc(c['근거'])}</q>`:''}</li>`}).join('')}</ul>`);
+  const acts=[];
+  if(r.open.note||r.open.line)acts.push(`<button class="btn" data-open="${esc(r.id)}">원문</button>`);
+  for(const c of mineCols())acts.push(`<span class="seg">${c.options.map(x=>`<button data-set="${esc(x)}" data-field="${esc(c.id)}" data-id="${esc(r.id)}" class="${r[c.id]===x?'on':''}">${esc(x)}</button>`).join('')}</span>`);
+  o.push(`<div class="acts">${acts.join('')}</div>`);
+  return`<div class="det-b">${o.join('')}</div>`}
+function draw(){const v=S.v;if(!v)return;const app=$('#app');
+  if(v.error){app.innerHTML=`<div class="err">${v.error.map(esc).join('\n')}</div>`;return}
+  if(S.key===null){S.key=v.sort[0].replace(/^-/,'');S.rev=v.sort[0].startsWith('-')}
+  const rows=shown(),gone=Object.values(v.hidden||{}).reduce((a,b)=>a+b,0);
+  const fch=Object.entries(S.f).filter(([,s])=>s.size).map(([k,s])=>`<button class="fchip" data-clear="${esc(k)}">${esc(k)} ${esc([...s].join('·'))} ✕</button>`);
+  let h=`<div class="hd"><b>${esc(v.name)}</b><span class="cnt">${rows.length}건</span>${fch.join('')}</div>`;
+  const cols=v.columns,ncol=cols.length;
+  const fx=fixed(),tb=`<table${fx?` class="fx" style="width:${sumW()}px"`:''}><colgroup>${cols.map(c=>`<col data-c="${esc(c.id)}"${fx?` style="width:${W(c.id)}px"`:''}>`).join('')}</colgroup>`;
+  const head=`<tr>${cols.map(c=>{const fl=v.filters.includes(c.id),on=S.f[c.id]&&S.f[c.id].size;return`<th class="${c.id===S.key?'s':''}"><span class="h" data-sort="${esc(c.id)}">${esc(c.head||'꽁돈')}${c.id===S.key?`<span class="a">${S.rev?'▼':'▲'}</span>`:''}</span>${fl?`<span class="f${on?' on':''}" data-menu="${esc(c.id)}">▾</span>`:''}<span class="rz" data-rz="${esc(c.id)}"></span></th>`}).join('')}</tr>`;
+  const tr=(r,dim)=>`<tr class="row${r['꽁돈']&&cols.some(c=>c.kind==='gold')?' gold':''}${S.open===r.id?' sel':''}${dim?' dim':''}" data-id="${esc(r.id)}">${cols.map(c=>cell(c,r)).join('')}</tr>`
+    +(S.open===r.id?`<tr class="det"><td colspan="${ncol}">${detail(r)}</td></tr>`:'');
+  const body=rows.length?rows.map(r=>tr(r,false)).join(''):`<tr><td class="empty" colspan="${ncol}">없음</td></tr>`;
+  const more=gone?`<button id="more">${S.past?'접기':Object.entries(v.hidden).map(([k,n])=>`${esc(k)} ${n}`).join(' · ')}</button>`:'';
+  const past=S.past?`${tb}<tbody>${(v.gone||[]).map(r=>tr(r,true)).join('')}</tbody></table>`:'';
+  h+=`<div class="main"><div class="tw">${tb}<thead>${head}</thead><tbody>${body}</tbody></table>${more}${past}</div></div>`;
+  app.innerHTML=h}
+// 칸 너비 — S.w = {칸 id: px}(없으면 브라우저가 나눔) · 처음 값 = .moa «widths»(자료로 옴) · 끈 뒤 brain-base 에 cols 로 알린다(받는 쪽이 파일에 적으면 다시 열어도 남음)
+const MINW=40;
+const fixed=()=>!!(S.w&&Object.keys(S.w).length);
+const W=id=>S.w&&S.w[id]>0?S.w[id]:100;
+const sumW=()=>S.v.columns.reduce((a,c)=>a+W(c.id),0);
+function takeW(d){const w=d&&d.widths&&typeof d.widths==='object'?d.widths:{},dw=JSON.stringify(w);if(dw===S.dw)return;S.dw=dw;S.w=Object.keys(w).length?{...w}:null}
+function applyW(){const fx=fixed();
+  document.querySelectorAll('#app table').forEach(t=>{t.classList.toggle('fx',fx);t.style.width=fx?sumW()+'px':''});
+  document.querySelectorAll('#app col[data-c]').forEach(c=>{c.style.width=fx?W(c.dataset.c)+'px':''})}
+function freeze(){if(fixed())return false;S.w={};const ths=document.querySelectorAll('#app thead th');S.v.columns.forEach((c,i)=>{if(ths[i])S.w[c.id]=Math.round(ths[i].getBoundingClientRect().width)});return true}
+document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-rz]');if(!h||e.button!==0)return;
+  e.preventDefault();closeMenu();const was=freeze();applyW();
+  S.drag={id:h.dataset.rz,x:e.clientX,w:W(h.dataset.rz),el:h,was,moved:false};h.classList.add('on');document.body.classList.add('rzing');
+  try{h.setPointerCapture(e.pointerId)}catch{}});
+document.addEventListener('pointermove',e=>{const d=S.drag;if(!d)return;const w=Math.max(MINW,Math.round(d.w+e.clientX-d.x));if(w===S.w[d.id])return;S.w[d.id]=w;d.moved=true;applyW()});
+function endDrag(){const d=S.drag;if(!d)return;S.drag=null;d.el.classList.remove('on');document.body.classList.remove('rzing');
+  if(d.moved)send({t:'cols',widths:S.w});else if(d.was){S.w=null;applyW()}
+  if(S.pend){S.pend=false;draw()}}
+document.addEventListener('pointerup',endDrag);
+document.addEventListener('pointercancel',endDrag);
+document.addEventListener('dblclick',e=>{if(!e.target.closest('[data-rz]')||!fixed())return;S.w=null;send({t:'cols',widths:{}});draw()});
+function find(id){return[...S.v.rows,...(S.v.gone||[])].find(r=>r.id===id)}
+function menu(el,html){const m=$('#menu'),b=el.getBoundingClientRect();m.innerHTML=html;m.hidden=false;m.style.left=Math.min(b.left,innerWidth-m.offsetWidth-8)+'px';m.style.top=(b.bottom+4)+'px'}
+function closeMenu(){$('#menu').hidden=true;S.menu=null}
+function filterMenu(el,k){S.menu=['f',k];const set=S.f[k]||new Set(),vals=[...new Set(S.v.rows.map(r=>key(r,k)))].sort();
+  menu(el,vals.map(x=>`<label><input type="checkbox" data-fv="${esc(x)}"${set.has(x)?' checked':''}>${esc(x)}</label>`).join(''))}
+function mineMenu(el,field,id){S.menu=['m',field,id];const c=mineCols().find(x=>x.id===field),r=find(id);
+  menu(el,c.options.map(x=>`<button data-set="${esc(x)}" data-field="${esc(field)}" data-id="${esc(id)}">${r&&r[field]===x?'● ':''}${esc(x)}</button>`).join('')+`<button data-set="" data-field="${esc(field)}" data-id="${esc(id)}">—</button>`)}
+function setMine(field,id,value){const r=find(id);if(r){r[field]=value||null}send({t:'set',field,id,value});closeMenu();draw()}
+addEventListener('message',e=>{const m=e.data||{};
+  if(m.t==='theme'){for(const[k,x]of Object.entries(m.vars||{}))if(x)document.documentElement.style.setProperty(k,x)}
+  else if(m.t==='data'){S.v=m.data;if(S.drag){S.pend=true;return}takeW(m.data);closeMenu();draw()}});
+addEventListener('resize',()=>S.v&&!S.drag&&draw());
+document.addEventListener('click',e=>{const q=s=>e.target.closest(s);let t;
+  if(t=q('[data-set]')){setMine(t.dataset.field,t.dataset.id,t.dataset.set);return}
+  if(t=q('[data-fv]')){const k=S.menu[1],set=S.f[k]||(S.f[k]=new Set());t.checked?set.add(t.dataset.fv):set.delete(t.dataset.fv);draw();return}
+  if(q('#menu'))return;
+  if(t=q('[data-menu]')){const k=t.dataset.menu;if(S.menu&&S.menu[1]===k){closeMenu();return}filterMenu(t,k);return}
+  if(t=q('[data-mine]')){mineMenu(t,t.dataset.mine,t.dataset.id);return}
+  closeMenu();
+  if(t=q('[data-sort]')){const k=t.dataset.sort;if(S.key===k)S.rev=!S.rev;else{S.key=k;S.rev=false}draw();return}
+  if(t=q('[data-clear]')){delete S.f[t.dataset.clear];draw();return}
+  if(t=q('[data-open]')){const r=find(t.dataset.open);if(r&&r.open.note)send({t:'open',target:{note:r.open.note}});else if(r&&r.open.line)send({t:'open',target:{note:r.open.line.note,find:r.open.line.find}});return}
+  if(q('#more')){S.past=!S.past;draw();return}
+  if(q('.det-b'))return;
+  if(t=q('tr.row')){S.open=S.open===t.dataset.id?null:t.dataset.id;draw();return}
+});
+send({t:'ready'});
+</script>
+</body>
+</html>
