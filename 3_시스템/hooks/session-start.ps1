@@ -1,5 +1,5 @@
 ﻿# 외부뇌 SessionStart 훅 (결정론층 — LLM 호출 없음)
-# 동작: 개인화 미완료 감지 → recent/open-loops 주입 → 헬스 1줄 → (있으면) 인덱스 증분
+# 동작: 개인화 미완료 감지 → recent/open-loops 주입 → 받은함 1줄 → (있으면) 인덱스 증분 · 볼트 건강·운영 위험은 session-notice.py
 $ErrorActionPreference = 'SilentlyContinue'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -64,27 +64,15 @@ if (Test-Path $schedDir) {
     } else { Write-Output '(열린 일정 없음)' }
 }
 
-# 2. 헬스 1줄 (지식노트만 — profile/recent/open-loops/MOC 제외)
-# 자리는 역할로(볼트 개혁 R6 · 3_시스템/roles.json groups.knowledge_notes) — 못 읽으면 0
-$kn = @()
-try { $rj = [System.IO.File]::ReadAllText((Join-Path $vault '3_시스템\roles.json'), [System.Text.Encoding]::UTF8) | ConvertFrom-Json; $kn = @($rj.groups.knowledge_notes | ForEach-Object { $rj.roles.$_ }) } catch {}
-$noteCount = ($kn | ForEach-Object { Get-ChildItem (Join-Path $vault $_) -Recurse -Filter *.md -ErrorAction SilentlyContinue } | Measure-Object).Count
-$lastCommit = (git -C $vault log -1 --format='%cr' 2>$null)
-if (-not $lastCommit) { $lastCommit = '없음' }
-$idx = Join-Path $vault '3_시스템\_index\embeddings.json'
-if (Test-Path $idx) {
-    $days = [int]((Get-Date) - (Get-Item $idx).LastWriteTime).TotalDays
-    $idxAge = "${days}d"
-} else {
-    $idxAge = 'N/A'
-}
-# 받은함(설계안 §13.3 B4 · 볼트 개혁 R9) — 머문 것이 있을 때만 붙인다(0건이면 글자 0 · 상시 토큰 늘리지 않음). 못 읽으면 빼고 간다.
-$ib = ''
+# 2. 받은함 1줄
+# 노트 수·색인 나이·마지막 커밋은 11-12 뺐다(one-in-one-out) — 볼트 건강 주입(session-notice.py ← brain.py doctor)이
+# 색인·받은함 넘김을, 운영 위험(drift.ops_rows)이 커밋 멈춤을 문제가 있을 때만 알린다. 09-19 잠금 사흘 동안 이 줄 «5 days ago»는 아무도 못 봤다.
+# 받은함(설계안 §13.3 B4 · 볼트 개혁 R9) — 머문 것이 있을 때만 한 줄(0건이면 글자 0 · 상시 토큰 늘리지 않음). 못 읽으면 빼고 간다.
 try {
+    $rj = [System.IO.File]::ReadAllText((Join-Path $vault '3_시스템\roles.json'), [System.Text.Encoding]::UTF8) | ConvertFrom-Json
     $it = @(Get-ChildItem (Join-Path $vault ($rj.roles.inbox -replace '/', '\')) -ErrorAction Stop | Where-Object { $_.Name -notmatch '^[._]' })
-    if ($it.Count) { $ib = " | 받은함 $($it.Count)(가장 오래된 $([int]((Get-Date) - ($it | Sort-Object LastWriteTime | Select-Object -First 1).LastWriteTime).TotalDays)일 · inbox.py)" }
+    if ($it.Count) { Write-Output "[뇌] 받은함 $($it.Count)(가장 오래된 $([int]((Get-Date) - ($it | Sort-Object LastWriteTime | Select-Object -First 1).LastWriteTime).TotalDays)일 · inbox.py)" }
 } catch {}
-Write-Output "[뇌] 노트 ${noteCount}개 | 인덱스 age $idxAge | 마지막커밋 $lastCommit$ib"
 
 # 2.5 따라가기(설계안 §19.3) — 옵시디언 밖에서 옮기거나 지운 파일 뒤처리 · 알릴 것이 있을 때만 한 줄(0건이면 글자 0) · 사진이 있으면 0.7초(11-03 실측) · 찾기 색인(3)보다 먼저
 $followPy = Join-Path $vault '3_시스템\follow.py'

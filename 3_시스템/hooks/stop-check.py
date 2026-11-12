@@ -10,6 +10,9 @@
 
   py -3 3_시스템/hooks/stop-check.py            (Stop 훅 · stdin = 훅 입력)
   py -3 stop-check.py --check-only --vault <V>   (재기·대조용 — git·가드·받은함 쓰기 없음 · 판정과 걸린 시간만)
+  py -3 stop-check.py --commit-only [--vault <V>] (서버 — 마지막 커밋이 24시간 넘으면 «외부뇌 서버»가 부른다 · 11-12 사용자 안 A)
+      검사·가드·받은함 없이 아래 autocommit 만 · index.lock 이 있으면 건너뜀 · push 없음 · pre-commit(비밀값·프론트매터) 그대로
+      stdout = {"result": "없음|커밋|막힘|잠금|add 실패"} 한 줄
 
 v2(11-06 perf-system-2 · 치명 경우 대조 뒤):
   · add·commit 에 시간 제한을 두지 않는다(PS 판과 같음). v1 은 git 한 번에 120초 — pre-commit 이 파일마다 0.36초
@@ -96,6 +99,27 @@ def commit_later(vault):
         return False
 
 
+def autocommit(vault, hlog, tag="Stop"):
+    """바뀐 것이 있으면 볼트 커밋(Claude) → 1_수집 커밋(User) — Stop 훅과 서버가 같이 쓴다. push 없음.
+    돌려줌 = "없음"(바뀐 것 없음) · "커밋" · "막힘"(pre-commit 이 막아 스테이지가 남음) · «add 실패»"""
+    rc, out = git(vault, "--no-optional-locks", "status", "--porcelain", "--untracked-files=normal", timeout=300)
+    if rc == 0 and not out.strip():
+        return "없음"
+    today = dt.date.today().isoformat()            # 바뀐 것이 있거나 status 를 못 읽으면 PS 판과 같은 순서로
+    rc, _ = git(vault, "add", "-A", "--", ":!1_수집")
+    if rc != 0:
+        log(hlog, tag + " git add 실패 — 자동 커밋 안 됨(잠금 확인)")
+    if git(vault, "diff", "--cached", "--quiet")[0] != 0:
+        git(vault, "commit", "-m", "session: " + today, "--author=Claude <claude@local>")
+    git(vault, "add", "1_수집")
+    if git(vault, "diff", "--cached", "--quiet")[0] != 0:
+        git(vault, "commit", "-m", "user: " + today, "--author=User <user@local>")
+    if git(vault, "diff", "--cached", "--quiet")[0] != 0:
+        log(hlog, tag + " commit BLOCKED by pre-commit - staged remain")
+        return "막힘"
+    return "add 실패" if rc != 0 else "커밋"
+
+
 def log(path, msg):
     try:
         with open(path, "a", encoding="utf-8", newline="") as f:
@@ -171,6 +195,11 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", newline="")
     except Exception:
         pass
+    if "--commit-only" in sys.argv:                # 서버(11-12) — 검사·가드·받은함 없이 커밋만 · 잠금이 있으면 건너뜀(커밋이 도는 중)
+        hlog = os.path.join(vault, "3_시스템", "_index", "hooks.log")
+        res = "잠금" if os.path.exists(os.path.join(vault, ".git", "index.lock")) else autocommit(vault, hlog, "서버")
+        sys.stdout.write(json.dumps({"result": res}, ensure_ascii=False))
+        return 0
     inp = {}
     if not check_only:
         try:
@@ -229,20 +258,8 @@ def main():
                     except OSError:
                         pass
         # 기능 단계 «자동 커밋» 하옵 = 마지막 커밋 뒤 몇 분 안이면 이번 턴은 status·커밋을 건너뜀(세션 끝 훅이 몰아서 남김)
-        rc, out = (0, b"") if commit_later(vault) else \
-            git(vault, "--no-optional-locks", "status", "--porcelain", "--untracked-files=normal", timeout=300)
-        if rc != 0 or out.strip():                 # 바뀐 것이 있거나 status 를 못 읽으면 PS 판과 같은 순서로
-            today = dt.date.today().isoformat()
-            rc, _ = git(vault, "add", "-A", "--", ":!1_수집")
-            if rc != 0:
-                log(hlog, "Stop git add 실패 — 자동 커밋 안 됨(잠금 확인)")
-            if git(vault, "diff", "--cached", "--quiet")[0] != 0:
-                git(vault, "commit", "-m", "session: " + today, "--author=Claude <claude@local>")
-            git(vault, "add", "1_수집")
-            if git(vault, "diff", "--cached", "--quiet")[0] != 0:
-                git(vault, "commit", "-m", "user: " + today, "--author=User <user@local>")
-            if git(vault, "diff", "--cached", "--quiet")[0] != 0:
-                log(hlog, "Stop commit BLOCKED by pre-commit - staged remain")
+        if not commit_later(vault):
+            autocommit(vault, hlog)                # 커밋 순서·장부 줄은 함수로 옮기기 전과 같다(서버도 같은 함수 · 11-12)
         # 받은함 되먹임 — 이 세션 도구 호출이 건드린 받은함 항목이 남았으면 항목당 세션 한 번
         ib_role = (rj.get("roles") or {}).get("inbox")
         try:

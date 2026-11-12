@@ -98,43 +98,11 @@ class Stop(Exception):
         self.kind, self.why = kind, why
 
 
-# 이것들이 있으면 claude -p 가 구독 대신 API 키·다른 경로(게이트웨이·Bedrock·Vertex)로 나간다. ANTHROPIC_AUTH_TOKEN 은
-# `claude auth status` 에 드러나지 않아(10-26 실측) 직접 본다 — 10-02 사고(사용자 환경변수 → 모든 claude 가 게이트웨이로)와 같은 꼴.
-PAID_ENV = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY")
-NO_LOGIN = "claude 로그인 안 됨"
-# claude -p 가 로그인이 없거나 풀렸을 때 내는 말(2.1.287 실행 파일 글자 · 11-02) — 확인을 지나쳐 호출 중에 풀린 경우
-LOGIN_ERR = r"(?i)run /login|not logged in|oauth token (?:revoked|has expired)|login expired|invalid api key|authentication_error|^401$"
-
-
-def subscription():
-    """구독(claude.ai 로그인)으로 나가는가 — API 호출 없이 확인. 맞으면 "", 아니면 까닭. 모르면 막는다(확인 실패 = 구독 아님으로 본다)."""
-    from urllib.parse import urlparse
-    env = dict(os.environ)
-    try:                                                        # --setting-sources user = 사용자 settings.json 의 env 도 claude 에 들어간다
-        with open(os.path.join(os.path.expanduser("~"), ".claude", "settings.json"), encoding="utf-8") as f:
-            st = json.load(f)
-        env.update({k: str(v) for k, v in (st.get("env") or {}).items()})
-        if st.get("apiKeyHelper"):
-            return "~/.claude/settings.json 에 apiKeyHelper(API 키) 설정"
-    except (OSError, ValueError):
-        pass
-    bad = [n for n in PAID_ENV if env.get(n)]
-    base = env.get("ANTHROPIC_BASE_URL")
-    if base and urlparse(base).hostname != "api.anthropic.com":
-        bad.append(f"ANTHROPIC_BASE_URL={urlparse(base).hostname}")
-    if bad:
-        return "환경변수 " + ", ".join(bad)
-    try:
-        with tempfile.TemporaryDirectory(prefix="ingest-vision-") as cwd:
-            r = subprocess.run([claude_bin.newest(), "auth", "status", "--json"], cwd=cwd, capture_output=True, timeout=60)
-        d = json.loads(r.stdout.decode("utf-8", "replace"))
-    except (OSError, ValueError, subprocess.TimeoutExpired) as e:
-        return f"로그인 상태 확인 실패({type(e).__name__})"
-    if not d.get("loggedIn"):
-        return NO_LOGIN
-    if d.get("authMethod") != "claude.ai" or d.get("apiProvider") != "firstParty" or d.get("apiKeySource") or not d.get("subscriptionType"):
-        return f"구독 로그인이 아님(authMethod={d.get('authMethod')} · apiProvider={d.get('apiProvider')} · apiKeySource={d.get('apiKeySource')})"
-    return ""
+# 구독 확인은 한 곳(claude_bin · 11-11 구독 해지 대비) — 옛 이름은 부르는 쪽(ingest·notice-filter)을 위해 남긴다
+PAID_ENV = claude_bin.PAID_ENV
+NO_LOGIN = claude_bin.NO_LOGIN
+LOGIN_ERR = claude_bin.LOGIN_TEXT
+subscription = claude_bin.subscription
 
 
 def _reset(info):
@@ -157,7 +125,7 @@ def _run(content, system=SYSTEM, cache=False):
             r = subprocess.run(cmd, cwd=cwd, input=payload, capture_output=True, timeout=TIMEOUT, env=env)
         except subprocess.TimeoutExpired:
             return "", {}, f"시간 초과 {TIMEOUT}s"
-    text, usage, err, source, limit = "", {}, "", None, None
+    text, usage, err, source, limit, kind_err = "", {}, "", None, None, ""
     for ln in r.stdout.decode("utf-8", "replace").splitlines():
         if not ln.startswith("{"):
             continue
@@ -167,6 +135,8 @@ def _run(content, system=SYSTEM, cache=False):
             continue
         if d.get("type") == "system" and d.get("subtype") == "init":
             source = d.get("apiKeySource")
+        elif d.get("type") == "assistant" and d.get("error"):       # CLI 가 붙인 오류 종류(authentication_failed 등 · 모델 <synthetic>)
+            kind_err = str(d["error"])
         elif d.get("type") == "result":
             text = d.get("result") or ""
             u = d.get("usage") or {}
@@ -184,8 +154,10 @@ def _run(content, system=SYSTEM, cache=False):
                 usage["rate_limit"] = json.dumps(info or d, ensure_ascii=False)[:200]
     if source not in (None, "none"):                            # 호출 전 확인을 지나쳤어도 — 다음 그림부터는 묻지 않는다
         raise Stop("구독 아님", f"apiKeySource={source}")
-    if (err or not text) and re.search(LOGIN_ERR, "\n".join([err, text, r.stderr.decode("utf-8", "replace")[-500:]]), re.M):
-        raise Stop("로그인 안 됨", (err if err and err != "401" else text or err)[:120])
+    failed = bool(kind_err or err or not text)
+    cut = claude_bin.note_call(not failed, kind_err or ("rate_limit" if limit is not None else ""), "\n".join([err, text, r.stderr.decode("utf-8", "replace")[-500:]]) if failed else "", err)
+    if cut in (claude_bin.LAPSED, claude_bin.LOGIN):            # 해지·로그인 끊김 — 상태 파일에 적혔다(알림은 부른 쪽이 claude_bin.alert)
+        raise Stop(cut, (err if err and err != "401" else text or err or kind_err)[:120])
     if limit is not None or (err and re.search(r"(?i)429|usage limit|rate.?limit|limit reached|hit your limit|한도", err)):
         info = limit or {}
         raise Stop("사용량 한도", f"{info.get('rateLimitType') or '한도'} · 다시 가능 {_reset(info)}" + ("" if limit else f" · {err[:120]}"))

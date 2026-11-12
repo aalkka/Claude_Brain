@@ -172,6 +172,7 @@ rc = json.load(open(rp, encoding='utf-8'))
 ok('확정: 주기·이름·첫 날만 바꾼 초안은 다시 받지 않고 그 값으로', sum(1 for h in hits if h.startswith('/board')) == n_board and rc.get('recheck_hours') == 24
    and rc.get('name') == '시험 게시판(주기 바꿈)', f'{n_board}→{sum(1 for h in hits if h.startswith("/board"))} {rc.get("recheck_hours")}')
 ok('확정: 계약 문구(사용자 · 목적 · robots)', '사용자 수집 창 «수집 추가» 확정' in rc.get('contract', '') and 'robots 허용' in rc['contract'], rc.get('contract'))
+ok('확정: 시각 없는 초안 = 주기(15분 확인) · at 칸 없음', 'at' not in rc and '24시간마다(15분 확인)' in out, out[-120:])
 draft(BOARD_RC)
 code, out = br('collect_desk.add', 'id=t-board')
 ok('확정 거절: 같은 id', code != 0 and '이미 있음' in out, out)
@@ -233,11 +234,14 @@ os.remove(os.path.join(DRAFT, 't-board.json'))
 # ── RSS · 유튜브 꼴 ──
 for rid, feed, fam_name in (('t-blog', '/feed', 'RSS'), ('t-yt', '/yt', '유튜브 꼴 Atom')):
     draft({'id': rid, 'name': fam_name, 'purpose': 'GPU 글만', 'family': 'rss', 'page': U + '/channel', 'feed': U + feed,
-           'words': {'keep': 'gpu'}, 'recheck_hours': 12, 'first_since': '2026-10-20', 'folder': '@sources/웹/' + rid})
+           'words': {'keep': 'gpu'}, **({'at': ['18:00']} if rid == 't-blog' else {'recheck_hours': 12}), 'first_since': '2026-10-20', 'folder': '@sources/웹/' + rid})
     code, out = br('collect_desk.try', f'id={rid}')
     ok(f'{fam_name} 미리보기: 3건 · 통과 2(대소문자 무시)', code == 0 and '목록 1쪽 3건 · 통과 2 · 거름 1' in out, out)
     code, out = br('collect_desk.add', f'id={rid}')
     ok(f'{fam_name} 확정(글 쪽 요청 없는 가족은 --view 없이)', code == 0, out)
+    if rid == 't-blog':     # 받기 시각 = Claude 가 정함(11-12) — 확정이 at_since 를 쓰고 시각 예약을 맞춘다
+        rb = json.load(open(os.path.join(S, 'collect', rid + '.json'), encoding='utf-8'))
+        ok('확정: 시각 초안 = at [18:00] · at_since · «매일 18:00(시각 예약)»', rb.get('at') == ['18:00'] and rb.get('at_since') and 'recheck_hours' not in rb and '매일 18:00' in out, (rb.get('at'), out[-120:]))
     run(os.path.join(S, 'web-collect.py'), '--source', rid, '--force')
     st = json.load(open(os.path.join(S, '_index', 'collect', rid + '.json'), encoding='utf-8'))
     inv = {k: v for k, v in st['items'].items() if v.get('path')}

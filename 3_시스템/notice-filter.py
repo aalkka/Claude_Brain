@@ -9,6 +9,8 @@
 저장 전 거르기(10-29 · 수집은 선별): 엔진(web-collect)이 글을 받기 전에 gate()(제목만 · LLM 0)를 묻고, 받은 글은 대기 칸
     (_index/collect/stage — 볼트 지식층 밖)에 둔다. 판정이 나면 엔진 settle 이 verdicts()를 물어 KEEP(해당·확인 필요·관심)만
     볼트로 들이고, 비해당은 대기 칸에 둔 채 장부 한 줄(카드가 바뀌면 다시 판정) · 지남은 지운다. 추출은 본문만 먼저(첨부는 들인 뒤).
+꽁돈(11-10 · 황금 태그): 조리법 filter.gold 가 켠 글은 추출 때 지급 형태·선정 뒤 의무·소득 심사도 뽑는다(같은 호출).
+    판정이 해당·확인 필요이고 카드 «꽁돈» 칸(현금·막는 의무·소득 심사)을 넘으면 일정 줄에 #꽁돈 · 판정표에 «꽁돈» · 수집 창 한 줄 맨 앞에 «꽁돈».
 
   py -3.11 3_시스템/notice-filter.py extract [--max N] [--again 글번호...]   # 추출 안 된 공지만 claude -p(--again = 첨부 색인을 고친 글도 다시) — 사용량이 든다(누를 때만) · 끝나면 settle
   py -3.11 3_시스템/notice-filter.py judge                # 캐시로 판정·출력만(사용량 0)
@@ -65,6 +67,17 @@ JSON 하나만 출력한다(앞뒤 글 없음):
 - 기타: 위에 없는 조건 짧은 설명
 규칙: 근거는 반드시 원문 그대로(띄어쓰기 포함, 고치지 말 것). 조건이 «첨부 참조»·그림에만 있다고 보이면 "첨부에만":true.
 조건이 없으면 "조건":[]. 마감은 이 공지의 신청·접수 마감(학교 기한이 따로 있으면 학교 기한)."""
+# 꽁돈 칸(11-10) — 조리법 filter.gold 가 켠 글에만 덧붙인다(true = 모든 글 · 글자 = 제목이 맞는 글). 자격 판정과 따로 «받으면 통장으로 현금이 오고
+# 무거운 의무가 없는가»를 본다. 근거는 조건과 같이 원문 그대로 — 원문에 없으면 그 칸은 모름.
+GOLD = """
+이 공지가 장학금·지원금 모집이면 JSON 에 세 칸을 더한다(아니면 "지급":null,"의무":[],"소득심사":null):
+ "지급":{"형태":"현금|등록금|혼합|모름","근거":"<원문 그대로 10~80자>"}
+   현금 = 학생 본인에게 돈을 준다(계좌 입금·생활비·생활지원금·학업보조금·학업장려금·연구지원금 등) · 등록금 = 등록금·수업료로만 준다(감면·대납)
+   혼합 = 둘 다 · 원문에서 알 수 없으면 모름
+ "의무":[{"종류":"보고서|활동|근로봉사|사용계획|행사|성적유지|기타","근거":"<원문 그대로>"}]
+   선정된 뒤 해야 하는 일만(연구·결과 보고서 제출 · 정기 활동·멘토링 · 근로·봉사 시간 · 사용계획서·영수증 · 행사 참석 · 성적 유지). 지원할 때 내는 서류는 의무가 아니다.
+ "소득심사":{"반영":true,"근거":"<원문 그대로>"} — 자격 조건은 아니지만 심사에서 소득·가계 형편을 본다는 문장이 있을 때만. 없으면 null."""
+GOLD_DEFAULT = {'지급': ['현금', '혼합'], '막는 의무': ['보고서', '활동', '근로봉사', '사용계획'], '소득심사 막음': True}   # 카드 «꽁돈» 칸이 덮어쓴다
 
 SEOUL_GU = '종로 중 용산 성동 광진 동대문 중랑 성북 강북 도봉 노원 은평 서대문 마포 양천 강서 구로 금천 영등포 동작 관악 서초 강남 송파 강동'.split()
 FIELD_OK = r'이공|자연과학|이학|이과|물리|기초과학|과학기술|STEM|자연계'
@@ -183,8 +196,9 @@ def extract_one(n):
     att = ''.join(f'\n\n=== 첨부: {name} (색인 글자 · OCR 일 수 있음) ===\n{t}' for name, t in n['att'])
     content = [{'type': 'text', 'text': f'{n.get("hint", "")}제목: {n["title"]}\n등록일자: {n["date"]}\n\n{text}{att}'}]
     d, tot = None, {'in': 0, 'out': 0, 'cost': 0.0}
+    system = SYSTEM + (GOLD if gold_on(n) else '')
     for attempt in range(2):            # JSON 이 깨지면 한 번 더 묻는다(10-27: 36건 중 4건 «"근거":"…","}» 꼴)
-        out, usage, err = iv._run(content, system=SYSTEM)
+        out, usage, err = iv._run(content, system=system)
         tot['in'] += usage.get('in', 0)
         tot['out'] += usage.get('out', 0)
         tot['cost'] += usage.get('cost') or 0.0
@@ -236,8 +250,15 @@ def extract(maxn, refresh=False, workers=1, sid=None, settle=True, stop_on_warni
     stop_on_warning = 사용량 경고(한도 가까움)가 뜨면 거기서 멈춘다 — 자동 추출(조리법 filter.auto)용.
     again = 캐시가 있어도 다시 뽑을 글번호(첨부 색인을 고친 공고 — 사람이 짚을 때만). 돌려줌 = 합계 dict."""
     import ingest_vision as iv
+    cb = getattr(iv, 'claude_bin', None)            # 리허설 대역(flow_rehearsal_check)엔 없다
     why = iv.subscription()
     if why:
+        kind = cb.LAST.get('kind') if cb else ''
+        if kind in (cb.LAPSED, cb.LOGIN) if cb else False:     # 구독 해지·로그인 끊김(11-11) — 윈도 알림은 끊김마다 한 번 · 자동은 대기열에도 안 적는다(폰에 되풀이 안 뜨게)
+            cb.alert()
+            if stop_on_warning:
+                print(f'멈춤({kind}): {why} — 구독이 필요한 자동 추출은 쉰다')
+                return {'in': 0, 'out': 0, 'ok': 0, 'err': 0, 'cost': 0.0, 'stopped': kind}
         sys.exit(f'멈춤: {why} — 구독이 아니면 부르지 않는다')
     today = date.today().isoformat()
     todo = [n for n in notices(sid) if (n['id'] in again or n.get('again') or (stale(n) if refresh else not os.path.exists(cpath(n))))
@@ -276,7 +297,11 @@ def extract(maxn, refresh=False, workers=1, sid=None, settle=True, stop_on_warni
                     break
     except iv.Stop as e:
         print(f'멈춤({e.kind}): {e.why} — 남은 공지는 다음에')
-        tot['warning'] = f'{e.kind}: {e.why}'
+        if cb and e.kind in (cb.LAPSED, cb.LOGIN):   # 호출 중에 끊김을 앎 — 알림 한 번 · 사용량 경고 줄은 안 남긴다
+            cb.alert()
+            tot['stopped'] = e.kind
+        else:
+            tot['warning'] = f'{e.kind}: {e.why}'
     finally:
         if ex:
             ex.shutdown(cancel_futures=True)
@@ -391,7 +416,7 @@ def check(c, me):
         return '모름', tgt or '할일 대상'
     if ax == '이수학기':
         done = finished(me)
-        if v.get('이하') is not None and done is not None:      # «3학년 1학기(5학기) 등록 예정» 을 {"이하": 4} 로 뽑은 꼴(11-05 관정) — 예정 근거면 지금 학기까지 끝낸 것으로 센다
+        if v.get('이하') is not None and done is not None:      # «3학년 1학기(5학기) 등록 예정» 을 {"이하": 4} 로 뽑은 꼴(11-05 장학 공지) — 예정 근거면 지금 학기까지 끝낸 것으로 센다
             now = done + 1 if FUTURE.search(c.get('근거') or '') else done
             return ('충족', f'{now}학기 이수 ≤ {v["이하"]}') if now <= int(v['이하']) else ('불충족', f'{v["이하"]}학기 이하 · 나 {now}학기')
         need = v.get('이상')
@@ -457,7 +482,7 @@ def other(t, me):
         return ('충족', '9학기 미만 · 정상 등록') if n else ('모름', '학기 수')
     if re.search(r'전공 ?미배정|제1전공 배정', t):
         return ('충족', f'제1전공 {me.get("학과")}') if me.get('학과') else ('모름', '전공 배정')
-    if re.search(r'(?:대한민국|국내|한국).{0,6}(?:고등학교|고교).{0,4}졸업', t):     # 11-05 관정 — 카드의 출신고교는 국내 지역이다
+    if re.search(r'(?:대한민국|국내|한국).{0,6}(?:고등학교|고교).{0,4}졸업', t):     # 11-05 장학 공지 — 카드의 출신고교는 국내 지역이다
         school = (me.get('지역') or {}).get('출신고교')
         return ('충족', f'출신고교 {school}') if school else ('모름', '출신고교 모름')
     if re.search(r'외국대학 수학|교환학생으로 수학|국제교류 프로그램', t):
@@ -623,6 +648,38 @@ IMG = ('.jpg', '.jpeg', '.png', '.gif')
 NEG = re.compile(r'해당\s*없|해당되지|해당 안|제외|불가|아닌 |아닙니다')
 
 
+def src_text(n):
+    """근거 대조용 원문 — (본문·문서 첨부, 그림 OCR). 그림 글자는 깨진 글자일 수 있어 따로 둔다."""
+    return (norm(n['text'] + ''.join(t for a, t in n['att'] if not a.lower().endswith(IMG))),
+            norm(''.join(t for a, t in n['att'] if a.lower().endswith(IMG))))
+
+
+def gold_on(n):
+    g = (n['rc'].get('filter') or {}).get('gold')
+    return g is True or (isinstance(g, str) and bool(re.search(g, n['title'])))
+
+
+def gold(n, d, me, v):
+    """꽁돈(황금 태그) — 해당·확인 필요 가운데 통장으로 현금이 오고, 막는 의무·소득 심사가 없는 글.
+    돌려줌 (True | False | None, 까닭). None = 따질 수 없음(꽁돈 칸이 꺼진 출처 · 꽁돈 칸 없이 뽑힌 옛 캐시 · 자격 밖).
+    근거가 원문에 없으면: 지급은 «모름»(황금 아님) · 의무·소득 심사는 있는 것으로 본다(헛황금을 막는 쪽)."""
+    if not gold_on(n) or v not in ('해당', '확인 필요') or '지급' not in d:
+        return None, ''
+    cfg = {**GOLD_DEFAULT, **(me.get('꽁돈') or {})}
+    strong, weak = src_text(n)
+    seen = lambda q: bool(norm(q)) and (norm(q) in strong or norm(q) in weak)
+    pay = d.get('지급') or {}
+    form = pay.get('형태') if seen(pay.get('근거')) else '모름'
+    if form not in cfg['지급']:
+        return False, f'지급 {form or "모름"}'
+    heavy = [o.get('종류') for o in d.get('의무') or [] if o.get('종류') in cfg['막는 의무']]
+    if heavy:
+        return False, '의무 ' + '·'.join(dict.fromkeys(heavy))
+    if cfg.get('소득심사 막음') and (d.get('소득심사') or {}).get('반영'):
+        return False, '소득 심사'
+    return True, f'꽁돈 · {form} «{(pay.get("근거") or "")[:30]}»'
+
+
 def judge_one(n, d, me):
     v, res = judge_rules(n, d, me)
     if v == '비해당' and load_marks().get(f'{n["sid"]}:{n["id"]}', {}).get('평가') == '쓸모':    # 사용자가 살린 글(수집 창) — 규칙이 다시 빼지 않는다
@@ -637,8 +694,7 @@ def judge_rules(n, d, me):
     rule = card_rule(n['title'], me) if n['rc'].get('filter') else None     # LMS 글(filter {})은 제목 규칙 대상이 아니다
     if rule:
         return '비해당', [('불충족', f'제목 규칙({rule})', {'근거': n['title']})]
-    strong = norm(n['text'] + ''.join(t for a, t in n['att'] if not a.lower().endswith(IMG)))   # 본문·문서 첨부
-    weak = norm(''.join(t for a, t in n['att'] if a.lower().endswith(IMG)))                      # 그림 OCR — 깨진 글자일 수 있다
+    strong, weak = src_text(n)
     res = []
     for c in d.get('조건') or []:
         if c.get('축') not in AXES:
@@ -685,7 +741,10 @@ def judged(sid):
             continue
         d = json.load(open(cpath(n), encoding='utf-8'))
         v, res = judge_one(n, d, me)
-        out[n['id']] = (v, ' · '.join(dict.fromkeys(x[1] for x in res if x[0] in ('불충족', '모름', '관심')))[:160], deadline(n, d))
+        why = ' · '.join(dict.fromkeys(x[1] for x in res if x[0] in ('불충족', '모름', '관심')))
+        if gold(n, d, me, v)[0]:          # 수집 창은 이 한 줄(엔진 상태 why)을 보여 준다 — 꽁돈을 맨 앞에
+            why = '꽁돈' + (f' · {why}' if why else '')
+        out[n['id']] = (v, why[:160], deadline(n, d))
     return out
 
 
@@ -799,9 +858,14 @@ def judge(quiet=False):
     # 판정표 — 근거 한 줄
     L = [f'# 공지 판정 ({time.strftime("%Y-%m-%d %H:%M")})', '> notice-filter.py judge · 카드 = [[자격-카드]] · 비해당은 근거 인용이 원문에 있는 불충족만',
          '> 자리: **볼트** = 1_수집 에 든 글 · **대기 칸** = 판정 전이거나 비해당이라 볼트 밖(_index/collect/stage)에 둔 글 · **장부** = 본문을 받지 않고 제목·근거만 남긴 글 · **보관 칸** = 볼트에 들였다가 빼낸 글(_index/collect/archive · 첨부째 · 자동으로 지우지 않음 · 되돌리기 `web-collect.py --restore`)', '']
-    cnt = {}
+    cnt, golds = {}, []
     for n, v, res, dl, d in rows:
         cnt[(n['sid'], v)] = cnt.get((n['sid'], v), 0) + 1
+        g, gwhy = gold(n, d, me, v)
+        if g:
+            golds.append(f'- {dl or "마감?"} · {n["title"][:60]} — {gwhy}')
+        elif g is False:
+            gwhy = f'꽁돈 아님({gwhy})'
         if v == '비해당':
             r = next(x for x in res if x[0] == '불충족')
             why = f'{r[1]} — «{(r[2].get("근거") or "")[:60]}»'
@@ -814,12 +878,15 @@ def judge(quiet=False):
             why = ' · '.join(x[1] for x in res)[:120]
         else:
             why = '추출 전 — `notice-filter.py extract`' if v.startswith('판정 대기') else ''
-        L.append(f'- **{v}** {dl or "마감?"} · {"" if n["where"] == "볼트" else "(" + n["where"] + ") "}{n["title"][:60]} — {why}')
+        if gwhy:
+            why = f'{why} · {gwhy}' if why else gwhy
+        L.append(f'- **{v}**{" · 꽁돈" if g else ""} {dl or "마감?"} · {"" if n["where"] == "볼트" else "(" + n["where"] + ") "}{n["title"][:60]} — {why}')
     for rc in recipes():                 # 장부 — 제목만으로 걸러져 본문을 받지 않은 글
         for aid, it in state_items(rc).items():
             if not it.get('path') and not it.get('stage') and not it.get('archived') and it.get('verdict'):
                 cnt[(rc['id'], '장부 ' + it['verdict'])] = cnt.get((rc['id'], '장부 ' + it['verdict']), 0) + 1
                 L.append(f'- **{it["verdict"]}** (장부) · {(it.get("title") or "")[:60]} — {it.get("why", "")} · {it.get("url", "")}')
+    L += ['', '## 꽁돈 (해당·확인 필요 중 현금 · 막는 의무 없음 · 기준 = 카드 «꽁돈» 칸)', *(golds or ['- 없음'])]
     L += ['', '## 집계', *[f'- {k[0]} {k[1]}: {c}' for k, c in sorted(cnt.items())]]
     # 성과 칸(M1-4) — 출처별 자리 수 · 사용자 표시 · 놓침 장부. 목표값은 기준선(M2 뒤 2주)을 잰 다음 정한다.
     marks, S = load_marks(), {}
@@ -876,14 +943,14 @@ def write_schedule(rows, SCHED, label):
             if m and m.group(1) in 'xX' and m.group(6):
                 done.add(m.group(6))
     today = date.today().isoformat()
-    lines, seen = [], set()
+    lines, seen, me = [], set(), card()
     for n, v, res, dl, d in sorted(rows, key=lambda r: r[3]):
         if dl < today:
             continue
         dd = datetime.strptime(dl, '%Y-%m-%d')
         # 짧은 글 번호는 게시판마다 따로 늘어나 한 파일에서 겹칠 수 있다(체크가 번지고 알림 키가 같아진다) — 출처를 붙인다. 포털 18자리는 게시판 번호가 들어 있고 이미 쓰는 줄이라 그대로
         bid = f'sch-{n["id"]}' if len(n['id']) >= 12 else f'sch-{n["sid"]}-{n["id"]}'
-        tag = '' if v == '해당' else f' ({v})'
+        tag = ('' if v == '해당' else f' ({v})') + (' #꽁돈' if gold(n, d, me, v)[0] else '')   # 황금 태그(CSS 조각 꽁돈.css)
         name = re.sub(r'^\[[^\]]*\]\s*', '', n['title'])[:50]
         if (dl, norm(name)) in seen:     # 같은 글을 여러 게시판이 올림(표본 공대·전기전자 공지 제목 3개가 같다) — 한 줄만
             continue
@@ -893,7 +960,7 @@ def write_schedule(rows, SCHED, label):
     title = os.path.splitext(os.path.basename(SCHED))[0].replace('-', ' ')
     head = ['---', 'type: episodic', f'title: {title}', f'created: {today}', f'updated: {today}', f'tags: [일정, {label}, 생성파일]',
             'links: ["[[외부뇌-일정-형식]]", "[[자격-카드]]"]', 'status: active', 'source: claude', '---', f'# {title} (생성 파일)', '',
-            '> `3_시스템/notice-filter.py judge` 가 «해당»·«확인 필요» 중 마감이 남은 것만 다시 쓴다(조리법 `filter.schedule`). 체크만 남는다. 비해당과 근거는 `3_시스템/_index/collect/판정.md`.', '']
+            '> `3_시스템/notice-filter.py judge` 가 «해당»·«확인 필요» 중 마감이 남은 것만 다시 쓴다(조리법 `filter.schedule`). 체크만 남는다. 비해당과 근거는 `3_시스템/_index/collect/판정.md`. 꽁돈 태그 = 통장으로 현금이 오고 막는 의무가 없는 것(카드 «꽁돈» 칸).', '']
     with open(SCHED, 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(head + lines) + '\n')
 

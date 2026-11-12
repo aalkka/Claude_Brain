@@ -167,8 +167,23 @@ def cmd_run(a):
 
 
 # ── 건강 ──
+HEALTH = os.path.join(HERE, "_index", "health.json")  # 마지막 잼 — 세션 시작 주입(hooks/session-notice.py)이 읽는다
+
+
 def chk(name, status, line):
     return {"name": name, "status": status, "line": line}
+
+
+def save_health(res):
+    """잴 때마다 남긴다 — 옵시디언은 30분마다 재도 메모리에만 들고 있어 Claude 세션이 몰랐다(11-12 사용자 «세션에 주입»)"""
+    tmp = "%s.%d.tmp" % (HEALTH, os.getpid())  # 옵시디언 재기와 손 실행이 겹쳐도 서로 덮지 않게
+    try:
+        os.makedirs(os.path.dirname(HEALTH), exist_ok=True)
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"at": time.time(), "rows": res}, f, ensure_ascii=False)
+        os.replace(tmp, HEALTH)
+    except OSError:
+        pass
 
 
 def doctor_checks():
@@ -325,6 +340,7 @@ def module_checks():
 
 def cmd_doctor(a):
     res = doctor_checks()
+    save_health(res)
     if a.json:
         print(json.dumps(res, ensure_ascii=False))
     else:

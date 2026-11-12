@@ -416,7 +416,7 @@ def ocr_images(pngs):
     return res, None
 
 
-# 방향 — 윈도우 OCR 은 글이 돌아가 있어도 바로잡지 않고 깨진 글자를 낸다(11-05 관정 제출서류 = 세로 쪽에 가로로 그린 표 · «1卜1卜 =1卜»).
+# 방향 — 윈도우 OCR 은 글이 돌아가 있어도 바로잡지 않고 깨진 글자를 낸다(11-05 장학 제출서류 = 세로 쪽에 가로로 그린 표 · «1卜1卜 =1卜»).
 # 판별 = 말이 되는 낱말(한글 2자+ · 영문 3자+)에 든 글자 비율. 11-05 실측(정상 쪽 16장을 4방향으로 돌려 읽음): 바른 방향 0.63~0.89 ·
 # 틀린 방향 0.45 이하 · 손글씨 쪽은 어느 방향이든 0.33 이하(그래서 안 돌린다). 깨진 쪽만 나머지 세 방향을 더 읽으니 멀쩡한 쪽은 비용이 없다.
 ROT_CLEAN, ROT_GAIN, ROT_MIN, ROT_BATCH = 0.55, 2, 20, 8
@@ -1225,9 +1225,12 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
         for sha in list(caches):
             rebuild_index(sha, groups, sizes, mtimes, "그림 읽기")
         return
-    why = V.subscription()                                      # 구독이 아니면 묻지 않는다(사용자 10-26) — 플러그인이 이 줄을 알림으로 띄운다
-    if why:
-        stop_line("로그인 안 됨" if why == V.NO_LOGIN else "구독 아님", why)
+    st = V.claude_bin.check()                                   # 구독이 아니면 묻지 않는다(사용자 10-26) — 플러그인이 이 줄을 알림으로 띄운다
+    if not st["ok"]:
+        if st["kind"] in (V.claude_bin.LAPSED, V.claude_bin.LOGIN) and not V.claude_bin.alert(toast=False):
+            print(f"그림 읽기 안 함 — {st['kind']}(알림 끝남): {st['why']}")      # 같은 끊김에 플러그인 알림을 되풀이하지 않는다(11-11)
+        else:
+            stop_line(st["kind"], st["why"])
         for sha in list(caches):
             rebuild_index(sha, groups, sizes, mtimes, "그림 읽기")
         return
@@ -1367,7 +1370,10 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
         if got:
             put(sha, k, got)
     if halt:
-        stop_line(halt[0].kind, halt[0].why)
+        if halt[0].kind in (V.claude_bin.LAPSED, V.claude_bin.LOGIN) and not V.claude_bin.alert(toast=False):
+            print(f"그림 읽기 안 함 — {halt[0].kind}(알림 끝남): {halt[0].why}")
+        else:
+            stop_line(halt[0].kind, halt[0].why)
     left += skipped
     print(f"그림 읽기 끝: 성공 {tot['ok']} · 실패 {tot['fail']} · 손글씨 {tot['hw']} · 판서 위치 {tot['loc']}쪽 · 토큰 입력 {tot['in']:,} + 출력 {tot['out']:,}"
           + (f" · 남은 {left}장" if left else ""))

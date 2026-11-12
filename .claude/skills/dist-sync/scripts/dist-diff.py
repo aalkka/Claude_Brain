@@ -86,7 +86,7 @@ EXCLUDE_EXT = (".pyc", ".pyo", ".lock", ".tmp")
 # 배포판이 직접 만든 Obsidian 플러그인(2026-10-13 Brain Sheet) — `.obsidian/` 은 통째로 제외지만 이 폴더는 코어다.
 # 남의 커뮤니티 플러그인 본체는 여전히 제외. 플러그인 설정(data.json)은 사용자 것이라 개인.
 DIST_PLUGINS = [".obsidian/plugins/brain-source/", ".obsidian/plugins/brain-base/", ".obsidian/plugins/brain-calendar/"]  # mf:allow-path
-DIST_PLUGIN_PERSONAL = {"data.json", "tutorial-practice.json"}
+DIST_PLUGIN_PERSONAL = {"data.json", "tutorial-practice.json", "tutorial-log.jsonl"}  # tutorial-log = 사용자의 튜토리얼 진행 기록(11-12 publish 때 «코어»로 잡힘)
 # 배포판이 거둔 플러그인 → 대신 쓰는 것(2026-10-22 brain-sheet → brain-source · .sheet 를 이어 맡음).
 # 거둔 것만 지우고 대신 쓰는 것을 켜야 한다 — 거둔 것이 «켜짐» 으로 남아 있으면 brain-source 는
 # 그쪽이 .sheet 를 맡는 줄 알고 비켜서, 아무도 안 맡은 .sheet 가 탐색기에서 사라진다(10-18 버그와 같은 꼴).
@@ -149,6 +149,8 @@ CORE = [
     "3_시스템/quietwin.py", "3_시스템/quietwin.mjs", "3_시스템/winwatch.py", "3_시스템/graph_topics.py",  # mf:allow-path
     # 수집 창(코어 화면 · 11-07 본체 통합)이 부르는 엔진 — 출처마다 다른 것은 조리법(3_시스템/collect/* · 개인)
     "3_시스템/web-collect.py", "3_시스템/notice-filter.py", "3_시스템/alarms.py", "3_시스템/filter-learn.py",  # mf:allow-path
+    # 모아보기(.moa · 11-12) — views.json formats 가 부르는 엔진·화면. 빠지면 배포판의 .moa 가 안 열린다
+    "3_시스템/gather/*",  # mf:allow-path
 ]
 
 # publish 방향에서 배포판에 새어 나가면 안 되는 것 (2026-08-03 전수검사 계열)

@@ -49,5 +49,16 @@
         "forbids": ["1_수집/**"]
       }
     }
+  ],
+  "_formats": "파일 형식 화면(모아보기 11-11 · brain-base formatview.ts) — 그 확장자 파일을 열면 html 한 장에 data 명령의 마지막 줄 JSON 을 그린다 · {file} = 연 파일의 볼트 경로 · 리본·명령 없음(탐색기·찾기·링크로 연다) · watch 아래가 바뀌거나 그 파일을 고치면 다시 그린다 · 확장자 선언은 brain-base 를 다시 읽을 때 반영(html·대본은 바로).",
+  "formats": [
+    {
+      "ext": "moa",
+      "name": "모아보기",
+      "icon": "layout-list",
+      "html": "3_시스템/gather/view.html",
+      "data": ["{py}", "3_시스템/gather/gather.py", "view", "--file", "{file}"],
+      "watch": ["3_시스템/_index/collect/", "3_시스템/collect/"]
+    }
   ]
 }
