@@ -21,6 +21,7 @@
 ".claude/skills/canvas/SKILL.md": {
 "0bca862cef17": "ced6992063d5e0b0",
 "70230f00886f": "753f7d3536996b4a",
+"92fd8e46aeeb": "d561d699231b3e0c",
 "de619e32902a": "f3326956613bce5d",
 "f8233f173114": "11cdf5d4b29142ed"
 },
@@ -1156,6 +1157,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "e61e4dcaab8c",
+"rev": "4d64072dfa69",
 "schema": 1
 }
