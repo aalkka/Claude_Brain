@@ -406,6 +406,7 @@
 "762b61ffd338": "86b821dbe1f617db"
 },
 "3_시스템/_eval/idle_save_check.py": {
+"9cea08ded346": "2ea76faede07f104",
 "fc729a5ad979": "6e037f550c834c6c"
 },
 "3_시스템/_eval/ingest_check.py": {
@@ -705,6 +706,7 @@
 "3_시스템/hooks/idle-save.py": {
 "516d5db75671": "5530c110682e6a95",
 "bdbbb0c8654d": "b1477f8af4ac8dff",
+"c508a117a92f": "df85facfe141f81c",
 "c5c1852d9cac": "e337bfeb152462ce"
 },
 "3_시스템/hooks/loop-pin.py": {
@@ -900,6 +902,7 @@
 "40bbae820ee0": "c4bda10756a87c90",
 "4a76fe3549ed": "10851752e5c99f72",
 "59389afde877": "52e7e72b12a30797",
+"72c953d8e53a": "73b8d5373709dd17",
 "a1d65401aa78": "2bb699efcdff99af",
 "d81a2e2276b0": "9ff0f04eeaef5a06",
 "f6d272128c1b": "74194d71b3b9a188"
@@ -1142,6 +1145,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "6582cbe213d7",
+"rev": "f51313aab58f",
 "schema": 1
 }
