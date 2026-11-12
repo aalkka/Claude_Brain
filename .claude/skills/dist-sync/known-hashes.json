@@ -88,10 +88,12 @@
 "508baef7f34e": "d7aa9a8743780757",
 "8982d19e7aa6": "42803efd33ff68ae",
 "b7d8d711ef84": "816428bfea7432d4",
+"d639cf5f48a6": "acea2cc1789b097c",
 "ed63f0b9b654": "6a3a0ff17dee154a"
 },
 ".claude/skills/dist-sync/README.md": {
 "075c2af054d5": "69d4b7a3d884a906",
+"2bfb37cc06a9": "4db0d1318b481e98",
 "305539f715d0": "28566e58489d909e",
 "77e74afd57bd": "69f9c0ae6f0b2817",
 "d56f6baca481": "2dc7207dbd5b4e02"
@@ -111,6 +113,7 @@
 "d7189c38d662": "fd7ce028d99b551d"
 },
 ".claude/skills/dist-sync/scripts/dist-check.py": {
+"fb408acda8bf": "c4e1b6b17ddac672",
 "ffa4bdeb3f36": "17c825d593f0f861"
 },
 ".claude/skills/dist-sync/scripts/dist-diff.py": {
@@ -134,6 +137,7 @@
 "92cc8ee90a63": "bc0dcea1fa6a1498"
 },
 ".claude/skills/dist-sync/scripts/test_dist_check.py": {
+"b2507c5ca19e": "a24afa8868bb3b97",
 "d84dafb8d9aa": "cefecc403de852f8"
 },
 ".claude/skills/dist-sync/skills/outside/SKILL.md": {
@@ -145,6 +149,7 @@
 "7d3aca584536": "3de822b39fd05f21",
 "98683c724762": "038464d1d9a94cb4",
 "a03cea231509": "1d3e9f6e1df1791c",
+"dc66e7abc1db": "98bbfbc4fc281932",
 "ec3bbfe21d8a": "c2420238b81cf4ea"
 },
 ".claude/skills/dist-sync/skills/update/SKILL.md": {
@@ -571,6 +576,12 @@
 },
 "3_시스템/_ref/incident-2026-10-13-배포판-autocrlf-번들-줄바꿈변환.md": {
 "1040b4829cf7": "d18712b6bf75cb4f"
+},
+"3_시스템/_ref/incident-2026-11-13-dist-check-새파일-시각거름-조용히빠짐.md": {
+"167230e14674": "530cab47696168f5"
+},
+"3_시스템/_ref/incident-2026-11-13-일모드전환-CLI가-거부글로-바꿈.md": {
+"4fe754398b0c": "4df8d128abd976ff"
 },
 "3_시스템/_ref/measure-module-toggle.md": {
 "40026e81a7d8": "c3fd4f83d5e6cecd"
@@ -1145,6 +1156,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "f51313aab58f",
+"rev": "e61e4dcaab8c",
 "schema": 1
 }
