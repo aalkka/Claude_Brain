@@ -63,6 +63,7 @@ VAULT = os.path.dirname(SYS)
 sys.path.insert(0, SYS)
 import fileops  # noqa: E402 — 볼트에 들이는 첨부는 장부에(볼트 개혁 R6.3 · by script:web-collect)
 import roles  # noqa: E402 — 조리법의 넣을 자리 «@역할/하위»(볼트 개혁 R9)
+ME = roles.me()                     # 사용자 호칭(프로필) — 대기열 사람 줄 «(호칭)»·장부 글
 RECIPES = os.path.join(SYS, 'collect')
 STATE_DIR = os.path.join(SYS, '_index', 'collect')
 QUEUE = os.path.join(SYS, '_index', '수집-대기열.md')
@@ -478,7 +479,7 @@ def take_attachments(rc, run, post_md, v):
         rec['sha'] = sha[:16]
         if problems:
             rec['quarantined'] = problems
-            queue(rc['id'], f'첨부 격리 {fn} — {problems} ({qp})', '사용자·Claude')
+            queue(rc['id'], f'첨부 격리 {fn} — {problems} ({qp})', f'{ME}·Claude')
             out.append(rec)
             continue
         if sha in vault_hashes():
@@ -653,7 +654,7 @@ def rescue(rc, aid, run):
     keep_raw(rc, aid, raw)
     it['files'] = take_attachments(rc, run, p, v)
     it['path'] = os.path.relpath(p, VAULT)
-    it['verdict'], it['why'] = '관심', '사용자 승인'
+    it['verdict'], it['why'] = '관심', f'{ME} 승인'
     it.pop('stage', None)
     it.pop('v_att', None)
     save_state(sp, st)
@@ -751,10 +752,10 @@ def auto_extract(rc, run):
     try:
         tot = nf.extract(int(rc['filter'].get('auto_max', 10)), sid=rc['id'], settle=False, stop_on_warning=True)
     except SystemExit as e:
-        queue(rc['id'], f'자동 추출 안 함 — {e}', '사용자')
+        queue(rc['id'], f'자동 추출 안 함 — {e}', ME)
         return
     if tot.get('warning'):
-        queue(rc['id'], f'자동 추출 멈춤 — 사용량 경고 {str(tot["warning"])[:120]}', '사용자')
+        queue(rc['id'], f'자동 추출 멈춤 — 사용량 경고 {str(tot["warning"])[:120]}', ME)
     if tot.get('ok'):
         settle(rc, run)
 
@@ -1275,7 +1276,7 @@ def probe(url, note=''):
     try:
         rb = robots(url)
         if rb[0] == '막힘' and not note.strip():
-            return {'url': url, 'robots': rb, 'problems': [f'robots 막힘({rb[1]}) — 받지 않음 · 넣을지는 사용자가 정한다']}
+            return {'url': url, 'robots': rb, 'problems': [f'robots 막힘({rb[1]}) — 받지 않음 · 넣을지는 ' + roles.me('이') + ' 정한다']}
         with _open(url) as r:
             raw = r.read(8 * 2**20 + 1)
             status, final, ctype, cs = r.status, r.geturl(), r.headers.get('Content-Type') or '', r.headers.get_content_charset()
@@ -1391,7 +1392,7 @@ def preview(path, view=False):
             out['waited'] = site_wait(lu)
             out['robots']['list'] = robots(lu)
             if out['robots']['list'][0] == '막힘' and not note:
-                out['problems'].append('robots 막힘 — 받지 않음 · 넣을지는 사용자가 정한다(초안 robots_note)')
+                out['problems'].append(f'robots 막힘 — 받지 않음 · 넣을지는 {roles.me("이")} 정한다(초안 robots_note)')
                 raise StopIteration
             rows = FAMILIES[rc['family']][0](rc, get(lu))
             sp = os.path.join(STATE_DIR, rc['id'] + '.json')      # 고침이면 지금 상태와 견준다 — 글 번호 꼴이 바뀌면 전부 새 글로 받힌다
@@ -1424,7 +1425,7 @@ def preview(path, view=False):
                 if rc['family'] == 'regex' or rc.get('view'):     # 글 쪽을 실제로 받을 때만(피드 본문만 쓰면 요청이 없다)
                     out['robots']['view'] = robots(view_url(rc, first))
                     if out['robots']['view'][0] == '막힘' and not note:
-                        out['problems'].append('글 쪽 robots 막힘 — 받지 않음 · 넣을지는 사용자가 정한다(초안 robots_note)')
+                        out['problems'].append(f'글 쪽 robots 막힘 — 받지 않음 · 넣을지는 {roles.me("이")} 정한다(초안 robots_note)')
                         raise StopIteration
                 url, _, v = fetch_view(rc, first)
                 body = to_text(v['body_html'] or '').text()
@@ -1500,12 +1501,12 @@ def main():
     ap.add_argument('--archive', action='store_true', help='거르는 출처: 지금 엔진이면 들이지 않았을 볼트 글을 보관 칸으로(--dry = 목록만)')
     ap.add_argument('--restore', action='store_true', help='보관 칸 → 볼트(--id 로 한 글만)')
     ap.add_argument('--expire', action='store_true', help='보존 일정표 «웹공지»: 마감 + 날이 지난 볼트 글 → 휴지통')
-    ap.add_argument('--rescue', action='store_true', help='사용자가 승인한 글 → 볼트(--source · --id 필수 · 수집 창이 부른다)')
+    ap.add_argument('--rescue', action='store_true', help=f'{roles.me("이")} 승인한 글 → 볼트(--source · --id 필수 · 수집 창이 부른다)')
     ap.add_argument('--id')
     ap.add_argument('--probe', metavar='URL', help='수집 추가 탐색: 한 쪽을 받아 draft/probe 에 두고 요약 JSON(피드 찾기·robots)')
     ap.add_argument('--preview', metavar='조리법.json', help='미리보기(저장 없음): 목록 1쪽 + 관문 결과 JSON · --view = 첫 글 하나도')
     ap.add_argument('--view', action='store_true')
-    ap.add_argument('--robots-note', default='', help='--probe: robots 가 막은 쪽을 사용자가 넣기로 정했을 때 그 결정 한 줄')
+    ap.add_argument('--robots-note', default='', help=f'--probe: robots 가 막은 쪽을 {roles.me("이")} 넣기로 정했을 때 그 결정 한 줄')
     ap.add_argument('--lint', metavar='조리법.json', help='꼴 검사만(망 요청 0): 문제 목록 + 미리보기 결과 지문 JSON — 확정·고침이 부른다')
     a = ap.parse_args()
     if a.lint:

@@ -523,7 +523,7 @@ def write_plans(st):
         if ops:
             p = os.path.join(out_dir, "작업-%s-%s.json" % (day, re.sub(r"[^0-9A-Za-z가-힣_-]", "_", t["path"].split("/", 1)[-1])))
             with open(p, "w", encoding="utf-8", newline="\n") as f:
-                json.dump({"title": "끝난 작업 정리 — %s (%s) · 사용자 승인 뒤에만 --apply" % (t["path"], t["state"]), "ops": ops}, f, ensure_ascii=False, indent=1)
+                json.dump({"title": "끝난 작업 정리 — %s (%s) · %s 승인 뒤에만 --apply" % (t["path"], t["state"], roles.me()), "ops": ops}, f, ensure_ascii=False, indent=1)
             item["plan"] = rel(p)
         res.append(item)
     return res

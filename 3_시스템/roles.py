@@ -10,9 +10,11 @@
   py -3 3_시스템/roles.py topics [--json]                    주제 등록부
   py -3 3_시스템/roles.py canon 별칭                         별칭 → 정식 이름(모르면 종료 1)
   py -3 3_시스템/roles.py topic <볼트 상대 경로>               그 파일·폴더의 주제(자리 → md 의 `주제:` 속성)
+  py -3 3_시스템/roles.py me [조사]                          사용자 호칭(프로필 «- **호칭**: …» · 없으면 «사용자»)
 
 파이썬: `import roles` → `roles.path("sessions")` · `roles.abs("inbox")` · `roles.group("moc_notes")` ·
-`roles.topics()` · `roles.canon("별칭")` · `roles.topic_of("1_수집/배움/과목A/x.pdf")`.
+`roles.topics()` · `roles.canon("별칭")` · `roles.topic_of("1_수집/배움/과목A/x.pdf")` ·
+`roles.me("이")` → «○○님이»(프로필 «- **호칭**: …» · 없으면 «사용자가»).
 """
 import json
 import os
@@ -242,6 +244,46 @@ def topic_of(rel, read_md=True, vault=None):
     return None
 
 
+# ── 사용자 호칭 — 대본에 사람 이름을 박지 않는다(배포판 익명 · 2026-11-12) ──
+# 프로필(역할 profile · `2_지식/profile.md`)의 «- **호칭**(설명): …» 줄(설명 괄호는 없어도 됨) · 없거나 슬롯({{…}}) 그대로면 «사용자».
+# brain-base src/who.ts 와 같은 규칙. 조사는 앞말 끝 받침을 따른다 — 글자 치환이 «사용자이»를 만든 전례(2026-08-03).
+ME_NONE = "사용자"
+_ME_LINE = re.compile(r"^[ \t]*(?:[-*][ \t]*)?(?:\*\*)?호칭(?:\*\*)?(?:\([^)\n]*\))?[ \t]*[:：][ \t]*(.+?)[ \t]*$", re.M)
+_PAIR = {"이": ("이", "가"), "가": ("이", "가"), "은": ("은", "는"), "는": ("은", "는"),
+         "을": ("을", "를"), "를": ("을", "를"), "과": ("과", "와"), "와": ("과", "와")}
+_ME = {}
+
+
+def me_of(text):
+    """프로필 글 → 호칭 · 못 찾으면 «사용자»."""
+    m = _ME_LINE.search(text or "")
+    v = re.sub(r"[.。]$", "", m.group(1)).strip() if m else ""
+    return v if v and "{{" not in v else ME_NONE
+
+
+def josa(word, j):
+    """말 + 조사 — 짝 조사(이/가 · 은/는 · 을/를 · 과/와)만 받침으로 고르고 나머지(께 · 의 …)는 그대로 · 끝이 한글이 아니면 «이(가)»."""
+    p = _PAIR.get(j)
+    if not p:
+        return word + j
+    c = ord(word[-1]) if word else 0
+    if not 0xAC00 <= c <= 0xD7A3:
+        return "%s%s(%s)" % (word, p[0], p[1])
+    return word + (p[0] if (c - 0xAC00) % 28 else p[1])
+
+
+def me(j="", vault=None):
+    """사용자 호칭(+ 조사) — me("이") = «○○님이» · 프로필에 호칭이 없으면 «사용자가». 한 번 읽으면 그 실행 동안 같은 값."""
+    key = _vault(vault)
+    if key not in _ME:
+        try:
+            with open(os.path.join(key, *path("profile", vault=vault).split("/")), encoding="utf-8") as f:
+                _ME[key] = me_of(f.read())
+        except (OSError, KeyError, ValueError):
+            _ME[key] = ME_NONE
+    return josa(_ME[key], j)
+
+
 def main(argv=None):
     for s in (sys.stdout, sys.stderr):
         try:
@@ -280,6 +322,8 @@ def main(argv=None):
                 print("모르는 주제: %s" % a[1])
                 return 1
             print(c)
+        elif cmd == "me" and len(a) <= 2:
+            print(me(a[1] if len(a) == 2 else ""))
         elif cmd == "topic" and len(a) == 2:
             t = topic_of(a[1])
             print(t or "(주제 없음)")

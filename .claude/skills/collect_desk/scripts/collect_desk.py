@@ -36,6 +36,9 @@ import webbrowser
 HERE = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.abspath(os.path.join(HERE, '..', '..', '..', '..'))
 SYS = os.path.join(VAULT, '3_시스템')
+sys.path.insert(0, SYS)
+import roles  # noqa: E402 — 사용자 호칭(프로필) · 대본에 사람 이름을 박지 않는다
+ME = roles.me()
 PLAN = os.path.join(VAULT, '2_지식', '일정')
 ALARM_NOTE = '2_지식/일/외부뇌/알림-설정.md'
 EVENTS = 8
@@ -179,7 +182,7 @@ def web_events():
 
 
 # 단추 이름이 살리기·빼기에서 승인·거절로 바뀌기 전(11-09) 장부에 남은 낱말 — 기록은 그대로 두고 화면에서만 지금 이름으로
-SAID_NOW = {'살림': '승인', '사용자 살림': '사용자 승인', '수집 창에서 뺌': '거절', '사용자: 수집 창에서 뺌': '사용자: 거절'}
+SAID_NOW = {'살림': '승인', f'{ME} 살림': f'{ME} 승인', '수집 창에서 뺌': '거절', f'{ME}: 수집 창에서 뺌': f'{ME}: 거절'}
 
 
 def said(s):
@@ -350,7 +353,7 @@ def next_at(at, now):
 # ── 일어난 일 상세(11-12 사용자 «일어난 일을 상세보기 · 지금 정보가 너무 부실») — 기록 셋(web.log·auto.log·장부)과 글마다 run 을 묶는다 · 읽기만 ──
 HIST_N = 60
 HIST_SHOW = 40              # 보기 자료에 싣는 출처마다 기록 줄 수(기록 칸)
-WHO = {'at': '시각 예약', 'tick': '15분 확인', 'fetch': '지금 받기', 'judge': '판정', 'me': '사용자', 'claude': 'Claude', 'ext': '확장', 'wake': '크롬 띄우기'}
+WHO = {'at': '시각 예약', 'tick': '15분 확인', 'fetch': '지금 받기', 'judge': '판정', 'me': ME, 'claude': 'Claude', 'ext': '확장', 'wake': '크롬 띄우기'}
 
 
 def _ts(day, hm):
@@ -1171,7 +1174,7 @@ def tried_ok(p, did, rc):
         raise Refuse('글 하나 미리보기(try --view) 전')
     blocked = [f'{"목록" if k == "list" else "글"} {v[0]}' for k, v in (t.get('robots') or {}).items() if v and v[0] != '허용']
     if blocked and not str(rc.get('robots_note') or '').strip():
-        raise Refuse(f'robots {" · ".join(blocked)} — 사용자 결정을 초안 robots_note 에 적은 뒤')
+        raise Refuse(f'robots {" · ".join(blocked)} — {ME} 결정을 초안 robots_note 에 적은 뒤')
     return t
 
 
@@ -1194,7 +1197,7 @@ def add_source(did):
     t = tried_ok(p, did, rc)
     rb = (t.get('robots') or {}).get('list') or ['모름']
     note = str(rc.get('robots_note') or '').strip()
-    rc['contract'] = (f'{dt.date.today().isoformat()} 사용자 수집 창 «수집 추가» 확정 · 목적 «{str(rc["purpose"]).strip()[:80]}» · robots {rb[0]}'
+    rc['contract'] = (f'{dt.date.today().isoformat()} {ME} 수집 창 «수집 추가» 확정 · 목적 «{str(rc["purpose"]).strip()[:80]}» · robots {rb[0]}'
                       + (f'({note[:80]})' if note else '') + ' · 공개 페이지 · 받기만(GET)')
     rc.pop('enabled', None)
     at = at_list(rc.get('at'))                  # 받기 시각 = Claude 가 정함(11-12 · 수집 추가 5단계) — 확정 때부터 센다(지난 시각을 따라잡지 않게)
@@ -1369,7 +1372,7 @@ def view(_reason='open'):
     for x in sources:
         if links.get(x['id']):
             x['moa'] = links[x['id']]
-    return {'now': fmt(now), 'hist': hist, 'allOff': sw.get('all_off') is True, 'autoJudge': sw.get('auto_judge') is True, 'wakePc': sw.get('wake_pc') is not False, 'alarmNote': ALARM_NOTE, 'alarmBad': alarm_bad, 'sources': sources, 'candidates': candidates()}
+    return {'now': fmt(now), 'me': ME, 'hist': hist, 'allOff': sw.get('all_off') is True, 'autoJudge': sw.get('auto_judge') is True, 'wakePc': sw.get('wake_pc') is not False, 'alarmNote': ALARM_NOTE, 'alarmBad': alarm_bad, 'sources': sources, 'candidates': candidates()}
 
 
 # ── 연습(튜토리얼 E2 · 11-08) — «연습: 모듈» 장 동안 수집 창이 그리는 자료 · 쓰기 흉내 ──
@@ -1453,7 +1456,7 @@ def practice_act(F, act, now):
             it['path'] = f'2_지식/연습/{g["id"]}.md'
         elif op == 'reject':
             it.pop('stage', None)
-            it.update(verdict='뺌', why='사용자: 거절')
+            it.update(verdict='뺌', why=f'{ME}: 거절')
         elif op in ('useless', 'useful'):
             F.setdefault('3_시스템/_index/collect/평가.json', {})[f'{src}:{g["id"]}'] = {'평가': '헛것' if op == 'useless' else '쓸모', 'at': f'{now:%Y-%m-%d %H:%M}'}
         else:
@@ -1467,7 +1470,7 @@ def practice_act(F, act, now):
             raise Refuse('제목에 없는 낱말')
         it.pop('stage', None)
         said = ' · '.join([f'«{w}»' for w in picked] + ([g['memo'].strip()] if g.get('memo', '').strip() else []))
-        it.update(verdict='뺌', why=f'사용자: {said or "거절"}')
+        it.update(verdict='뺌', why=f'{ME}: {said or "거절"}')
     elif aid in ('collect_desk.fetch', 'collect_desk.judge'):
         if sw.get('all_off') is True or (lms and desk.get('enabled') is False) or (not lms and (not isinstance(rc, dict) or rc.get('enabled') is False)):
             raise Refuse('꺼진 출처')

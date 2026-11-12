@@ -270,7 +270,7 @@ def classify_file(out, name, a, same):
     kind = kind_of(name)
     if kind == "md":
         topic, hit = topic_of_text(stem + "\n" + peek(a))
-        out.update(why="md = 사용자가 적은 아이디어 노트면 승격은 Claude(conventions)" + (" · 주제 «%s»" % topic if topic else ""))
+        out.update(why="md = %s 적은 아이디어 노트면 승격은 Claude(conventions)" % roles.me("이") + (" · 주제 «%s»" % topic if topic else ""))
         return out
     topic, hit = topic_of_text(stem)
     if not topic:

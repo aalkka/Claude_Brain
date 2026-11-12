@@ -99,25 +99,100 @@ def commit_later(vault):
         return False
 
 
+LOCK_RX = re.compile(r"\.lock\b")
+
+
+def git_w(vault, *args):
+    """잠금을 잡는 git(add·commit). 다른 git 이 잠금을 쥐어 못 했으면(끝 코드 128 + «….lock») 0.3·0.6·1.2·2.4초 쉬고 다시.
+    11-12 잼: Stop 훅 둘이 겹치거나 다른 세션이 git status 를 치는 순간 add 가 바로 실패했다(git 은 index.lock 을 기다리지 않는다).
+    돌려줌 = (끝 코드, 출력+오류 글) — 실패 까닭을 장부에 남기려고."""
+    for i in range(5):
+        try:
+            r = subprocess.run(["git", "-C", vault] + list(args), capture_output=True, creationflags=NOWIN)
+        except (OSError, subprocess.SubprocessError) as e:
+            return 1, str(e)
+        msg = (r.stdout + r.stderr).decode("utf-8", "replace")
+        if r.returncode != 128 or not LOCK_RX.search(msg) or i == 4:
+            return r.returncode, msg
+        time.sleep(0.3 * 2 ** i)
+
+
+def why(msg):
+    """장부에 남길 한 줄 — pre-commit 의 ❌ 줄이 있으면 그것, 없으면 fatal·error 줄, 그것도 없으면 첫 줄."""
+    ls = [l.strip() for l in msg.splitlines() if l.strip()]
+    pick = [l for l in ls if l.startswith("❌")] or [l for l in ls if l.startswith(("fatal", "error"))] or ls
+    return pick[0][:160] if pick else ""
+
+
+def one_at_a_time(vault, wait=30):
+    """자동 커밋을 프로세스끼리 하나씩 — 세션 여럿의 Stop 훅·서버가 같은 순간 add·commit 을 섞지 않게
+    (섞이면 한쪽 add 가 잠금에 막히고, «user:» 커밋에 다른 세션의 볼트 파일이 든다 · 10-15~11-12 20건 넘음).
+    msvcrt 바이트 잠금이라 프로세스가 죽으면 OS 가 푼다 — 죽은 잠금이 남지 않는다.
+    못 잡으면 wait 초까지 기다리고, 그래도 못 잡거나 잠글 수 없는 곳이면 None(= 지금처럼 그냥 한다)."""
+    try:
+        import msvcrt
+        f = open(os.path.join(vault, "3_시스템", "_index", ".autocommit.lock"), "a+b")
+    except (ImportError, OSError):
+        return None
+    t0 = time.time()
+    while True:
+        try:
+            f.seek(0)
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+            return f
+        except OSError:
+            if time.time() - t0 > wait:
+                f.close()
+                return None
+            time.sleep(0.2)
+
+
 def autocommit(vault, hlog, tag="Stop"):
     """바뀐 것이 있으면 볼트 커밋(Claude) → 1_수집 커밋(User) — Stop 훅과 서버가 같이 쓴다. push 없음.
-    돌려줌 = "없음"(바뀐 것 없음) · "커밋" · "막힘"(pre-commit 이 막아 스테이지가 남음) · «add 실패»"""
+    돌려줌 = "없음"(바뀐 것 없음) · "커밋" · "막힘"(pre-commit 이 막아 스테이지가 남음) · «add 실패» · «잠금»(재시도 뒤에도 잠금 경합)"""
     rc, out = git(vault, "--no-optional-locks", "status", "--porcelain", "--untracked-files=normal", timeout=300)
     if rc == 0 and not out.strip():
         return "없음"
+    mx = one_at_a_time(vault)
+    try:
+        return _autocommit(vault, hlog, tag)
+    finally:
+        if mx:
+            try:
+                import msvcrt
+                mx.seek(0)
+                msvcrt.locking(mx.fileno(), msvcrt.LK_UNLCK, 1)
+            except OSError:
+                pass
+            mx.close()
+
+
+def _autocommit(vault, hlog, tag):
     today = dt.date.today().isoformat()            # 바뀐 것이 있거나 status 를 못 읽으면 PS 판과 같은 순서로
-    rc, _ = git(vault, "add", "-A", "--", ":!1_수집")
+    rc, msg = git_w(vault, "add", "-A", "--", ":!1_수집")
     if rc != 0:
-        log(hlog, tag + " git add 실패 — 자동 커밋 안 됨(잠금 확인)")
+        log(hlog, tag + " git add 실패 — 자동 커밋 안 됨(잠금 확인) · " + why(msg))
+    fails = []                                     # (끝 코드, 글) — 커밋이 실패한 까닭
+    made = False                                   # 앞 프로세스가 이미 담아 갔으면 이번엔 커밋할 것이 없다
     if git(vault, "diff", "--cached", "--quiet")[0] != 0:
-        git(vault, "commit", "-m", "session: " + today, "--author=Claude <claude@local>")
-    git(vault, "add", "1_수집")
+        c = git_w(vault, "commit", "-m", "session: " + today, "--author=Claude <claude@local>")
+        if c[0]:
+            fails.append(c)
+        made = made or not c[0]
+    git_w(vault, "add", "1_수집")
     if git(vault, "diff", "--cached", "--quiet")[0] != 0:
-        git(vault, "commit", "-m", "user: " + today, "--author=User <user@local>")
+        c = git_w(vault, "commit", "-m", "user: " + today, "--author=User <user@local>")
+        if c[0]:
+            fails.append(c)
+        made = made or not c[0]
     if git(vault, "diff", "--cached", "--quiet")[0] != 0:
-        log(hlog, tag + " commit BLOCKED by pre-commit - staged remain")
-        return "막힘"
-    return "add 실패" if rc != 0 else "커밋"
+        if any(c[0] != 128 for c in fails):        # pre-commit 이 막음(끝 코드 1) — 진짜 막힘 · 줄 머리는 그대로(drift 가 센다)
+            log(hlog, tag + " commit BLOCKED by pre-commit - staged remain · " + why([c for c in fails if c[0] != 128][0][1]))
+            return "막힘"
+        # 잠금이 끝내 안 풀렸거나(128) 커밋 뒤 다른 git 이 올림 — 다음 커밋이 담는다 · 막힘으로 세지 않는다
+        log(hlog, tag + " 스테이지 남음(잠금 경합 · 다음 커밋이 담음) · " + (why(fails[0][1]) if fails else "커밋 뒤 다른 git 이 올림"))
+        return "잠금"
+    return "add 실패" if rc != 0 else ("커밋" if made else "없음")
 
 
 def log(path, msg):
@@ -291,7 +366,7 @@ def main():
                         f.write("{}\t{}\r\n".format(sid, nm))
                 reason = ("받은함 항목을 확인하고 그대로 둠: " + ", ".join(left) + " → 필요한 곳으로 옮겨 받은함을 비운다"
                           "(py -3 3_시스템/inbox.py --take <이름> <자리> · --do <이름>). 작업에 쓰는 재료면 작업 폴더로 옮긴 뒤 "
-                          "그 경로를 쓴다. 애매하면 사용자에게 묻는다.")
+                          "그 경로를 쓴다. 애매하면 사용자께 묻는다.")
                 sys.stdout.write(json.dumps({"decision": "block", "reason": reason}, ensure_ascii=False))
         return 0
     # 순환 서킷브레이커 — 같은 위반 집합으로 두 번 막았으면 풀고 기록

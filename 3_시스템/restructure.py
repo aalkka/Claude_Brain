@@ -239,7 +239,7 @@ def table_md(rows, sources=False):
     low = sum(1 for r in rows if r["sure"] == "낮음")
     if sources:
         L = ["# R9-b 원본 층 이전 표 (%s · `restructure.py classify --sources`)" % today, "",
-             "> 원본 층(1_수집) 폴더 이름을 주제 정식 이름으로. CLAUDE.md §2 원본 규칙(시스템이 하는 일 넷) 밖의 이동이라 **사용자 승인으로만** 한다. "
+             "> 원본 층(1_수집) 폴더 이름을 주제 정식 이름으로. CLAUDE.md §2 원본 규칙(시스템이 하는 일 넷) 밖의 이동이라 **" + roles.me() + " 승인으로만** 한다. "
              "함께 바뀌는 것 = 원본을 가리키는 링크 · 역할(`school_notice`) · 수집 상태 항목 경로 · 수집 보관 칸 거울 · 색인(해시로 다시 이음). "
              "근거 = [[ADR-023-구조이전-restructure-분류표-역할묶음-원본층제외]] 4.", "",
              "| # | 지금 | 새 자리 | 까닭 | 확신 |", "|---|---|---|---|---|"]
@@ -259,7 +259,7 @@ def table_md(rows, sources=False):
          "## 적용 때 함께 (Claude)",
          "- 대본이 함께: 링크 · `roles.json` 새 판 · 옵시디언 그래프 색 묶음 · 찾기 골든셋 정답 경로 · 빈 옛 폴더.",
          "- 글로 고칠 것: conventions(«notes/·decisions/» 문장 → 역할 묶음) · 기억(작업 자리 `0_작업/<과목>` → `0_작업/학교/<과목>` 등) · 찾기 색인 다시.",
-         "- 사용자: `.claude/settings.local.json` 허용 규칙 글자 3곳(게이트 자신 — 토큰으로도 못 고침) · 옵시디언 화면.", "",
+         "- " + roles.me() + ": `.claude/settings.local.json` 허용 규칙 글자 3곳(게이트 자신 — 토큰으로도 못 고침) · 옵시디언 화면.", "",
          "## 요약",
          "- 줄 %d · 확신 낮음 %d(먼저 볼 것) · 새 자리 폴더 %d" % (len(rows), low, len(by)), "",
          "## 표", "",

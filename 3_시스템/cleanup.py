@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """**cleanup** — 정리 후보를 찾아 fileops 계획 파일로 남긴다 (볼트 개혁 R8 · 2026-10-30 · 설계안 §4 보존 일정표 · §13 B5·B6).
 
-지우지 않는다. 후보와 까닭만 낸다 → 주간 점검(weekly-review)이 사용자에게 보이고 → 승인한 것만
+지우지 않는다. 후보와 까닭만 낸다 → 주간 점검(weekly-review)이 사용자께 보이고 → 승인한 것만
 `py -3 3_시스템/fileops.py plan <계획> --apply`(휴지통 · 장부 · 되살림). 비우기(영구 삭제)는 사람만(`fileops purge`).
 
   py -3 3_시스템/cleanup.py [--json] [--days 30]
@@ -243,7 +243,7 @@ def main(argv=None):
     out = os.path.join(HERE, "_index", "cleanup", "후보-%s.json" % day)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8", newline="\n") as f:
-        json.dump({"title": "정리 후보 %s — 사용자 승인 뒤에만 --apply" % day, "ops": ops, "report": c}, f, ensure_ascii=False, indent=1)
+        json.dump({"title": "정리 후보 %s — %s 승인 뒤에만 --apply" % (day, roles.me()), "ops": ops, "report": c}, f, ensure_ascii=False, indent=1)
     if a.json:
         print(json.dumps({"plan": rel(out), "ops": len(ops), **c}, ensure_ascii=False))
         return 0
