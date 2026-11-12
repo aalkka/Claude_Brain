@@ -4,7 +4,7 @@
 왜 있나: `session-start.ps1` 이 주입하는 plain stdout 은 **사용자에게 보이지 않는다.**
 공식 문서 — SessionStart stdout 은 "context that Claude can see and act on" 이고
 terminal·transcript 표시 경로가 없다(anthropics/claude-code#47117).
-실측(2026-09-12): 71 세션에서 주입됐고 Claude 가 사용자에게 전달한 것은 4 건(전부 기능 개발
+실측(2026-09-12): 71 세션에서 주입됐고 Claude 가 사용자께 전달한 것은 4 건(전부 기능 개발
 당일). 최근 40 세션 연속 0 건. **채널이 없는데 순응에 기대고 있었다.**
 
 그래서 같은 자료를 `systemMessage` 로 낸다 — 문서상 "Warning message shown to the user"

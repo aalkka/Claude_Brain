@@ -77,7 +77,7 @@ F = {f'3_시스템/collect/{src}.json': {'id': src}, f'3_시스템/_index/collec
      '3_시스템/lms/desk.json': {}}
 cd.practice_act(F, {'id': 'collect_desk.reject', 'args': {'source': src, 'id': 'n1', 'words': '학생회|설문', 'memo': '관심 없음'}}, dt.datetime(2026, 11, 9))
 it = F[f'3_시스템/_index/collect/{src}.json']['items']['n1']
-ok('연습: 장부로 · 근거 = 낱말 + 메모', it.get('verdict') == '뺌' and 'stage' not in it and it['why'] == '사용자: «학생회» · «설문» · 관심 없음', it)
+ok('연습: 장부로 · 근거 = 낱말 + 메모', it.get('verdict') == '뺌' and 'stage' not in it and it['why'] == f'{cd.ME}: «학생회» · «설문» · 관심 없음', it)
 try:
     cd.practice_act(F, {'id': 'collect_desk.reject', 'args': {'source': src, 'id': 'n1', 'words': '없는말', 'memo': ''}}, dt.datetime(2026, 11, 9))
     ok('연습: 제목에 없는 낱말 거부', False)

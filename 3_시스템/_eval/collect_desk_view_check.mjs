@@ -54,6 +54,8 @@ const srv = http.createServer((q, s) => {
 await new Promise((r) => srv.listen(0, "127.0.0.1", r));
 const WEB = srv.address().port;
 const R = JSON.parse(fs.readFileSync(path.join(TV, "3_시스템/roles.json"), "utf8")).roles;
+fs.mkdirSync(path.dirname(path.join(TV, R.profile)), { recursive: true });
+fs.writeFileSync(path.join(TV, R.profile), "# 프로필\n- **호칭**: 시험님\n"); // 호칭은 프로필에서(roles.me) — 장부 근거에 시험 볼트 값이 나오는가
 const LOCAL = "t-local";
 const LP = `3_시스템/collect/${LOCAL}.json`;
 fs.writeFileSync(path.join(TV, LP), JSON.stringify({
@@ -285,7 +287,7 @@ try {
   ok("낱말 고름 = 가로선", await inFrame(`return getComputedStyle(document.querySelector('.dlg .wd[data-w="제목"]')).textDecorationLine.includes('line-through')`));
   await inFrame(`document.querySelector('.dlg .memo').value = '시험 메모'; return 1`);
   await click(".dlg [data-y]");
-  ok("빼기 = 장부로 · 대기 칸 파일 지움 · 근거 = 낱말·메모", await until(() => ST().zz201.verdict === "비해당" && ST().zz201.why === "사용자: «제목» · 시험 메모" && !ST().zz201.stage && !fs.existsSync(path.join(TV, `3_시스템/_index/collect/stage/${LOCAL}/zz201.md`))), JSON.stringify(ST().zz201));
+  ok("빼기 = 장부로 · 대기 칸 파일 지움 · 근거 = 낱말·메모", await until(() => ST().zz201.verdict === "비해당" && ST().zz201.why === "시험님: «제목» · 시험 메모" && !ST().zz201.stage && !fs.existsSync(path.join(TV, `3_시스템/_index/collect/stage/${LOCAL}/zz201.md`))), JSON.stringify(ST().zz201));
   const mk = J("3_시스템/_index/collect/평가.json")[`${LOCAL}:zz201`] || {};
   ok("거절 표시 = 단추 · 낱말 · 메모(되먹임이 대조 없이 씀)", mk.평가 === "헛것" && mk.길 === "단추" && JSON.stringify(mk.낱말) === '["제목"]' && mk.메모 === "시험 메모", JSON.stringify(mk));
   await until(() => has('[data-seg="ledger"]'));

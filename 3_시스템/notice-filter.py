@@ -30,6 +30,7 @@ SYS = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(SYS)
 sys.path.insert(0, SYS)
 import roles  # noqa: E402 — 노트는 이름으로 찾는다(볼트 개혁 R6 · 옮겨도 따라감)
+ME = roles.me()                                     # 사용자 호칭(프로필) — 표시·장부 글에
 CARD = os.path.join(VAULT, *(roles.find_note('자격-카드') or roles.path('notes', '자격-카드.md')).split('/'))
 RECIPES = os.path.join(SYS, 'collect')          # 거를 출처 = 조리법에 "filter" 가 있는 것(출처 이름을 코드에 두지 않는다)
 STATE = os.path.join(SYS, '_index', 'collect')
@@ -683,7 +684,7 @@ def gold(n, d, me, v):
 def judge_one(n, d, me):
     v, res = judge_rules(n, d, me)
     if v == '비해당' and load_marks().get(f'{n["sid"]}:{n["id"]}', {}).get('평가') == '쓸모':    # 사용자가 살린 글(수집 창) — 규칙이 다시 빼지 않는다
-        return '관심', res + [('관심', '사용자 쓸모 표시', {})]
+        return '관심', res + [('관심', f'{ME} 쓸모 표시', {})]
     return v, res
 
 
@@ -792,7 +793,7 @@ def reject(aid, why, words=(), button=False):
     it.pop('stage', None)
     words = [w for w in dict.fromkeys(w.strip() for w in words) if w]
     said = ' · '.join([f'«{w}»' for w in words] + ([why] if why else []))
-    it.update(verdict='비해당', why=f'사용자: {said or "거절"}')
+    it.update(verdict='비해당', why=f'{ME}: {said or "거절"}')
     with open(sp + '.tmp', 'w', encoding='utf-8', newline='\n') as f:
         json.dump(st, f, ensure_ascii=False, indent=1)
     os.replace(sp + '.tmp', sp)
@@ -904,7 +905,7 @@ def judge(quiet=False):
     P = ['## 성과 (출처별 · 로드맵 M1-4)', '| 출처 | 볼트 | 대기 칸 | 판정 대기 | 장부 | 보관 칸 | 헛것 표시 | 쓸모 표시 |', '|---|---|---|---|---|---|---|---|',
          *[f'| {sid} | {s["볼트"]} | {s["대기 칸"]} | {s["판정 대기"]} | {s["장부"]} | {s["보관 칸"]} | {s["헛것"]} | {s["쓸모"]} |' for sid, s in sorted(S.items())],
          f'- 놓침 장부 {len(ms)}건 — 수집 출처 밖에서 찾아 옮긴 일정 줄 + 기록한 놓침', *[f'  - {a} {b} — {c}' for a, b, c in ms],
-         '- 표시: `py -3.11 3_시스템/notice-filter.py mark <글번호> 헛것|쓸모 [메모]` · `… miss "<무엇>" [주소]` (Claude 가 사용자 말을 받아 적는다)', '']
+         '- 표시: `py -3.11 3_시스템/notice-filter.py mark <글번호> 헛것|쓸모 [메모]` · `… miss "<무엇>" [주소]` (Claude 가 ' + ME + ' 말을 받아 적는다)', '']
     L[4:4] = P
     write_status(S)
     # 카드에 물으면 줄어드는 «모름» — 많이 걸리는 순(마감 남은 확인 필요만 · 한 공지에 한 번)
@@ -971,7 +972,7 @@ def main():
     ap.add_argument('args', nargs='*', help='mark <글번호> 헛것|쓸모 [메모] · miss "<무엇>" [주소] · reject <글번호> <까닭> | reject <글번호> --button [--word 낱말]… [--memo 메모]')
     ap.add_argument('--button', action='store_true', help='reject: 수집 창 거절 단추(까닭 = 고른 낱말·메모 · 둘 다 비어도 됨)')
     ap.add_argument('--word', action='append', default=[], help='reject --button: 제목에서 고른 낱말(여럿)')
-    ap.add_argument('--memo', default='', help='reject --button: 사용자 메모')
+    ap.add_argument('--memo', default='', help=f'reject --button: {ME} 메모')
     ap.add_argument('--max', type=int, default=60)
     ap.add_argument('--refresh', action='store_true', help='첨부 글자가 새로 생긴 «첨부에만» 공지를 다시 뽑는다')
     ap.add_argument('--again', nargs='+', default=[], metavar='글번호', help='캐시가 있어도 이 글을 다시 뽑는다(첨부 색인을 고친 공고)')

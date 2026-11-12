@@ -180,7 +180,7 @@ const TOP=()=>BESIDE||innerWidth<=760;
 window.addEventListener('message',e=>{
   const m=e.data||{};
   if(m.t==='theme'){for(const[k,v]of Object.entries(m.vars||{}))if(v)document.documentElement.style.setProperty(k,v)}
-  else if(m.t==='data'){D=m.data;draw()}
+  else if(m.t==='data'){D=m.data;WHO.me[1]=D.me||'사용자';draw()}
   else if(m.t==='env'){const b=!!(m.left&&m.left.open&&m.left.beside);if(b!==BESIDE){BESIDE=b;draw()}}
 });
 addEventListener('resize',()=>{if(D&&TOP()!==lastTop)draw()});   // 꼴이 바뀔 때만 다시 그림(쓰던 칸을 안 잃게)
@@ -319,7 +319,7 @@ function ask(msg,yes,fn){
   el.onclick=e=>{e.stopPropagation();if(e.target.closest('[data-y]'))fn();if(e.target.closest('[data-y],[data-n]')||e.target===el)el.remove()};
   document.body.append(el);
 }
-// 거절(11-09) — 제목 낱말을 누르면 그 말이 든 글을 다음부터 거름(filter-learn) · 메모는 Claude 가 자격 카드에 올릴지 사용자에게 묻는다 · 둘 다 비워도 거절됨
+// 거절(11-09) — 제목 낱말을 누르면 그 말이 든 글을 다음부터 거름(filter-learn) · 메모는 Claude 가 자격 카드에 올릴지 사용자께 묻는다 · 둘 다 비워도 거절됨
 function rejectBox(s,x){
   const el=document.createElement('div');el.className='dlg';
   el.innerHTML=`<div class="rj"><p class="q">거절하시겠습니까?</p><p class="t">${esc(x.title)}</p><div class="chips">${(x.words||[]).map(w=>`<button class="wd" data-w="${esc(w)}" aria-pressed="false">${esc(w)}</button>`).join('')}</div><input class="memo" aria-label="메모" placeholder="메모" maxlength="200"><div class="row"><button class="btn" data-n>취소</button><button class="btn warn" data-y>거절</button></div></div>`;

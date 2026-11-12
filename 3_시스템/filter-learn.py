@@ -6,7 +6,7 @@ LLM 0 · 네트워크 0. 사용자 일을 늘리지 않는다: 새로 묻는 일
 길 넷:
   ① 카드 → 제목 관문: 카드 JSON «제목규칙»(묶음마다 낱말 + 카드 조건)은 notice-filter 가 판정 때 바로 읽는다(조리법에 복사하지 않는다 — 조리법 title_skip·수집 창 낱말 칸은 출처 몫만).
      조건이 깨지면(예 4학년) 그 묶음이 꺼진다. 살린 글이 걸린 말은 카드 «풀린말»로 간다.
-  ② 뺀 글·살린 글 → 규칙: 평가.json 의 헛것·쓸모(learn). 뺀 까닭의 말이 글에 없으면 규칙으로 올리지 않고 대기열 한 줄. 제목에 있고 재생 손실 0 이면 «사용자 뺌» 묶음에.
+  ② 뺀 글·살린 글 → 규칙: 평가.json 의 헛것·쓸모(learn). 뺀 까닭의 말이 글에 없으면 규칙으로 올리지 않고 대기열 한 줄. 제목에 있고 재생 손실 0 이면 «<호칭> 뺌» 묶음에.
   ③ 손 노트 → 암묵 쓸모: 내-일정 등 손 노트가 가리키는 글 = «쓸모»(자동) · 판정의 지역 불충족 재단 이름 → «다른 지역» 묶음(같은 재단이 다음 학기에도 온다).
   ④ 사실 → 카드: `card set` (사용자 답·공고 대조·학적 변화를 받아 적는다) · 전후 뒤집힌 글을 바로 보여 준다 · «다시볼날»(전과 발표·학기 바뀜)이 되면 대기열 한 줄(tick).
   sweep = 대기 칸의 판정 전 글이 제목 규칙에 걸리면 추출하지 않고 장부로(사용량을 아낀다).
@@ -32,7 +32,7 @@ VAULT = os.path.dirname(SYS)
 RECIPES = os.path.join(SYS, 'collect')
 STATE = os.path.join(SYS, '_index', 'collect')
 LOG = os.path.join(STATE, '되먹임.jsonl')          # 한 일 — 낱말·표시를 무엇 때문에 바꿨는지(값 없음)
-STOP = {'아님', '없음', '해당', '대상', '필요', '안함', '있음', '관심', '사용자', '이미', '지금', '아니', '함께', '때문', '모름'}
+STOP = {'아님', '없음', '해당', '대상', '필요', '안함', '있음', '관심', '이미', '지금', '아니', '함께', '때문', '모름'}
 ORG = re.compile(r'(?:\(재\)\s*)?([가-힣A-Za-z]{2,14}(?:장학회|장학재단|재단|진흥원|연구원))')
 
 
@@ -44,6 +44,7 @@ def _load(name, fn):
 
 
 nf = _load('notice_filter', 'notice-filter.py')
+STOP.add(nf.ME)                                  # 메모 «○○님: …» 의 호칭(프로필)은 까닭 낱말이 아님
 
 
 def now():
@@ -271,7 +272,7 @@ def learn(dry=False, quiet=False):
     index = {f'{rc["id"]}:{aid}': (rc, aid, it) for rc, aid, it in items}
 
     def skip_word(rc, key, word):
-        """제목 낱말 하나 → 사용자 뺌 묶음(남길 글에 걸리면 보류). 결과 한 줄."""
+        """제목 낱말 하나 → <호칭> 뺌 묶음(남길 글에 걸리면 보류). 결과 한 줄."""
         nonlocal changed_card
         if word in '|'.join(words(rc['filter'].get('title_skip')) + [w for w, _ in nf.card_words(me)]):
             return f'이미 제외어 «{word}»'
@@ -280,7 +281,7 @@ def learn(dry=False, quiet=False):
             return f'보류 — «{word}» 가 남길 글 {len(prot)}건에 걸림'
         done['제외어'] += 1
         if not dry:
-            rule_group(me, '사용자 뺌', '사용자가 뺀 글의 까닭(평가.json)')['말'].append(re.escape(word))
+            rule_group(me, f'{nf.ME} 뺌', f'{nf.roles.me("이")} 뺀 글의 까닭(평가.json)')['말'].append(re.escape(word))
             changed_card = True
         return f'제외어 «{word}» · 다른 글 {len(hits)}건 · 손실 0'
 
@@ -299,7 +300,7 @@ def learn(dry=False, quiet=False):
                 done['거절 메모'] += 1
                 got.append('메모 → 대기열')
                 if not dry:
-                    queue('filter-learn', f'거절 메모 — 자격 카드 조건으로 올릴지 사용자에게 확인: «{memo[:60]}» · {title[:50]} (`{key}`)')
+                    queue('filter-learn', f'거절 메모 — 자격 카드 조건으로 올릴지 {nf.ME}께 확인: «{memo[:60]}» · {title[:50]} (`{key}`)')
             result = ' · '.join(got) or '거절 · 까닭 없음(대조 안 함)'
             say(f'뺀 글 {title[:36]} → {result}')
             if not dry:
@@ -315,7 +316,7 @@ def learn(dry=False, quiet=False):
             result = '까닭 안 맞음 — 까닭의 말이 글에 없음'
             done['까닭 안 맞음'] += 1
             if not dry:
-                queue('filter-learn', f'뺀 글의 까닭이 글과 안 맞음 — 원문 대조 뒤 사용자에게 확인: {title[:50]} (`{key}`)')
+                queue('filter-learn', f'뺀 글의 까닭이 글과 안 맞음 — 원문 대조 뒤 {nf.ME}께 확인: {title[:50]} (`{key}`)')
         else:
             result = '제목에 까닭의 말 없음 · 본문에만(규칙 안 올림)'
         say(f'뺀 글 {title[:36]} → {result}')
@@ -431,7 +432,7 @@ def report():
     tot = [0] * 8
     for rc in nf.recipes():
         items = nf.state_items(rc)
-        ledger = sum(1 for it in items.values() if not (it.get('path') or it.get('stage') or it.get('archived')) and '제목' in str(it.get('why') or '') or (not (it.get('path') or it.get('stage') or it.get('archived')) and str(it.get('why') or '').startswith(('제목', '사용자'))))
+        ledger = sum(1 for it in items.values() if not (it.get('path') or it.get('stage') or it.get('archived')) and '제목' in str(it.get('why') or '') or (not (it.get('path') or it.get('stage') or it.get('archived')) and str(it.get('why') or '').startswith(('제목', nf.ME))))
         cached = {a for a in items if os.path.exists(os.path.join(nf.CACHE, f'{rc["id"]}-{a}.json'))}
         got = sum(1 for it in items.values() if it.get('hash'))
         wait = sum(1 for a, it in items.items() if it.get('stage') and a not in cached)

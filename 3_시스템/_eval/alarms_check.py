@@ -10,6 +10,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import alarms  # noqa: E402
+import roles  # noqa: E402 — 대기열 사람 줄의 호칭(프로필)
 import schedule  # noqa: E402
 
 NOW = dt.datetime(2026, 11, 5, 12, 0, tzinfo=schedule.KST)
@@ -386,7 +387,8 @@ class RightAway(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             p = os.path.join(d, 'q.md')
             with open(p, 'w', encoding='utf-8') as f:
-                f.write('- [ ] 2026-11-05 10:00:00 `run1` (사용자) 로그인 끊김\n- [ ] 2026-11-05 10:00:00 `run2` (Claude) 구조 바뀜\n- [ ] 2026-11-05 10:00:00 `run3` (사용자·Claude) 첨부 격리\n- [x] 2026-11-04 10:00:00 `run0` (사용자) 끝남\n')
+                me = roles.me()
+                f.write(f'- [ ] 2026-11-05 10:00:00 `run1` ({me}) 로그인 끊김\n- [ ] 2026-11-05 10:00:00 `run2` (Claude) 구조 바뀜\n- [ ] 2026-11-05 10:00:00 `run3` ({me}·Claude) 첨부 격리\n- [x] 2026-11-04 10:00:00 `run0` ({me}) 끝남\n')
             self.assertEqual(alarms.blocked_lines(p), [('2026-11-05 10:00:00', '로그인 끊김')])
 
 

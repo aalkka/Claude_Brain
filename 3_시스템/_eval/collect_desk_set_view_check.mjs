@@ -44,7 +44,7 @@ const last=()=>{const a=ACTS[ACTS.length-1];return a?[a.args.source,a.args.field
 const row=()=>[...d.querySelectorAll('.ed>label')].find(l=>l.textContent==='받기')?.nextElementSibling;`;
 const run = async (body) => (await cdp("Runtime.evaluate", { expression: `(async()=>{${IN}try{${body}}catch(e){return 'ERR '+e.message}})()`, awaitPromise: true, returnByValue: true })).result?.result?.value;
 const res = [];
-const SHOT = process.env.SHOT_DIR;   // 있으면 그림을 남김(사용자에게 보일 것)
+const SHOT = process.env.SHOT_DIR;   // 있으면 그림을 남김(사용자께 보일 것)
 const shot = async (name) => { if (!SHOT) return; const r = await cdp("Page.captureScreenshot", { format: "png", clip: { x: 0, y: 0, width: 1100, height: 520, scale: 1 } }); fs.writeFileSync(path.join(SHOT, name), Buffer.from(r.result.data, "base64")); };
 const ok = (name, cond, detail) => { res.push(!!cond); console.log((cond ? "통과 " : "실패 ") + name + (cond ? "" : " — " + JSON.stringify(detail))); };
 await cdp("Emulation.setDeviceMetricsOverride", { width: 1100, height: 760, deviceScaleFactor: 1, mobile: false });

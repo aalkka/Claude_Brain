@@ -209,12 +209,21 @@ def ops_rows():
     except (OSError, subprocess.SubprocessError):
         pass
     # Stop 훅이 커밋 뒤 스테이지가 남으면 적는 줄 — 세션 시작에 안 보여 쌓이기만 했다(07-30~11-03 157줄)
+    # 막힌 뒤 자동 커밋(claude@local·user@local)이 한 번이라도 됐으면 풀린 것 — 그 앞 줄은 세지 않는다.
+    # 11-12 잼: 24시간 안 5회 중 4회는 전날 밤 고친 진짜 막힘(옵시디언 CSS 사본 비밀값 오탐 · 23:05 고침), 1회는 Stop 훅 둘이
+    # 겹친 경합(같은 초에 다른 쪽이 커밋) — 둘 다 이미 풀려 있었는데 다음 날까지 위험으로 떴다.
     try:
         with open(os.path.join(HERE, "_index", "hooks.log"), "rb") as h:
             h.seek(0, os.SEEK_END)
             h.seek(max(0, h.tell() - 500_000))
             log = h.read().decode("utf-8", "replace")
         now = time.time()
+        try:
+            r = subprocess.run(["git", "-C", VAULT, "log", "-1", "--format=%ct", "--author=claude@local", "--author=user@local"],
+                               capture_output=True, text=True, timeout=5)
+            last_auto = int(r.stdout.strip() or 0)
+        except (OSError, ValueError, subprocess.SubprocessError):
+            last_auto = 0                          # 못 재면 지금처럼 24시간 안 줄을 모두 센다
         hits = []
         for line in log.splitlines():
             if "BLOCKED" in line:
@@ -222,10 +231,10 @@ def ops_rows():
                     t = time.mktime(time.strptime(line[:19], "%Y-%m-%d %H:%M:%S"))
                 except ValueError:
                     continue
-                if now - t < COMMIT_H * 3600:
+                if now - t < COMMIT_H * 3600 and t > last_auto:
                     hits.append(line[11:16])
         if hits:
-            rows.append(("운영", "자동 커밋", f"{COMMIT_H}시간 안에 {len(hits)}회 막힘(마지막 {hits[-1]}) — 3_시스템/_index/hooks.log · 스테이지에 남은 파일 확인"))
+            rows.append(("운영", "자동 커밋", f"막힌 뒤 자동 커밋 0회 — {len(hits)}회 막힘(마지막 {hits[-1]}) · 3_시스템/_index/hooks.log 의 까닭 · 스테이지에 남은 파일 확인"))
     except OSError:
         pass
     # 앱이 자기 프로세스에 BASE_URL=api.anthropic.com 을 넣고, 사용자 범위에 빈 값이 남기도 한다 — 값이 있고 공식 주소가 아닐 때만 위험

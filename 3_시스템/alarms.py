@@ -45,7 +45,7 @@ STATE = os.path.join(HERE, '_index', 'alarms')
 FIRED = os.path.join(STATE, 'fired.jsonl')
 SEEN = os.path.join(STATE, 'seen.json')
 QUEUE = os.path.join(HERE, '_index', '수집-대기열.md')
-QUEUE_LINE = re.compile(r'^- \[ \] (\S+ \S+) `[^`]*` \(사용자\) (.+)$')
+QUEUE_LINE = None                       # 사람 줄 «(호칭)» — 호칭은 프로필에서(blocked_lines 가 처음 부를 때 짓는다)
 HHMM = re.compile(r'^([01]?\d|2[0-3]):([0-5]\d)$')
 JSON_BLOCK = re.compile(r'^```json[ \t]*\r?\n(.*?)^```', re.M | re.S)
 LOCK = threading.Lock()
@@ -271,6 +271,10 @@ def blocked_lines(path=None):
     path = path or QUEUE
     if not os.path.exists(path):
         return []
+    global QUEUE_LINE
+    if QUEUE_LINE is None:
+        import roles
+        QUEUE_LINE = re.compile(r'^- \[ \] (\S+ \S+) `[^`]*` \(' + re.escape(roles.me()) + r'\) (.+)$')
     with open(path, encoding='utf-8') as f:
         return [m.groups() for m in map(QUEUE_LINE.match, f.read().splitlines()) if m]
 

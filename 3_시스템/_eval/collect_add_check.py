@@ -20,6 +20,9 @@ for d in (os.path.join(S, 'collect'), os.path.join(S, 'lms'), os.path.join(S, '_
     os.makedirs(d)
 for f in ('fileops.py', 'roles.py', 'roles.json', 'web-collect.py', 'brain.py', 'actions.json', 'claude_bin.py'):
     shutil.copy2(os.path.join(REAL, f), os.path.join(S, f))
+os.makedirs(os.path.join(V, '2_지식'))
+with open(os.path.join(V, '2_지식', 'profile.md'), 'w', encoding='utf-8') as f:
+    f.write('# 프로필\n- **호칭**: 시험님\n')     # 호칭은 프로필에서(roles.me) — 계약 문구에 시험 볼트 값이 나오는가
 shutil.copytree(os.path.join(VAULT_REAL, '.claude', 'skills', 'collect_desk'), os.path.join(V, '.claude', 'skills', 'collect_desk'),
                 ignore=shutil.ignore_patterns('__pycache__'))
 ENV = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', LMS_AUTO_STATE=os.path.join(root, 'lms-state'), COLLECT_SITE_GAP='0')   # 사이트 1분 간격은 끝에서 2초로 따로 잰다
@@ -133,7 +136,7 @@ ok('탐색: 댓글 피드는 따로 · 본문 링크 피드는 후보(같은 사
 ok('탐색: robots 허용', 'robots: 허용' in out, out)
 code, out = br('collect_desk.probe', f'url={U}/private/list')
 ok('탐색: robots 막힌 쪽은 «막힘» · 받지 않음', code != 0 and 'robots: 막힘' in out and '/private/list' not in hits, out)
-code, out = br('collect_desk.probe', f'url={U}/private/list', '--', '--robots-note', '사용자 시험 결정')
+code, out = br('collect_desk.probe', f'url={U}/private/list', '--', '--robots-note', '시험 결정')
 ok('탐색: 사용자 결정이 있으면 받음', code == 0 and '/private/list' in hits, out)
 code, out = br('collect_desk.probe', f'url={U}/yt')
 ok('탐색: 피드 주소면 글 수', '이 주소가 피드(글 3)' in out, out)
@@ -171,7 +174,7 @@ ok('확정: 조리법 생김 · 초안 지움', code == 0 and os.path.exists(rp)
 rc = json.load(open(rp, encoding='utf-8'))
 ok('확정: 주기·이름·첫 날만 바꾼 초안은 다시 받지 않고 그 값으로', sum(1 for h in hits if h.startswith('/board')) == n_board and rc.get('recheck_hours') == 24
    and rc.get('name') == '시험 게시판(주기 바꿈)', f'{n_board}→{sum(1 for h in hits if h.startswith("/board"))} {rc.get("recheck_hours")}')
-ok('확정: 계약 문구(사용자 · 목적 · robots)', '사용자 수집 창 «수집 추가» 확정' in rc.get('contract', '') and 'robots 허용' in rc['contract'], rc.get('contract'))
+ok('확정: 계약 문구(호칭 = 프로필 · 목적 · robots)', '시험님 수집 창 «수집 추가» 확정' in rc.get('contract', '') and 'robots 허용' in rc['contract'], rc.get('contract'))
 ok('확정: 시각 없는 초안 = 주기(15분 확인) · at 칸 없음', 'at' not in rc and '24시간마다(15분 확인)' in out, out[-120:])
 draft(BOARD_RC)
 code, out = br('collect_desk.add', 'id=t-board')
@@ -257,12 +260,12 @@ code, out = br('collect_desk.try', 'id=t-private', '--', '--view')
 ok('robots 막힘: 미리보기가 받지 않고 멈춤', code != 0 and '목록 막힘' in out and sum(1 for h in hits if h.startswith('/private?')) == n_priv, out)
 code, out = br('collect_desk.add', 'id=t-private')
 ok('확정 거절: robots 막힘 + 사용자 결정 없음', code != 0, out)
-rcp = dict(BOARD_RC, id='t-private', page=U + '/private', list=dict(BOARD_RC['list'], page_url=U + '/private?page={page}'), robots_note='사용자 11-06 시험 결정')
+rcp = dict(BOARD_RC, id='t-private', page=U + '/private', list=dict(BOARD_RC['list'], page_url=U + '/private?page={page}'), robots_note='11-06 시험 결정')
 draft(rcp)
 code, out = br('collect_desk.try', 'id=t-private', '--', '--view')
 code, out = br('collect_desk.add', 'id=t-private')
 rc = json.load(open(os.path.join(S, 'collect', 't-private.json'), encoding='utf-8')) if code == 0 else {}
-ok('robots 막힘 + 사용자 결정 = 확정 · 계약에 결정', code == 0 and 'robots 막힘(사용자 11-06 시험 결정)' in rc.get('contract', ''), out + str(rc.get('contract')))
+ok('robots 막힘 + 사용자 결정 = 확정 · 계약에 결정', code == 0 and 'robots 막힘(11-06 시험 결정)' in rc.get('contract', ''), out + str(rc.get('contract')))
 
 # ── 미리보기 표 = 줄 전부·제목 전체(11-06 끝까지 시험: 15줄·60자로 잘려 대화가 원시를 뒤지고 엔진을 직접 불렀다) ──
 mode['broken'] = False      # 앞 «깨짐» 단계가 바꾼 목록 꼴을 되돌림

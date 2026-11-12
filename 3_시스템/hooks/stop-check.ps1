@@ -121,7 +121,7 @@ if ($noFm.Count -eq 0 -and $noMoc.Count -eq 0 -and $dupNames.Count -eq 0 -and $b
         if ($left.Count) {
             if (-not (Test-Path $idx)) { New-Item -ItemType Directory $idx -Force | Out-Null }
             foreach ($n in $left) { Add-Content -LiteralPath $nudged -Encoding UTF8 -Value "$($inp.session_id)`t$n" -ErrorAction SilentlyContinue }
-            $reason = '받은함 항목을 확인하고 그대로 둠: ' + ($left -join ', ') + ' → 필요한 곳으로 옮겨 받은함을 비운다(py -3 3_시스템/inbox.py --take <이름> <자리> · --do <이름>). 작업에 쓰는 재료면 작업 폴더로 옮긴 뒤 그 경로를 쓴다. 애매하면 사용자에게 묻는다.'
+            $reason = '받은함 항목을 확인하고 그대로 둠: ' + ($left -join ', ') + ' → 필요한 곳으로 옮겨 받은함을 비운다(py -3 3_시스템/inbox.py --take <이름> <자리> · --do <이름>). 작업에 쓰는 재료면 작업 폴더로 옮긴 뒤 그 경로를 쓴다. 애매하면 사용자께 묻는다.'
             Write-Output (@{ decision = 'block'; reason = $reason } | ConvertTo-Json -Compress)
         }
     }
