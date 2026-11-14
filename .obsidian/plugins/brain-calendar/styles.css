@@ -162,3 +162,30 @@ body.bc-dragging, body.bc-dragging * { user-select: none; cursor: grabbing !impo
 .bc-f-foot button { height: auto; padding: 2px 8px; border: 0; box-shadow: none; background: none; color: var(--text-muted); font-size: var(--font-ui-smaller); cursor: pointer; }
 .bc-f-foot button:disabled { opacity: 0.4; cursor: default; }
 .bc-flt:focus { outline: none; }
+
+/* 0.6 일정마다 알림(ADR-052 · 11-13) — 알림 누름으로 짚은 줄 · 종(울림 = 늘 보임 · 끔 = 기본이면 울릴 줄만) */
+.bc-row.is-flash { background: var(--background-modifier-hover); box-shadow: inset 2px 0 0 var(--interactive-accent); }
+.bc-bell { padding: 3px; color: var(--text-faint); }
+.bc-bell svg { width: 14px; height: 14px; }
+.bc-bell.is-idle { opacity: 0; }
+.bc-row:hover .bc-bell.is-idle, .is-mobile .bc-bell.is-idle, .bc-bell.is-idle:focus-visible { opacity: 1; }
+/* 알림 상자(초안 2차 A «수 · 단위 · 시각 칸») — 칸마다 한 줄 · 오른쪽 = 실제 울릴 때 */
+.bc-al { width: 300px; display: flex; flex-direction: column; gap: 4px; font-size: var(--font-ui-smaller); }
+.bc-al-row { display: flex; align-items: center; gap: 4px; min-height: 26px; }
+.bc-al-ic { display: flex; flex: none; color: var(--text-faint); margin-right: 2px; }
+.bc-al-ic svg { width: 13px; height: 13px; }
+.bc-al-row input, .bc-al-row select { height: 24px; font-size: var(--font-ui-smaller); }
+.bc-al-row input { padding: 0 6px; } /* 고르기 칸은 옵시디언 여백 그대로 — 오른쪽 여백이 ▾ 자리(0.6.2 · 6px 로 덮어 «시간 전» 위에 ▾ 가 겹쳤음) */
+.bc-al-row select { padding-top: 0; padding-bottom: 0; }
+.bc-al-n { width: 3.4em; text-align: right; }
+.bc-al-t { width: 6.4em; }
+.bc-al-row .is-bad { border-color: var(--text-error); }
+.bc-al-when { margin-left: auto; color: var(--text-faint); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bc-al-when.is-bad { color: var(--text-error); }
+.bc-al-row .bc-btn { padding: 3px; }
+.bc-al-foot { display: flex; align-items: center; gap: 4px; padding-top: 6px; margin-top: 2px; border-top: 1px solid var(--background-modifier-border); }
+.bc-al-foot .bc-btn { padding: 3px; }
+/* 0.6.2 칸의 종 = 끄기·켜기(삭제가 아닌 끄기 · 사용자 11-13) — 끈 칸은 흐리게 남음(읽을 수는 있게) */
+.bc-al-row .bc-al-ic { padding: 3px; margin-right: 0; color: var(--text-faint); }
+.bc-al-row.is-off .bc-al-n, .bc-al-row.is-off select, .bc-al-row.is-off .bc-al-t, .bc-al-row.is-off .bc-al-when { opacity: 0.5; }
+.bc-al-row.is-off .bc-al-when { text-decoration: line-through; }

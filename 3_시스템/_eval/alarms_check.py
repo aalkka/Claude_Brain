@@ -407,5 +407,211 @@ class Probes(unittest.TestCase):
         self.assertEqual(alarms.build({'mode': 'clock'}, now=NOW, rows=[], settings=parsed())['items'][0]['mode'], 'clock')
 
 
+def per(obj):
+    """일정별-알림 노트 글 → build 의 per 인자"""
+    return alarms.parse_per_line(note(obj))
+
+
+def runp(p, *lines, name='내-일정.md', now=NOW, s=None, st=None):
+    return alarms.build({'probe': False}, now=now, rows=rows(*lines, name=name), settings=parsed(s), per=per(p), st=st, queue=[], notices=[])
+
+
+class PerLine(unittest.TestCase):
+    """캘린더 종이 정한 일정별 울림(ADR-052) — 있으면 그 줄은 그것만 따른다."""
+    LMS = '- [ ] 2026-11-20 (금) 23:59 물리 · 과제 마감 ^lms-asg-9'
+    TUTOR = '- [ ] 2026-11-16 (월) 19:30~21:30 과외 · 수업 ^rep-40524b12-20261116'
+    TUTOR2 = '- [ ] 2026-11-23 (월) 19:30~21:30 과외 · 수업 ^rep-40524b12-20261123'
+
+    def test_ring_words(self):
+        self.assertEqual(alarms.ring_of('3일 전 20:00'), ('d', 3, '20:00'))
+        self.assertEqual(alarms.ring_of('당일 9:05'), ('d', 0, '09:05'))
+        self.assertEqual(alarms.ring_of('90분 전'), ('m', 90))
+        self.assertEqual(alarms.ring_of('2시간 전'), ('m', 120))
+        for bad in ('3일전 20:00', '0분 전', '1일 전', '24:00', '8일 전 25:00', '400일 전 09:00', 3, None):
+            self.assertIsNone(alarms.ring_of(bad), bad)
+
+    def test_own_rings_replace_the_default(self):
+        got = runp({'lms-asg-9': {'글': '물리', '울림': ['당일 09:00', '2시간 전']}}, self.LMS, name='LMS-마감.md')['items']
+        self.assertEqual([at(a) for a in got], ['11-20 09:00', '11-20 21:59'])
+        self.assertEqual([a['id'] for a in got], ['lms-asg-9@2026-11-20@d0-0900', 'lms-asg-9@2026-11-20@m120'])
+
+    def test_empty_list_turns_a_default_line_off(self):
+        self.assertEqual(runp({'lms-asg-9': {'울림': []}}, self.LMS, name='LMS-마감.md')['items'], [])
+        self.assertEqual(len(runp({'lms-asg-8': {'울림': []}}, self.LMS, name='LMS-마감.md')['items']), 2)     # 다른 열쇠는 그대로
+
+    def test_a_quiet_file_rings_only_what_was_set(self):
+        self.assertEqual(runp({}, self.TUTOR, name='반복-일정.md')['items'], [])
+        got = runp({'rep-40524b12': {'울림': ['60분 전']}}, self.TUTOR, self.TUTOR2, name='반복-일정.md')['items']
+        self.assertEqual([at(a) for a in got], ['11-16 18:30', '11-23 18:30'])     # 반복 전체에 붙는다
+
+    def test_one_occurrence_beats_the_series(self):
+        got = runp({'rep-40524b12': {'울림': ['60분 전']}, 'rep-40524b12-20261123': {'울림': []}}, self.TUTOR, self.TUTOR2, name='반복-일정.md')['items']
+        self.assertEqual([at(a) for a in got], ['11-16 18:30'])
+
+    def test_own_time_is_not_moved_by_sleep_hours(self):
+        got = runp({'al-x1': {'울림': ['당일 07:00']}}, '- [ ] 2026-11-20 (금) 09:00 학교 · 시험 ^al-x1')['items']
+        self.assertEqual([at(a) for a in got], ['11-20 07:00'])
+        # 기본 규칙은 그대로 잘 시간을 지킨다
+        self.assertEqual([at(a) for a in run('- [ ] 2026-11-20 (금) 09:00 학교 · 시험', s={'기본': {'며칠_전': [0], '시각': ['07:00']}})], ['11-20 08:00'])
+
+    def test_own_rings_after_the_event_fall_back_to_an_hour_before(self):
+        got = runp({'al-x1': {'울림': ['당일 20:00']}}, '- [ ] 2026-11-20 (금) 09:00 학교 · 시험 ^al-x1')['items']
+        self.assertEqual([at(a) for a in got], ['11-20 08:00'])
+
+    def test_text_edit_keeps_the_setting_because_the_key_is_the_block_id(self):
+        p = {'al-x1': {'울림': ['1일 전 21:00']}}
+        a = runp(p, '- [ ] 2026-11-20 (금) 학교 · 시험 ^al-x1')['items']
+        b = runp(p, '- [ ] 2026-11-21 (토) 학교 · 기말 시험 633호 ^al-x1')['items']
+        self.assertEqual([at(x) for x in a], ['11-19 21:00'])
+        self.assertEqual([at(x) for x in b], ['11-20 21:00'])
+
+    def test_items_carry_where_to_open(self):
+        got = runp({}, self.LMS, name='LMS-마감.md')['items'][0]
+        self.assertEqual((got['date'], got['key']), ('2026-11-20', 'lms-asg-9'))
+        self.assertEqual(got['open'], 'obsidian://brain-calendar?date=2026-11-20&key=lms-asg-9')
+        hand = runp({}, FAR)['items'][0]
+        self.assertTrue(hand['key'].startswith('h-') and hand['open'].endswith('key=' + hand['key']))
+
+    def test_events_carry_where_to_open_too(self):
+        st = {}
+        runp({}, '- [ ] 2026-12-17 (목) 18:00 전자기 · 기말 ^lms-asg-7', name='LMS-마감.md', st=st)
+        got = runp({}, '- [ ] 2026-12-10 (목) 18:00 전자기 · 기말 ^lms-asg-7', name='LMS-마감.md', st=st, now=later(hours=1))['items']
+        ev = [a for a in got if a['id'].startswith('ev-')][0]
+        self.assertEqual((ev['date'], ev['key']), ('2026-12-10', 'lms-asg-7'))
+        self.assertIn('open', ev)
+
+    def test_setting_a_line_is_not_learned_late(self):
+        st = {}
+        runp({}, SOON, st=st)
+        # 손 줄에 열쇠를 처음 붙이면 서버엔 새 줄로 보인다 — 첫 울림이 지났어도 «늦게 앎»을 울리지 않는다
+        got = runp({'al-n1': {'울림': ['3일 전 20:00', '당일 18:00']}}, '- [ ] 2026-11-06 (금) 23:59 물리 · 과제 마감 ^al-n1', st=st, now=later(hours=1))['items']
+        self.assertEqual([a['id'] for a in got if a['id'].startswith('ev-')], [])
+        self.assertEqual([at(a) for a in got], ['11-06 18:00'])
+
+    def test_wrong_entries_fall_back_and_are_reported(self):
+        own, problems = per({'lms-asg-9': {'울림': ['내일 아침']}, 'al-1': {'울림': ['1일 전 20:00', '모레']}, 'bad key!': {'울림': []}, 'al-2': ['1일 전 20:00'], 'al-3': {'울림': [], '메모': 1}})
+        self.assertNotIn('lms-asg-9', own)      # 다 틀림 = 기본 규칙(조용히 끄지 않음)
+        self.assertEqual(own['al-1'], [('d', 1, '20:00')])
+        self.assertNotIn('al-2', own)
+        self.assertEqual(own['al-3'], [])
+        self.assertEqual(len(problems), 5)
+        got = alarms.build({'probe': False}, now=NOW, rows=rows(self.LMS, name='LMS-마감.md'), settings=parsed(), per=(own, problems), st={}, queue=[], notices=[])
+        self.assertEqual(len([a for a in got['items'] if not a['id'].startswith('ev-')]), 2)
+        self.assertEqual([a['title'] for a in got['items'] if a['id'].startswith('ev-config-')], ['알림 설정 틀림'])
+
+    def test_missing_or_broken_note(self):
+        self.assertEqual(alarms.parse_per_line(None), ({}, []))
+        self.assertEqual(len(alarms.parse_per_line('# 일정별 알림\n')[1]), 1)
+        self.assertEqual(len(alarms.parse_per_line(note('{"a":'))[1]), 1)
+
+    def test_vault_note_is_valid(self):
+        self.assertEqual(alarms.load_per_line()[1], [])
+
+
+def txt(p):
+    with open(p, encoding='utf-8') as f:
+        return f.read()
+
+
+class TurnOff(unittest.TestCase):
+    """캘린더 상자의 종 = 칸 끄기(삭제가 아닌 끄기 · 사용자 11-13) — «끔»에 든 칸만 안 울리고 정한 칸은 남는다."""
+    LMS = PerLine.LMS
+
+    def test_off_ring_stays_in_the_note_but_does_not_ring(self):
+        own, problems = per({'lms-asg-9': {'울림': ['3일 전 20:00', '1일 전 20:00'], '끔': ['1일 전 20:00']}})
+        self.assertEqual((own, problems), ({'lms-asg-9': [('d', 3, '20:00')]}, []))
+        got = alarms.build({'probe': False}, now=NOW, rows=rows(self.LMS, name='LMS-마감.md'), settings=parsed(), per=(own, []))['items']
+        self.assertEqual([at(a) for a in got], ['11-17 20:00'])
+
+    def test_all_off_is_silent_like_an_empty_list(self):
+        own, _ = per({'lms-asg-9': {'울림': ['3일 전 20:00'], '끔': ['3일 전 20:00']}})
+        self.assertEqual(own, {'lms-asg-9': []})
+        self.assertEqual(alarms.build({'probe': False}, now=NOW, rows=rows(self.LMS, name='LMS-마감.md'), settings=parsed(), per=(own, []))['items'], [])
+
+    def test_wrong_off_is_ignored_and_reported(self):
+        own, problems = per({'lms-asg-9': {'울림': ['3일 전 20:00'], '끔': '전부'}, 'al-1': {'울림': ['1시간 전'], '끔': ['모레']}})
+        self.assertEqual(own, {'lms-asg-9': [('d', 3, '20:00')], 'al-1': [('m', 60)]})     # 틀린 «끔» = 그대로 울림
+        self.assertEqual(len(problems), 2)
+
+    def test_off_ring_not_in_the_list_does_nothing(self):
+        self.assertEqual(per({'al-1': {'울림': ['1시간 전'], '끔': ['2시간 전']}})[0], {'al-1': [('m', 60)]})
+
+
+class Skip(unittest.TestCase):
+    """폰 알림 «넘김» = 그 회차만(장부 skips.json) — 볼트 노트는 안 씀 · 같은 회차는 늘 데스크톱이 이김(사용자 11-13)."""
+    TUTOR = PerLine.TUTOR
+    TUTOR2 = PerLine.TUTOR2
+    LMS = PerLine.LMS
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.path = os.path.join(self.dir, 'skips.json')
+
+    def sk(self, *calls, today='2026-11-05'):
+        for key, date in calls:
+            self.assertEqual(alarms.skip(key, date, '넘김', path=self.path, today=today, now=NOW), {'ok': True})
+        return alarms.load_skips(self.path, today=today)
+
+    def items(self, *lines, own=None, skips=(), name='LMS-마감.md', **kw):
+        return alarms.build({'probe': False}, now=kw.pop('now', NOW), rows=rows(*lines, name=name), settings=parsed(), per=(own or {}, []), skips=set(skips), **kw)['items']
+
+    def test_one_occurrence_of_a_repeat(self):
+        sk = self.sk(('rep-40524b12-20261116', '2026-11-16'))
+        got = self.items(self.TUTOR, self.TUTOR2, own={'rep-40524b12': [('m', 60)]}, skips=sk, name='반복-일정.md')
+        self.assertEqual([at(a) for a in got], ['11-23 18:30'])
+
+    def test_a_skipped_deadline_rings_again_when_it_moves(self):
+        sk = self.sk(('lms-asg-9', '2026-11-20'))
+        self.assertEqual(self.items(self.LMS, skips=sk), [])
+        st = {}
+        self.items(self.LMS, skips=sk, st=st, queue=[], notices=[])
+        moved = self.LMS.replace('2026-11-20 (금)', '2026-11-27 (금)')
+        got = self.items(moved, skips=sk, st=st, queue=[], notices=[], now=later(hours=1))
+        self.assertEqual([a['id'][:9] for a in got if a['id'].startswith('ev-')], ['ev-moved-'])
+        self.assertEqual([at(a) for a in got if not a['id'].startswith('ev-')], ['11-24 20:00', '11-26 20:00'])
+
+    def test_desktop_always_wins_for_the_same_occurrence(self):
+        # 같은 칸: 넘김 뒤 캘린더가 그 회차를 정함(종에서 다시) — 서버 넘김보다 데스크톱
+        sk = self.sk(('lms-asg-9', '2026-11-20'))
+        got = self.items(self.LMS, own={'lms-asg-9@2026-11-20': [('d', 0, '09:00')]}, skips=sk)
+        self.assertEqual([at(a) for a in got], ['11-20 09:00'])
+        # 다른 칸: 캘린더가 같은 줄의 일반 칸(열쇠)을 정함 — 그 회차 넘김은 그대로 · 다른 줄은 각자
+        other = '- [ ] 2026-11-21 (토) 23:59 물리 · 다른 과제 ^lms-asg-8'
+        got = self.items(self.LMS, other, own={'lms-asg-9': [('m', 120)], 'lms-asg-8': [('d', 1, '21:00')]}, skips=sk)
+        self.assertEqual([a['id'] for a in got], ['lms-asg-8@2026-11-21@d1-2100'])
+
+    def test_skip_never_touches_the_desktop_note(self):
+        note_path = os.path.join(self.dir, '일정별-알림.md')
+        with open(note_path, 'w', encoding='utf-8') as f:
+            f.write(note({'al-x1': {'울림': ['2시간 전']}}))
+        before = txt(note_path)
+        self.sk(('al-x1', '2026-11-20'))
+        # 넘김과 캘린더가 «같은 순간»에 써도: 캘린더가 노트를 다시 써도 넘김은 장부에 남고, 노트는 캘린더가 쓴 그대로
+        with open(note_path, 'w', encoding='utf-8') as f:
+            f.write(note({'al-x1': {'울림': ['1시간 전']}}))
+        self.assertNotEqual(before, txt(note_path))
+        self.assertEqual(alarms.load_per_line(note_path)[0], {'al-x1': [('m', 60)]})
+        self.assertEqual(alarms.load_skips(self.path, today='2026-11-05'), {'al-x1@2026-11-20'})
+        self.assertEqual(sorted(os.listdir(self.dir)), sorted(['skips.json', '일정별-알림.md']))     # 넘김이 만든 파일은 장부 하나뿐
+
+    def test_ledger_drops_past_days_and_survives_damage(self):
+        self.sk(('al-x1', '2026-11-04'), today='2026-11-01')
+        self.assertEqual(self.sk(('al-x2', '2026-11-20')), {'al-x2@2026-11-20'})
+        with open(self.path, 'w', encoding='utf-8') as f:
+            f.write('{"broken":')
+        self.assertEqual(alarms.load_skips(self.path), set())        # 깨지면 넘김이 빠질 뿐(한 번 더 울림) — 조용해지지 않는다
+        self.assertEqual(self.sk(('al-x3', '2026-11-20')), {'al-x3@2026-11-20'})
+
+    def test_wrong_input_writes_nothing(self):
+        for k, d in (('bad key', '2026-11-20'), ('al-x1@2026-11-20', '2026-11-20'), ('al-x1', '11-20')):
+            self.assertFalse(alarms.skip(k, d, path=self.path)['ok'])
+        self.assertFalse(os.path.exists(self.path))
+
+    def test_occurrence_key_is_valid_in_the_desktop_note(self):
+        own, problems = per({'al-x1@2026-11-20': {'울림': []}, 'al-x1@11-20': {'울림': []}})
+        self.assertEqual(list(own), ['al-x1@2026-11-20'])
+        self.assertEqual(len(problems), 1)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=0)

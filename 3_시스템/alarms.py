@@ -5,9 +5,12 @@
   py -3 3_시스템/alarms.py --report       # 폰이 보고한 늦음·놓침(_index/alarms/fired.jsonl)
 
 무엇을 언제 울릴지는 사용자 설정 = 노트 [[알림-설정]] 의 json 블록(칸 설명은 그 노트). 요청 때마다 읽어 재시작 없이 반영한다.
+일정 하나만 다르게 = 노트 [[일정별-알림]] 의 json 블록(캘린더 종이 씀 · ADR-052) — 줄 열쇠(블록 id) 하나에 «울림» 목록. 있으면 그 줄은 그것만 따른다.
 틀린 값은 그 칸만 기본값으로 울리고, 틀린 칸을 «알림 설정 틀림» 한 번으로 알린다 — 잘못 고쳐 알림이 조용히 사라지면 안 된다.
+알림 항목에는 줄의 날짜·열쇠와 누름 주소(open = obsidian://brain-calendar?date=…&key=…)를 싣는다 — 폰 앱이 알림 누름에 붙인다.
 바로 알릴 것 = 시각 예약이 아니라 폰이 당겨 올 때 울린다(지난 시각으로 받은 알람은 바로 울린다). 잘 시간이면 아침으로.
-쓰는 곳은 _index/alarms 뿐이다(상태·보고 장부). 볼트 노트는 쓰지 않는다.
+쓰는 곳은 _index/alarms 뿐이다(상태·보고 장부 · 폰 «넘김» 장부 skips.json). 볼트 노트는 쓰지 않는다 — 넘김도 노트가 아니라 장부에 써서
+캘린더(데스크톱)와 같은 파일을 쓰는 일이 없다. 같은 회차를 두 쪽이 말하면 늘 데스크톱(일정별-알림의 «열쇠@날짜» 칸)이 이긴다(사용자 11-13 «무조건 데스크탑 우선»).
 """
 import datetime as dt
 import glob
@@ -41,9 +44,16 @@ PROBE_AT = dt.time(3, 17)               # 재기: 폰이 깊이 잠들어 있을
 PROBE_NIGHTS = 3                        # 며칠 PC 가 잠들어도 이어지게
 WD = '월화수목금토일'
 SETTINGS = os.path.join(os.path.dirname(HERE), '2_지식', '일', '외부뇌', '알림-설정.md')     # 일정 폴더 밖 — 폰에서도 고치게(일정 폴더는 폰 쓰기 금지)
+PER_LINE = os.path.join(os.path.dirname(HERE), '2_지식', '일', '외부뇌', '일정별-알림.md')     # 같은 자리 · 캘린더가 쓴다
+# 울림 한 칸 — «3일 전 20:00» · «당일 09:00» · «90분 전» · «2시간 전»(캘린더 repeat.ts 옆 alarm.ts 와 같은 글)
+RING = re.compile(r'^(?:(당일)|(\d{1,3})일 전) ([01]?\d|2[0-3]):([0-5]\d)$|^(\d{1,5})(분|시간) 전$')
+KEY = re.compile(r'^[A-Za-z0-9-]{1,64}(?:@(\d{4}-\d{2}-\d{2}))?$')     # «열쇠@날짜» = 그 회차만(캘린더가 넘김을 풀거나 회차를 따로 정할 때)
+REP_SERIES = re.compile(r'^(rep-[0-9a-f]{8})-\d{8}$')    # 반복 회차 id → 그 반복 전체(schedule.py repeat · 캘린더 repeat.ts)
+OPEN = 'obsidian://brain-calendar?date={date}&key={key}'
 STATE = os.path.join(HERE, '_index', 'alarms')
 FIRED = os.path.join(STATE, 'fired.jsonl')
 SEEN = os.path.join(STATE, 'seen.json')
+SKIPS = os.path.join(STATE, 'skips.json')     # 폰 «넘김» — {"열쇠@날짜": {"글", "at"}} · 서버만 쓴다 · 캘린더는 읽기만
 QUEUE = os.path.join(HERE, '_index', '수집-대기열.md')
 QUEUE_LINE = None                       # 사람 줄 «(호칭)» — 호칭은 프로필에서(blocked_lines 가 처음 부를 때 짓는다)
 HHMM = re.compile(r'^([01]?\d|2[0-3]):([0-5]\d)$')
@@ -180,6 +190,121 @@ def load_settings(path=None):
     return parse_settings(text)
 
 
+def ring_of(text):
+    """울림 한 칸 글 → ('d', 며칠 전, 'HH:MM') · ('m', 분 전) · 틀리면 None."""
+    m = RING.match(text.strip()) if isinstance(text, str) else None
+    if not m:
+        return None
+    if m.group(5):
+        n = int(m.group(5)) * (60 if m.group(6) == '시간' else 1)
+        return ('m', n) if 1 <= n <= 7 * 1440 else None
+    n = 0 if m.group(1) else int(m.group(2))
+    return ('d', n, f'{int(m.group(3)):02d}:{m.group(4)}') if n <= 365 else None
+
+
+def parse_per_line(text):
+    """일정별-알림 노트 글 → ({열쇠: [울릴 칸…]}, 문제들). 틀린 칸은 빼고(그 줄은 기본 규칙으로) 문제에 적는다. «울림»: [] = 그 일정은 안 울림.
+    «끔»: [칸…] = 정해 둔 칸은 남기고 그 칸만 안 울림(캘린더 상자의 종 · 사용자 11-13 «삭제가 아닌 끄기») — 울릴 칸 = 울림 − 끔."""
+    problems, out = [], {}
+    if text is None:
+        return out, problems
+    m = JSON_BLOCK.search(text)
+    if not m:
+        return out, ['일정별-알림: json 블록을 못 찾음 — 모든 일정이 기본 규칙']
+    try:
+        raw = json.loads(m.group(1))
+    except ValueError as e:
+        return out, [f'일정별-알림: json 오류({e}) — 모든 일정이 기본 규칙']
+    if not isinstance(raw, dict):
+        return out, ['일정별-알림: 맨 바깥이 { } 가 아님 — 모든 일정이 기본 규칙']
+    for k, v in raw.items():
+        where = f'일정별-알림.{k}'
+        if not KEY.match(k):
+            problems.append(f'{where}: 열쇠는 블록 id 꼴(영문·숫자·-)이어야 함')
+            continue
+        if not isinstance(v, dict) or not isinstance(v.get('울림'), list):
+            problems.append(f'{where}: {{"울림": [...]}} 꼴이어야 함 — 기본 규칙으로')
+            continue
+        extra = [a for a in v if a not in ('울림', '글', '끔')]
+        if extra:
+            problems.append(f'{where}.{extra[0]}: 모르는 칸')
+        off = set()
+        if '끔' in v:
+            if isinstance(v['끔'], list) and all(ring_of(x) for x in v['끔']):
+                off = {ring_of(x) for x in v['끔']}
+            else:       # 틀린 «끔»은 무시 = 울림 그대로 울린다(조용해지는 쪽으로 틀리지 않게)
+                problems.append(f'{where}.끔: «울림»과 같은 꼴의 목록이어야 함 ({json.dumps(v["끔"], ensure_ascii=False)})')
+        rings, bad = [], []
+        for x in v['울림']:
+            r = ring_of(x)
+            (rings if r else bad).append(r or x)
+        if bad:
+            problems.append(f'{where}.울림: "3일 전 20:00"·"당일 09:00"·"90분 전"·"2시간 전" 꼴이어야 함 ({json.dumps(bad[0], ensure_ascii=False)})')
+            if not rings:           # 다 틀렸으면 그 줄을 조용히 끄지 않고 기본 규칙으로
+                continue
+        out[k] = [r for r in dict.fromkeys(rings) if r not in off]     # 같은 칸 두 번은 한 번 · 끈 칸 뺌(다 끄면 [] = 안 울림)
+    return out, problems
+
+
+def load_per_line(path=None):
+    path = path or PER_LINE
+    try:
+        with open(path, encoding='utf-8') as f:
+            text = f.read()
+    except OSError:
+        text = None
+    return parse_per_line(text)
+
+
+def per_of(per, key, date=None, skips=()):
+    """그 줄의 일정별 울림 — 차례: 데스크톱 그 회차(열쇠@날짜) > 폰 넘김(장부) > 데스크톱 열쇠 > 반복 전체(rep-<8>). 없으면 None(기본 규칙).
+    데스크톱 회차 칸이 넘김보다 앞 = 같은 회차를 두 쪽이 말하면 늘 데스크톱(캘린더 종으로 넘김을 풀 때 쓴다)."""
+    occ = f'{key}@{date}' if date else None
+    if occ and occ in per:
+        return per[occ]
+    if occ and occ in skips:
+        return []
+    if key in per:
+        return per[key]
+    m = REP_SERIES.match(key)
+    return per.get(m.group(1)) if m else None
+
+
+def load_skips(path=None, today=None):
+    """폰 «넘김» 장부 → 오늘 이후 회차 열쇠들(«열쇠@날짜»). 못 읽으면 빈 것 — 넘김이 빠지면 한 번 더 울릴 뿐 조용해지지 않는다."""
+    today = today or dt.datetime.now(schedule.KST).date().isoformat()
+    try:
+        with open(path or SKIPS, encoding='utf-8') as f:
+            raw = json.load(f)
+    except (OSError, ValueError):
+        return set()
+    return {k for k in raw if isinstance(raw, dict) and (m := KEY.match(k)) and m.group(1) and m.group(1) >= today} if isinstance(raw, dict) else set()
+
+
+def skip(key, date, label='', path=None, today=None, now=None):
+    """폰 알림 «넘김» — 그 회차만 앞으로 안 울린다(장부 skips.json 에 «열쇠@날짜»). 반복의 다른 회차·다른 날로 옮겨진 줄은 그대로 울린다.
+    볼트 노트(일정별-알림)는 건드리지 않는다 — 캘린더와 같은 파일을 쓰지 않으니 겹쳐 쓸 일이 없다. 지난 회차는 쓸 때 정리한다."""
+    if not re.match(r'^[A-Za-z0-9-]{1,64}$', key or '') or not re.match(r'^\d{4}-\d{2}-\d{2}$', date or ''):
+        return {'ok': False, 'why': '열쇠·날짜 꼴이 아님'}
+    path = path or SKIPS
+    today = today or dt.datetime.now(schedule.KST).date().isoformat()
+    with LOCK:
+        try:
+            with open(path, encoding='utf-8') as f:
+                raw = json.load(f)
+            raw = raw if isinstance(raw, dict) else {}
+        except (OSError, ValueError):
+            raw = {}
+        raw = {k: v for k, v in raw.items() if (m := KEY.match(k)) and m.group(1) and m.group(1) >= today}
+        raw[f'{key}@{date}'] = {'글': str(label)[:40], 'at': ms(now or dt.datetime.now(schedule.KST))}
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8', newline='\n') as f:
+            json.dump(raw, f, ensure_ascii=False, indent=0)
+        os.replace(tmp, path)
+    return {'ok': True}
+
+
 def rule_for(s, name, text):
     """기본 ← 파일 ← 과목 ← 글자 순으로 덮는다. 목록에 없는 파일은 꺼진 채 시작한다(글자 칸의 «끔: false» 로 그 줄만 켠다)."""
     r = {**s['기본'], '끔': name not in s['파일']}
@@ -221,8 +346,18 @@ def awake(t, due, s):
 
 
 def ring_times(due, rule, s):
-    """[(칸, 시각)] 이른 것부터. 규칙의 시각이 모두 마감 뒤면 마감 한 시간 전에라도 — 규칙 때문에 안 울리는 일은 없게."""
+    """[(칸, 시각)] 이른 것부터. 규칙의 시각이 모두 마감 뒤면 마감 한 시간 전에라도 — 규칙 때문에 안 울리는 일은 없게.
+    일정별 울림(rule['울림'])은 정한 그 시각에 — 잘 시간으로 미루지 않는다(사용자가 그 일정에 직접 고른 때)."""
     out = []
+    if '울림' in rule:
+        for r in rule['울림']:
+            if r[0] == 'm':
+                kind, t = f'm{r[1]}', due - dt.timedelta(minutes=r[1])
+            else:
+                kind, t = f'd{r[1]}-{r[2].replace(":", "")}', at_clock(due.date() - dt.timedelta(days=r[1]), r[2], due.tzinfo)
+            if t < due:
+                out.append((kind, t))
+        return sorted(out, key=lambda x: x[1]) or [('last', due - dt.timedelta(hours=1))]
     for n in rule['며칠_전']:
         for hhmm in rule['시각']:
             t = awake(at_clock(due.date() - dt.timedelta(days=n), hhmm, due.tzinfo), due, s)
@@ -247,8 +382,10 @@ def key_of(m):
     return m.group(6) or 'h-' + hashlib.sha1(schedule.clean(m.group(5)).encode('utf-8')).hexdigest()[:12]
 
 
-def lines_of(rows, s):
-    """열린 줄 전부와 그 줄의 규칙. 꺼진 줄도 담는다 — 나중에 켜도 «새 일정»으로 몰아 울리지 않게."""
+def lines_of(rows, s, per=None, skips=()):
+    """열린 줄 전부와 그 줄의 규칙. 꺼진 줄도 담는다 — 나중에 켜도 «새 일정»으로 몰아 울리지 않게.
+    일정별 울림(또는 폰 넘김)이 있으면 그 줄은 그것만(빈 목록 = 안 울림) — 기본·파일·과목·글자 규칙은 안 본다."""
+    per = per or {}
     out = []
     for f, _, _, m in rows:
         if not m or m.group(1) in 'xX':
@@ -262,8 +399,16 @@ def lines_of(rows, s):
             due = dt.datetime(d.year, d.month, d.day, h, mi, tzinfo=schedule.KST)
         except ValueError:
             continue
-        out.append({'key': key_of(m), 'date': m.group(2), 'due': due, 'timed': bool(m.group(3)), 'text': text, 'rule': rule_for(s, os.path.basename(f), text)})
+        key = key_of(m)
+        own = per_of(per, key, m.group(2), skips)
+        rule = rule_for(s, os.path.basename(f), text) if own is None else {'울림': own, '끔': not own}
+        out.append({'key': key, 'date': m.group(2), 'due': due, 'timed': bool(m.group(3)), 'text': text, 'rule': rule})
     return out
+
+
+def where(ln):
+    """알림 누름이 갈 곳 — 그 줄의 날짜·열쇠·캘린더 주소(폰 앱이 그대로 연다 · 볼트 이름은 앱이 붙임)."""
+    return {'date': ln['date'], 'key': ln['key'], 'open': OPEN.format(date=ln['date'], key=ln['key'])}
 
 
 def blocked_lines(path=None):
@@ -327,9 +472,9 @@ def refresh(st, lines, now, s, problems, queue, notices):
         if ln['due'] > now:
             cur.setdefault(ln['key'], []).append(ln['date'])
 
-    def add(kind, mark, title, text, due, wanted=True):
+    def add(kind, mark, title, text, due, wanted=True, ln=None):
         if not first and mark not in known and wanted:
-            events.append({'id': f'ev-{kind}-{hashlib.sha1(mark.encode("utf-8")).hexdigest()[:12]}', 'at': ms(awake(now, due, s)), 'title': title, 'text': text, 'made': now_ms})
+            events.append({'id': f'ev-{kind}-{hashlib.sha1(mark.encode("utf-8")).hexdigest()[:12]}', 'at': ms(awake(now, due, s)), 'title': title, 'text': text, 'made': now_ms, **(where(ln) if ln else {})})
         known.add(mark)
 
     # 공지 먼저 — 같은 글의 마감 줄이 함께 처음 보이면 공지 한 번만 울린다. 이름으로 표시해 파일을 옮겨도 다시 안 울린다.
@@ -350,9 +495,10 @@ def refresh(st, lines, now, s, problems, queue, notices):
         ringing = not ln['rule'].get('끔')
         gone = [d for d in prev.get(ln['key'], []) if d not in cur[ln['key']]]
         if len(gone) == 1 and len(cur[ln['key']]) == 1:
-            add('moved', mark, ln['text'], f"{gone[0][5:]} → {date_text(ln['due'], ln['timed'])}", ln['due'], ringing and on['옮겨짐'])
+            add('moved', mark, ln['text'], f"{gone[0][5:]} → {date_text(ln['due'], ln['timed'])}", ln['due'], ringing and on['옮겨짐'], ln)
         elif ring_times(ln['due'], ln['rule'], s)[0][1] <= now:
-            add('late', mark, ln['text'], date_text(ln['due'], ln['timed']), ln['due'], ringing and on['늦게_앎'] and not any(t in ln['text'] for t in fresh_titles))
+            # 일정별로 정한 줄은 «늦게 앎»이 아니다 — 사용자가 그 일정을 보고 정했다(손 줄에 열쇠를 처음 붙일 때 새 줄로 보이는 것도 이것으로 조용)
+            add('late', mark, ln['text'], date_text(ln['due'], ln['timed']), ln['due'], ringing and on['늦게_앎'] and '울림' not in ln['rule'] and not any(t in ln['text'] for t in fresh_titles), ln)
         else:
             known.add(mark)
     said = set()                        # 출처 여럿이 같은 까닭(구독 아님·사용량 경고 등)을 대기열에 적어도 같은 말은 한 번만 — 폰에 같은 알림이 줄줄이 뜨지 않게
@@ -386,26 +532,29 @@ def quiet_of(s):
     return [s['잘_시간']['부터'], s['잘_시간']['까지']]
 
 
-def build(cfg=None, now=None, days=92, rows=None, st=None, queue=None, settings=None, notices=None):
-    """st 를 주면 사건을 갱신해 함께 낸다(서버). 없으면 시각 예약만(대조용). cfg = 서버 config 의 alarms(mode · probe)."""
+def build(cfg=None, now=None, days=92, rows=None, st=None, queue=None, settings=None, notices=None, per=None, skips=None):
+    """st 를 주면 사건을 갱신해 함께 낸다(서버). 없으면 시각 예약만(대조용). cfg = 서버 config 의 alarms(mode · probe).
+    per = (일정별 울림, 문제들) · skips = 폰 넘김 회차들 — 안 주면 노트·장부를 읽는다(설정을 손으로 준 시험은 빈 것)."""
     cfg = cfg or {}
     now = now or dt.datetime.now(schedule.KST)
     s, problems = load_settings() if settings is None else settings
-    problems = list(problems)
+    own, more = (load_per_line() if settings is None else ({}, [])) if per is None else per
+    skips = (load_skips(today=now.date().isoformat()) if settings is None else set()) if skips is None else skips
+    problems = list(problems) + list(more)
     if not s['켬']:                     # 다 끔 = 빈 목록이라 폰도 다음 당기기에 지운다
         return {'v': 1, 'items': [], 'problems': problems, 'pull_minutes': s['당겨_오기_분'], 'quiet': quiet_of(s)}
     until = now + dt.timedelta(days=days)
-    lines = lines_of(schedule.parse_all() if rows is None else rows, s)
+    lines = lines_of(schedule.parse_all() if rows is None else rows, s, own, skips)
     items = []
     if st is not None:
         refresh(st, lines, now, s, problems, blocked_lines() if queue is None else queue, (new_notices() if notices is None else notices))
-        items += [{k: e[k] for k in ('id', 'at', 'title', 'text')} for e in st['events']]
+        items += [{k: e[k] for k in ('id', 'at', 'title', 'text', 'date', 'key', 'open') if k in e} for e in st['events']]
     for ln in lines:
         if ln['rule'].get('끔'):
             continue
         for kind, t in ring_times(ln['due'], ln['rule'], s):
             if now < t <= until:
-                items.append({'id': f"{ln['key']}@{ln['date']}@{kind}", 'at': ms(t), 'title': ln['text'], 'text': f"{head_text(t, ln['due'])} · {date_text(ln['due'], ln['timed'])}"})
+                items.append({'id': f"{ln['key']}@{ln['date']}@{kind}", 'at': ms(t), 'title': ln['text'], 'text': f"{head_text(t, ln['due'])} · {date_text(ln['due'], ln['timed'])}", **where(ln)})
     if cfg.get('probe', True):
         items += probes(now)
     if cfg.get('mode'):                 # 앱을 다시 설치하지 않고 예약 방식을 바꾼다(clock · idle)
@@ -482,7 +631,7 @@ def main():
     if '--report' in sys.argv:
         return report()
     if '--check' in sys.argv:
-        problems = load_settings()[1]
+        problems = load_settings()[1] + load_per_line()[1]
         print('\n'.join(problems) or '틀린 칸 없음')
         return 1 if problems else 0
     days = int(sys.argv[sys.argv.index('--days') + 1]) if '--days' in sys.argv else 92

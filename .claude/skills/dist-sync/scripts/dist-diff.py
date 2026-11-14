@@ -151,6 +151,8 @@ CORE = [
     "3_시스템/web-collect.py", "3_시스템/notice-filter.py", "3_시스템/alarms.py", "3_시스템/filter-learn.py",  # mf:allow-path
     # 모아보기(.moa · 11-12) — views.json formats 가 부르는 엔진·화면. 빠지면 배포판의 .moa 가 안 열린다
     "3_시스템/gather/*",  # mf:allow-path
+    # 초안 비교 한 장(스킬 draft · 11-13) — 스킬이 부르는 그리기·검사 대본과 바탕 꼴. 빠지면 배포판의 draft 가 안 돈다
+    "3_시스템/draft.py", "3_시스템/draft/*",  # mf:allow-path
 ]
 
 # publish 방향에서 배포판에 새어 나가면 안 되는 것 (2026-08-03 전수검사 계열)

@@ -1,0 +1,80 @@
+/* 초안 공통 바탕 — 옵시디언 1.15 기본 테마 값(설치본 app.css 에서 뽑음 · 11-13) + brain-base 줄·묶음 꼴.
+   초안의 색·글자·간격은 여기 변수만 쓴다(하드코딩 색 0). 모듈 화면 코드를 그대로 붙일 수 있게 modview THEME 이름(--bg·--tx…)도 둔다.
+   accent-1 은 근사값(app.css 의 정의를 옮기지 않음). */
+:root {
+  --accent-h: 258; --accent-s: 88%; --accent-l: 66%;
+  --color-accent: hsl(var(--accent-h), var(--accent-s), var(--accent-l));
+  --color-accent-1: hsl(calc(var(--accent-h) - 3), calc(var(--accent-s) * 1.02), calc(var(--accent-l) * 1.15));
+  --color-red: #e93147; --color-orange: #ec7500; --color-yellow: #e0ac00; --color-green: #08b94e;
+  --color-base-00: #ffffff; --color-base-05: #fcfcfc; --color-base-10: #fafafa; --color-base-20: #f6f6f6; --color-base-25: #efefef;
+  --color-base-30: #e4e4e4; --color-base-35: #dadada; --color-base-40: #bdbdbd; --color-base-50: #ababab; --color-base-60: #707070;
+  --color-base-70: #5c5c5c; --color-base-100: #222222;
+  --mono-rgb: 0, 0, 0;
+  --text-accent: var(--color-accent); --interactive-accent: var(--color-accent-1);
+  --shadow-s: 0px 1px 2px rgba(0, 0, 0, .028), 0px 3.4px 6.7px rgba(0, 0, 0, .042), 0px 15px 30px rgba(0, 0, 0, .07);
+}
+:root[data-theme="dark"] {
+  --color-red: #fb464c; --color-orange: #e9973f; --color-yellow: #e0de71; --color-green: #44cf6e;
+  --color-base-00: #1c1c1c; --color-base-05: #212121; --color-base-10: #232323; --color-base-20: #282828; --color-base-25: #2e2e2e;
+  --color-base-30: #333333; --color-base-35: #3f3f3f; --color-base-40: #555555; --color-base-50: #666666; --color-base-60: #999999;
+  --color-base-70: #b3b3b3; --color-base-100: #dadada;
+  --mono-rgb: 255, 255, 255;
+  --text-accent: var(--color-accent-1); --interactive-accent: var(--color-accent);
+  --shadow-s: 0px 1px 2px rgba(0, 0, 0, .121), 0px 3.4px 6.7px rgba(0, 0, 0, .179), 0px 15px 30px rgba(0, 0, 0, .3);
+}
+:root {
+  --background-primary: var(--color-base-00); --background-primary-alt: var(--color-base-10); --background-secondary: var(--color-base-20);
+  --background-modifier-border: var(--color-base-30); --background-modifier-border-hover: var(--color-base-35);
+  --background-modifier-hover: rgba(var(--mono-rgb), .067);
+  --text-normal: var(--color-base-100); --text-muted: var(--color-base-70); --text-faint: var(--color-base-50);
+  --text-error: var(--color-red); --text-warning: var(--color-orange); --text-success: var(--color-green); --text-on-accent: white;
+  --font-ui-smaller: 12px; --font-ui-small: 13px; --font-ui-medium: 15px; --font-ui-large: 20px; --font-text-size: 16px;
+  --font-medium: 500; --font-semibold: 600; --radius-s: 4px; --radius-m: 8px;
+  --font-interface: "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", sans-serif;
+  /* modview THEME 이름 */
+  --bg: var(--background-primary); --bg2: var(--background-secondary); --line: var(--background-modifier-border); --line2: var(--background-modifier-border-hover);
+  --tx: var(--text-normal); --tx2: var(--text-muted); --tx3: var(--text-faint);
+  --accent: var(--text-accent); --warn: var(--text-warning); --err: var(--text-error); --ok: var(--text-success); --font: var(--font-interface);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--background-primary); color: var(--text-normal); font: var(--font-ui-small)/1.45 var(--font-interface); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+svg.svg-icon { width: 14px; height: 14px; flex: none; vertical-align: middle; }
+
+/* 아이콘 단추 — 이름은 마우스를 올릴 때만(aria-label) */
+.ib { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-s); background: none; color: var(--text-faint); cursor: pointer; position: relative; }
+.ib:hover, .ib.is-hover { background: var(--background-modifier-hover); color: var(--text-normal); }
+.ib[aria-label]:hover::after, .ib.is-hover[aria-label]::after { content: attr(aria-label); position: absolute; top: 28px; left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 3;
+  background: var(--text-normal); color: var(--background-primary); font-size: var(--font-ui-smaller); padding: 2px 6px; border-radius: var(--radius-s); }
+/* 칩(값 · 추천) */
+.chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border: 1px solid var(--background-modifier-border); border-radius: 11px; font-size: var(--font-ui-smaller); color: var(--text-muted); background: none; cursor: pointer; }
+.chip.is-rec { border-style: dashed; border-color: var(--interactive-accent); color: var(--text-accent); }
+/* 글자 단추 */
+.btn { height: 26px; padding: 0 10px; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-s); background: var(--background-primary); font-size: var(--font-ui-small); cursor: pointer; }
+.btn.is-cta { background: var(--interactive-accent); border-color: var(--interactive-accent); color: var(--text-on-accent); }
+
+/* brain-base 묶음(secEl) · 줄(bb-tp-row) — src/styles.css 170~208 그대로 */
+.bb-tp-sec { margin-bottom: 12px; }
+.bb-tp-sec-head { display: flex; align-items: center; gap: 6px; padding: 0 6px 4px; font-size: var(--font-ui-small); font-weight: var(--font-medium); color: var(--text-normal); }
+.bb-tp-sec-ic { display: flex; flex: none; color: var(--text-muted); }
+.bb-tp-sec-n { margin-left: auto; font-size: var(--font-ui-smaller); font-weight: normal; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.bb-tp-sec-body { margin-left: 12px; padding-left: 4px; border-left: 1px solid var(--background-modifier-border); }
+.bb-tp-row { display: flex; align-items: center; gap: 6px; min-height: 26px; padding: 2px 6px; border-radius: var(--radius-s); cursor: pointer; }
+.bb-tp-row:hover, .bb-tp-row.is-hover { background: var(--background-modifier-hover); }
+.bb-tp-ic { display: flex; flex: none; color: var(--text-faint); }
+.bb-tp-text { flex: 1; min-width: 0; font-size: var(--font-ui-small); color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-tp-flair { flex: none; font-size: var(--font-ui-smaller); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.bb-tp-row.is-near .bb-tp-flair { color: var(--text-warning); }
+.bb-tp-row.is-soon .bb-tp-flair, .bb-tp-row.is-soon .bb-tp-ic { color: var(--text-error); }
+.bb-tp-row.is-soon .bb-tp-flair { font-weight: var(--font-semibold); }
+.bb-tp-row.is-done .bb-tp-text, .bb-tp-row.is-done .bb-tp-ic { color: var(--text-faint); }
+.bb-tp-row .bb-tp-start { display: none; }
+.bb-tp-row:hover .bb-tp-start, .bb-tp-row.is-hover .bb-tp-start { display: flex; }
+.bb-tp-row:hover:has(.bb-tp-start) .bb-tp-flair, .bb-tp-row.is-hover:has(.bb-tp-start) .bb-tp-flair { display: none; }
+
+/* 노트 꼴 초안(읽기 보기 흉내) */
+.md-view { padding: 16px 24px; font-size: var(--font-text-size); line-height: 1.6; }
+.md-view h1 { font-size: 1.6em; margin: 0 0 .5em; } .md-view h2 { font-size: 1.3em; margin: 1em 0 .4em; } .md-view h3 { font-size: 1.1em; margin: 1em 0 .3em; }
+.md-view table { border-collapse: collapse; font-size: .875em; } .md-view th, .md-view td { border: 1px solid var(--background-modifier-border); padding: 4px 8px; text-align: left; }
+.md-view th { background: var(--background-secondary); font-weight: var(--font-semibold); }
+.md-view a { color: var(--text-accent); text-decoration: none; }
