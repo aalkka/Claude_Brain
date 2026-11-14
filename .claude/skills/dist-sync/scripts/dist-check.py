@@ -88,6 +88,12 @@ def acked(ack, rel, key):
     return ack_key(ack.get(rel)) == key
 
 
+def unshipped(A, B, ack, rel):
+    """배포판에 없고 볼트의 지금 판을 안 싣기로 적은 파일."""
+    pa = os.path.join(A, *rel.split("/"))
+    return not os.path.exists(os.path.join(B, *rel.split("/"))) and os.path.isfile(pa) and acked(ack, rel, dd.sha(pa))
+
+
 def seed_key(rel, p):
     """씨앗의 견줄 판 — 시스템 문서(설계노트·사용자설명서)는 본문 전체 · 그 밖은 항목 앞 머리말만(frontmatter·빈 줄 빼고)."""
     if rel in dd.PERSONAL_EXCEPT:
@@ -339,13 +345,15 @@ def check(A=VAULT, B=None, do_fetch=False):
     code, st, _ = git(B, "status", "--porcelain")
     res["uncommitted"] = [ln[3:] for ln in st.splitlines() if ln.strip()] if code == 0 else []
     res["fetched"] = stamp(fetch_age(B))
-    gaps, res["external"] = external_gaps(A, B)
-    annotate(A, B, res["unsynced"], dist_texts(B), gaps, load_ack(A))
+    ack = load_ack(A)
+    gaps, res["external"] = external_gaps(A, B, ack)
+    annotate(A, B, res["unsynced"], dist_texts(B), gaps, ack)
     return res
 
 
-def external_gaps(A, B):
-    """④ 볼트 밖 설정 추적 — 코어(배포판 + 곧 실릴 볼트 코어)가 볼트 밖을 건드리는데 안내 목록(external.json)에 없는 곳 → ([(파일, 종류, 줄)], 말)."""
+def external_gaps(A, B, ack=None):
+    """④ 볼트 밖 설정 추적 — 코어(배포판 + 곧 실릴 볼트 코어)가 볼트 밖을 건드리는데 안내 목록(external.json)에 없는 곳 → ([(파일, 종류, 줄)], 말).
+    배포판에 없고 지금 판을 안 싣기로 적은(ack) 파일은 뺀다 — 안 실리니 받는 사람에게 안내할 것이 없다(11-14 gpu_guard 가 ack 뒤에도 남았다). 다시 고치면 다시 잡힌다."""
     s = importlib.util.spec_from_file_location("dist_external", os.path.join(HERE, "external.py"))
     ex = importlib.util.module_from_spec(s)
     s.loader.exec_module(ex)
@@ -353,6 +361,8 @@ def external_gaps(A, B):
         gaps, bad = ex.scan([B, A], layer=dd.layer)
     except (OSError, ValueError, KeyError) as e:
         return [], ["목록 못 읽음(%s)" % type(e).__name__]
+    ack = ack or {}
+    gaps = [g for g in gaps if not unshipped(A, B, ack, g[0])]
     return gaps, ["%s:%d — %s" % (rel, n, kind) for rel, kind, n in gaps] + ["항목 %s — %s" % b for b in bad]
 
 
