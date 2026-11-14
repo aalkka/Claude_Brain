@@ -40,6 +40,7 @@
 "550df6050b16": "8dc80de98e4016f7",
 "85b1c05191a9": "fdfdd91d43316761",
 "935108da48b3": "cbe398b00d17f44e",
+"a1e6dc8ab40b": "fec5cf4c3e3f6b63",
 "d2277ce29d57": "a629e58dfba34cfb"
 },
 ".claude/skills/collect_desk/skills/add/SKILL.md": {
@@ -115,6 +116,7 @@
 "d7189c38d662": "fd7ce028d99b551d"
 },
 ".claude/skills/dist-sync/scripts/dist-check.py": {
+"67ddea63d070": "e141848f5268dd8a",
 "fb408acda8bf": "c4e1b6b17ddac672",
 "ffa4bdeb3f36": "17c825d593f0f861"
 },
@@ -1200,6 +1202,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "d25b156ac422",
+"rev": "bedefc3f6b77",
 "schema": 1
 }
