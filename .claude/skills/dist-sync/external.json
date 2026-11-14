@@ -296,11 +296,11 @@
   },
   {
    "id": "chrome",
-   "이름": "크롬(수집 창이 글을 여는 브라우저)",
+   "이름": "크롬(수집 창이 글을 여는 브라우저 · 초안 비교 그림)",
    "종류": ["브라우저", "레지스트리"],
-   "쓰는 곳": [".claude/skills/collect_desk/scripts/collect_desk.py"],
+   "쓰는 곳": [".claude/skills/collect_desk/scripts/collect_desk.py", "3_시스템/draft.py"],
    "필수": false,
-   "까닭": "수집 창에서 글을 크롬으로 연다(크롬 설치 자리를 레지스트리에서 읽기만). 없으면 기본 브라우저로 연다.",
+   "까닭": "수집 창에서 글을 크롬으로 연다(크롬 설치 자리를 레지스트리에서 읽기만). 없으면 기본 브라우저로 연다. 스킬 draft 는 크롬을 창 없이 띄워 초안 비교 그림을 찍는다 — 크롬이 없으면 Edge 로 찍는다.",
    "확인": "if (Test-Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe') { exit 0 } else { exit 1 }",
    "하기": "winget install --id Google.Chrome -e --accept-source-agreements --accept-package-agreements",
    "안내": [
