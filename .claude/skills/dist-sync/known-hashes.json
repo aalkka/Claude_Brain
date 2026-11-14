@@ -128,7 +128,8 @@
 "cfb58015c306": "c9aa0e503eab6c8c",
 "df39b0a50a57": "6c33d5b66177f232",
 "fa39f2997571": "9a3a1a13a8586a8d",
-"fce4ab3c9346": "343e7e2f7f3ca3bd"
+"fce4ab3c9346": "343e7e2f7f3ca3bd",
+"ff9d2fe90915": "26701f7f3fc09861"
 },
 ".claude/skills/dist-sync/scripts/doctor.py": {
 "36fe5fb4a9c1": "657ccb83b04688e6",
@@ -163,6 +164,33 @@
 },
 ".claude/skills/dist-sync/tutorial/1-업데이트.md": {
 "2a41f2886487": "ed2817d075f62cd2"
+},
+".claude/skills/draft/SKILL.md": {
+"c3449d1d980e": "46518ee102c4dbe2"
+},
+".claude/skills/draft/예시/A.html": {
+"0e2d8ee883fc": "f100f884d7e73157"
+},
+".claude/skills/draft/예시/B.html": {
+"f3baeb9221d6": "e1fc681084f13dfd"
+},
+".claude/skills/draft/예시/C.html": {
+"94fd079dbe33": "3dd8c07b742276f1"
+},
+".claude/skills/draft/예시/비교-어둠.png": {
+"5519b098bd8e": "7ff5279dd9c93ae8"
+},
+".claude/skills/draft/예시/비교.html": {
+"a1e0d221b9d4": "553b6aec40549fa8"
+},
+".claude/skills/draft/예시/비교.png": {
+"3a870a73e4d5": "d4429954727add42"
+},
+".claude/skills/draft/예시/지금.html": {
+"c355f475e77a": "47809e8fd83a979c"
+},
+".claude/skills/draft/예시/초안.json": {
+"66f9b22d89e7": "403ac1a00dc0a022"
 },
 ".claude/skills/inbox-sort/SKILL.md": {
 "073f545584fd": "4d9fe5dd33ac2bfd",
@@ -332,6 +360,7 @@
 },
 "3_시스템/_eval/alarms_check.py": {
 "12c77d8792cf": "afac0be1ccff9758",
+"86c6ea22b1e7": "fd9917644bbff2e0",
 "fd6457f3f7e4": "ce6cc6d288803b0d"
 },
 "3_시스템/_eval/autocommit_check.py": {
@@ -584,6 +613,9 @@
 "3_시스템/_ref/incident-2026-11-13-일모드전환-CLI가-거부글로-바꿈.md": {
 "4fe754398b0c": "4df8d128abd976ff"
 },
+"3_시스템/_ref/incident-2026-11-14-옵시디언-같은주소-두번등록-플러그인못켬.md": {
+"5ef8d8dd8f8b": "02ab7849349efa2d"
+},
 "3_시스템/_ref/measure-module-toggle.md": {
 "40026e81a7d8": "c3fd4f83d5e6cecd"
 },
@@ -610,7 +642,8 @@
 },
 "3_시스템/alarms.py": {
 "3835c974594f": "5a5b5f4bb05b1a43",
-"5d49ba7dbb19": "cb01ea5258a6e860"
+"5d49ba7dbb19": "cb01ea5258a6e860",
+"748a018c4a57": "df7c6189807fba70"
 },
 "3_시스템/brain.py": {
 "23d1202e355c": "5ba7c68ad87e70bd",
@@ -652,6 +685,15 @@
 "76d60f5ed74e": "d8f21bfc591c337d",
 "ad6598199803": "ff329eead0881809",
 "e2c8c74591dd": "55dae4f056510da5"
+},
+"3_시스템/draft.py": {
+"432e4a60b140": "aed2e634838c30ff"
+},
+"3_시스템/draft/check.js": {
+"b1e703b0f138": "4626e49dbab73016"
+},
+"3_시스템/draft/theme.css": {
+"92e515e87622": "411458ecdf73d0ac"
 },
 "3_시스템/drift.py": {
 "0d2125789af7": "3fa5d9a16bdc03e5",
@@ -1157,6 +1199,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "4d64072dfa69",
+"rev": "f9c719f2ffec",
 "schema": 1
 }
