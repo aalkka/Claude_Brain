@@ -46,7 +46,7 @@ ITEMS = 40
 LATE_MIN_H = 24            # 하루 안 늦음은 PC 가 잠든 것일 수 있어 늦음으로 안 친다
 LMS_LATE_H = 48            # 전 과목 20시간(신호 안 되면 12시간)의 두 배 넘게
 LMS_SID = 'lms-post'       # notice-filter 의 LMS 글 출처 이름
-NOT_LMS = {'filter-learn', 'notice-filter', 'web'}   # 웹 쪽 대본이 쓰는 대기열 이름 — mylms 칸에 «실패»로 붙이지 않는다(11-11 · filter-learn 거절 메모 줄이 mylms 를 빨갛게 했다)
+LMS_QUEUE = re.compile(r'(\d{8}-\d{4}|lms-run-.+|courses|signals|extension|orphan|tasks)')   # lms-auto 가 대기열에 쓰는 이름만 mylms 칸에 «실패»로 붙인다 — 막을 이름을 적던 옛 방식은 새 대본이 대기열에 쓸 때마다(11-11 filter-learn · 11-13 자격카드) mylms 를 빨갛게 했다
 BUSY_STALE = 30 * 60       # 받기·판정이 죽어 남은 표시를 이 뒤로는 안 믿는다(초)
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 # 거절 창의 낱말 단추 — 제목 낱말 중 고르면 공지 거의 다를 막는 말·날짜는 안 띄운다(고른 낱말은 전 출처 제외어가 된다 · filter-learn)
@@ -594,7 +594,7 @@ def lms_source(queue, cfg, desk, now):
             'login': (last_status or {}).get('login'),
             'loginAt': fmt(dt.datetime.fromtimestamp(last_status['at'] / 1000)) if last_status and last_status.get('at') else '',
             'courses': clist, 'events': ev[:EVENTS], 'items': [], 'cnt': None,
-            'problems': [q for q in queue if q['id'] not in web_ids and q['id'] not in NOT_LMS],
+            'problems': [q for q in queue if q['id'] not in web_ids and LMS_QUEUE.fullmatch(q['id'] or '')],
             'tot': {'posts': len(its), 'files': len(fls), 'board': sum(len(v) for v in board.values())},
             'alarm': alarm_of(cfg, 'LMS-마감.md')}
 
