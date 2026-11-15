@@ -5,6 +5,8 @@
 끝남을 사람 기억이 아니라 기록으로 판정한다. 10-31 판은 학교 과제만 상정했다(LMS 제출 · 제출 자리 · 실험 재료) —
 11-02 사용자 «보편화» → 작업 하나 = «결과물이 어디로 나가 끝나는가»(설계안 §19.8). 끝남 근거는 `3_시스템/work.json` 의 표(데이터)를
 위에서부터 본다 — 표시(작업.md 속성) · lms(내 제출) · git(가지 병합) · 일정(마감 지남) · 멈춤(묻기).
+끝남 근거가 있어도 아직 하는 중인 증거(같은 낱말의 앞으로 일정 «남음» · LMS 제출 뒤에 고친 파일)가 있으면 «진행»으로 둔다 —
+제출 하나는 그 결과물이 끝났다는 것이지 작업이 끝났다는 것이 아니다(사용자 11-15 «최종프로젝트» 사고 · 표시는 사람 판정이라 그대로).
 보낸 결과물이 원본 층 `<영역>/<주제>/보냄/`(학교 과목은 `제출/`)에도, 작업 안에도, 볼트 밖에도 없으면 «결과물 없음» —
 지우는 계획을 내지 않는다(결과물을 보관하기 전엔 작업 파일을 지우지 않는다).
 
@@ -16,7 +18,8 @@
 
 정리 계획 꼴(끝난 작업 하나 · 규칙 = work.json):
   보낸 파일이 있는 보냄 → 결과물 → `보냄/`(밖에서 찾은 것은 들임) · 재료(사진·측정·회로) → `보냄/<작업>/` · md → 2_지식 ·
-                          나머지(초안·다른 판 문서 · 다시 만들 수 있는 것) → 휴지통
+                          보낸 파일과 이름이 닮은 문서(초안·다른 판) · 다시 만들 수 있는 것 → 휴지통 ·
+                          이름이 다른 것 → 2_지식(다시 못 만드는 것은 남긴다 · 이런 것이 있으면 sweep 은 비우지 않고 승인을 기다린다)
   그 밖(끝냄·마감 지남·멈춤·저장소로 보냄) → 다시 만들 수 있는 것(대본·만든 그림·md 에서 내보낸 문서) → 휴지통 ·
                           나머지(md·그림·재료·md 원본 없는 문서) → `2_지식/<영역>/<주제>/<작업>/`(다시 못 만드는 것은 남긴다)
   보고서(학교 · work.json «보고서» · 사용자 11-03): 위와 같되 재료 = 휴지통(1회용) · docx = PDF 로 바꿔 PDF 만(이미 PDF 가 있으면 지우기만)
@@ -91,6 +94,17 @@ def common(a, b):
             break
         n += 1
     return n
+
+
+def related(name, deliver):
+    """보낸 파일의 판(초안·다른 꼴)으로 볼 이름 — 확장자는 보지 않고, 정규화한 이름이 같거나 앞머리가 길게 같다(LMS 근거와 같은 문턱).
+    «최종프로젝트_제안서_수정.docx» ↔ 보낸 «최종프로젝트_제안서.pdf» = 판 · «파트A_역할분담.docx» = 다른 것(11-15 · 역할분담 문서가 초안으로 지워짐)."""
+    x = norm(name)
+    for d in deliver or []:
+        w = norm(d)
+        if x and w and (x == w or common(x, w) >= max(8, min(len(x), len(w)) - 6)):
+            return True
+    return False
 
 
 def files_of(p):
@@ -192,7 +206,7 @@ def by_lms(t, ctx):
         for n in s["파일"]:
             w = norm(n)
             if w and any(x and common(x, w) >= max(8, min(len(w), len(x)) - 6) for x in stems):
-                return {"state": "보냄", "why": "LMS 내 제출 «%s» %s" % (s["과제"], (s["때"] or "")[:10]), "deliver": s["파일"]}
+                return {"state": "보냄", "why": "LMS 내 제출 «%s» %s" % (s["과제"], (s["때"] or "")[:10]), "deliver": s["파일"], "sent_at": s["때"]}
     return None
 
 
@@ -226,11 +240,11 @@ def by_git(t, ctx):
     return None
 
 
-def schedule_lines(topic):
-    """이 주제의 일정 줄(지난 60일부터) — topic.py 와 같은 문법."""
+def schedule_lines(topic, limit=None):
+    """이 주제의 일정 줄(지난 60일부터) — topic.py 와 같은 문법 · limit = 줄 수(기본 = topic.py 의 현황 줄 수)."""
     try:
         import topic as T
-        return T.status(meta(topic), dt.datetime.now(T.KST).date(), back=60)
+        return T.status(meta(topic), dt.datetime.now(T.KST).date(), back=60, limit=limit)
     except Exception:  # noqa: BLE001 — 일정이 없거나 깨져도 판정은 이어 간다
         return []
 
@@ -259,6 +273,32 @@ def by_idle(t, ctx):
 
 
 EVIDENCE = {"표시": by_mark, "lms": by_lms, "git": by_git, "일정": by_schedule, "멈춤": by_idle}
+
+
+def sent_time(s):
+    """LMS «때»(ISO · Z) → 초 · 모르면 None."""
+    try:
+        return dt.datetime.fromisoformat(str(s).replace("Z", "+00:00")).timestamp() if s else None
+    except ValueError:
+        return None
+
+
+def still_going(t, hit, fs):
+    """끝남 근거가 있어도 아직 하는 중인 증거 → 까닭 목록(없으면 []) · 사용자 11-15 «최종프로젝트» 사고(제안서 제출 = 폴더 끝으로 봄).
+    ① 작업 이름 낱말이 모두 든 앞으로 일정이 «남음» ② LMS 제출 시각 뒤에 고친 파일(보낸 파일의 판·작업.md 빼고 · 시계 차 60초)."""
+    why = []
+    tk = [x.replace(" ", "") for x in tokens(t["name"])]
+    for ln in schedule_lines(t["topic"], limit=10 ** 6) if tk else []:
+        if ln["days"] >= 0 and ln["state"] == "남음" and all(x in ln["text"].replace(" ", "") for x in tk):
+            why.append("앞으로 일정 %s «%s»" % (ln["date"], ln["text"][:40]))
+            break
+    at = sent_time(hit.get("sent_at"))
+    if at:
+        newer = [f for f in fs if os.path.basename(f) != MARK and os.path.getmtime(f) > at + 60
+                 and not related(os.path.basename(f), hit.get("deliver"))]
+        if newer:
+            why.append("제출 뒤 고친 파일 %d개(%s)" % (len(newer), ", ".join(os.path.basename(f) for f in newer[:2])))
+    return why
 
 
 # ── 자리 ──────────────────────────────────────────────────────────────
@@ -351,6 +391,10 @@ def judge(t, ctx, now=None):
             by_mark(t, ctx)  # git 근거가 표시 속성(저장소·가지)을 읽는다
         hit = fn(t, ctx)
         if hit:
+            if ev.get("id") != "표시":  # 사람 표시는 그대로 · 기록 근거는 아직 하는 중인 증거가 이긴다
+                going = still_going(t, hit, fs)
+                if going:
+                    hit = {"state": "진행", "why": "아직 하는 중 — %s (끝남 근거 %s)" % (" · ".join(going), hit["why"])}
             break
     t.update(hit or {"state": "진행", "why": ""})
     t.setdefault("deliver", [])
@@ -435,7 +479,8 @@ def plan_of(t):
     stem = os.path.splitext(t["name"])[0]
     md_stems = {os.path.splitext(f)[0] for f in fs if f.lower().endswith(".md")}
     sub = lambda f: os.path.relpath(f, base).replace("\\", "/") if t["dir"] else os.path.basename(f)  # noqa: E731
-    ops = []
+    ops, held = [], []  # held = 보낸 파일과 이름이 다른 파일 — 있으면 sweep 이 비우지 않는다
+    t["held"] = held
     files = t["state"] == "보냄" and bool(t.get("deliver"))
     report = is_report(t["topic"])
     mat = set(rules()["재료_확장자"])
@@ -483,8 +528,19 @@ def plan_of(t):
                 else:
                     ops.append({"op": "mv", "src": r, "dst": "%s/%s/%s" % (sd, stem, sub(f)), "why": "재료 승격(결과물 옆) — " + t["why"]})
             else:
-                why = regenerable(f, base, md_stems) or ("초안·다른 판(보낸 판이 보관됨)" if ext in docs else "작업 노트·파일")
-                ops.append({"op": "rm", "src": r, "why": "%s — %s" % (why, t["why"])})
+                why = regenerable(f, base, md_stems) or ("초안·다른 판(보낸 판이 보관됨)" if ext in docs and related(name, t["deliver"]) else "")
+                if why:
+                    ops.append({"op": "rm", "src": r, "why": "%s — %s" % (why, t["why"])})
+                    continue
+                # 보낸 파일과 이름이 다름 — 그 판이 아니라 다른 일의 것일 수 있다(11-15 역할분담 문서·예시 html 이 초안으로 지워짐)
+                # → 끝냄 갈래처럼 다시 못 만드는 것으로 지식에 남기고, sweep 은 이 작업을 비우지 않는다(승인 뒤 --apply)
+                held.append(name)
+                dst = "%s/%s/%s" % (knowledge_dir(t["topic"]), stem, sub(f))
+                keep = "지식으로 승격(보낸 파일과 이름이 다름 · 다시 못 만듦) — " + t["why"]
+                if report and ext == ".docx":
+                    ops += docx_to_pdf_ops(r, os.path.splitext(dst)[0] + ".pdf", keep)
+                else:
+                    ops.append({"op": "mv", "src": r, "dst": dst, "why": keep})
     else:  # 끝냄·마감 지남·멈춤·저장소로 보냄 — 다시 만들 수 있는 것만 지우고 나머지는 지식으로
         kd = knowledge_dir(t["topic"])
         for f in fs:
@@ -507,7 +563,8 @@ def plan_of(t):
         while os.path.abspath(top) != os.path.abspath(w) and [c for c in os.listdir(top) if not c.startswith(".")] == [os.path.basename(a)]:
             ops.append({"op": "rmdir", "path": rel(top), "why": "이 작업만 있던 폴더 — 작업 층에 빈 폴더를 남기지 않음"})
             a, top = top, os.path.dirname(top)
-    return ops, ""
+    note = "보낸 파일과 이름이 다른 파일 %d개(%s) — 자동으로 비우지 않음 · 승인 뒤 --apply" % (len(held), ", ".join(held[:3])) if held else ""
+    return ops, note
 
 
 def write_plans(st):
@@ -576,7 +633,8 @@ def finish(path, by="script:work"):
 
 def sweep():
     """끝난 작업 비우기(사용자 11-03 «작업이 진행 중일 때만 남아있고 끝나면 무조건 비운다») → 비운 작업 [{path, batch}] · door.py sweep 이 볼트를 켤 때 부른다.
-    결과물을 보관 못 하면 계획이 없어 그대로다(지우지 않는다) · 비운 작업이 되돌려져 돌아오면 다시 안 비운다."""
+    결과물을 보관 못 하면 계획이 없어 그대로다(지우지 않는다) · 비운 작업이 되돌려져 돌아오면 다시 안 비운다 ·
+    보낸 파일과 이름이 다른 파일이 있으면 비우지 않는다(후보로 남아 `plan` → 승인 뒤 --apply · 11-15)."""
     import fileops
     swept = load_swept()
     out = []
@@ -584,7 +642,7 @@ def sweep():
         if t["state"] not in SURE or t["path"] in swept:
             continue
         ops = plan_of(t)[0]
-        if not ops:
+        if not ops or t.get("held"):
             continue
         ctx = fileops.Ctx(VAULT, by="script:work")
         try:

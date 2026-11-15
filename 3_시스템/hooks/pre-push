@@ -1,0 +1,32 @@
+#!/bin/sh
+# 외부뇌 pre-push: 보낼 커밋에 민감 노트(sensitive: true)가 든 판이 있으면 push 를 막는다(11-15 · 마지막 그물).
+# pre-commit 이 내리고 exclude 에 적어도 틈(처음 찾는 커밋 · 손으로 친 --no-verify 커밋)이 남는다 — 원격에는 가지 않게 여기서 막는다.
+# 판정 = pre-push-scan.py(범위마다 git 두 번) · 끝 코드 0 = 통과 · 3 = 막음 · 그 밖(파이썬 없음·대본 깨짐) = 아래 sh 판이 처음부터 다시 한다.
+# 범위·까닭은 pre-push-scan.py 머리말 · 이미 원격에 있는 이력은 범위 밖(평소 push 를 막지 않음).
+input=$(cat)
+printf '%s\n' "$input" | py -3 3_시스템/hooks/pre-push-scan.py "$1"
+case $? in 0) exit 0 ;; 3) exit 1 ;; esac
+
+remote=$1   # 아래 고리의 set -- 가 $1 을 덮는다
+named=0
+for r in $(git remote); do [ "$r" = "$remote" ] && named=1; done
+hits=$(printf '%s\n' "$input" | while read -r lref lsha rref rsha; do
+	[ -n "$lsha" ] || continue
+	case "$lsha" in *[!0]*) ;; *) continue ;; esac
+	case "$rsha" in *[!0]*) known=1 ;; *) known=0 ;; esac
+	[ "$known" = 1 ] && ! git cat-file -e "$rsha^{commit}" 2>/dev/null && known=0
+	if [ "$known" = 1 ]; then set -- "$rsha..$lsha"
+	elif [ "$named" = 1 ]; then set -- "$lsha" --not "--remotes=$remote"
+	else set -- "$lsha"; fi
+	git -c core.quotepath=false log --format= --raw --no-abbrev --no-renames -m --diff-filter=AM "$@" -- '*.md' | while IFS= read -r ln; do
+		case "$ln" in :*) ;; *) continue ;; esac
+		blob=$(printf '%s' "$ln" | cut -d' ' -f4)
+		path=$(printf '%s' "$ln" | cut -f2)
+		git cat-file -p "$blob" | grep -Eq '^sensitive:[[:space:]]*true[[:space:]]*$' && printf '%s\n' "$path"
+	done
+done | sort -u)
+[ -z "$hits" ] && exit 0
+printf '%s\n' "$hits" | while IFS= read -r p; do echo "❌ push 막음 — 보낼 커밋에 민감 노트: $p"; done
+echo "   원격에 가면 강제 push 없이는 이력에서 못 지운다 · 고치기 = 안 보낸 커밋에서 그 파일을 빼고 다시 커밋(Claude 에게 «push 막힘»)"
+printf '%s pre-push BLOCKED 민감 노트(sh 판) → %s · %s\r\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$remote""$(printf '%s' "$hits" | head -n 3 | tr '\n' ' ')" >> 3_시스템/_index/hooks.log 2>/dev/null
+exit 1

@@ -76,6 +76,20 @@
 .bb-perm pre { margin: 0; max-height: 200px; overflow: auto; white-space: pre-wrap; word-break: break-all; font-size: var(--font-ui-smaller); background: var(--background-secondary); padding: 8px; border-radius: 8px; }
 .bb-perm-btns { display: flex; gap: 6px; flex-wrap: wrap; }
 .bb-perm-btns button { border-radius: 8px; font-size: var(--font-ui-small); }
+/* 고르기 카드(건강 고치기 11-14 A안) — 허용 카드 꼴 + 줄 = 칸·이름·흐린 줄 글(넘치면 말줄임 · 전부는 마우스) */
+.bb-pick { outline: none; }
+.bb-pick .bb-perm-title { flex: 1; min-width: 0; word-break: keep-all; }
+.bb-pick-x { margin-left: auto; }
+.bb-pick-rows { display: grid; grid-template-columns: 18px fit-content(45%) minmax(0, 1fr); gap: 2px 6px; }
+.bb-pick-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; min-height: 24px; padding: 0 2px; border-radius: 4px; font-size: var(--font-ui-small); cursor: pointer; }
+.bb-pick-row:hover { background: var(--background-modifier-hover); }
+.bb-pick-row:focus-visible { outline: 2px solid var(--background-modifier-border-focus); }
+.bb-pick-box { display: flex; color: var(--text-muted); }
+.bb-pick-box svg { width: 16px; height: 16px; }
+.bb-pick-row.is-on .bb-pick-box { color: var(--interactive-accent); }
+.bb-pick-name, .bb-pick-line { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-pick-line { color: var(--text-faint); font-size: var(--font-ui-smaller); }
+.bb-pick .bb-perm-btns button.mod-cta:disabled { opacity: 0.4; cursor: default; }
 
 /* 바뀐 파일(W3) */
 .bb-changed { border: 1px solid var(--background-modifier-border); border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; font-size: var(--font-ui-smaller); }
@@ -206,6 +220,13 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-tp-row.is-tt .bb-tp-start { display: flex; opacity: 1; } /* 튜토리얼 연습 받은함 줄 — 제안 단추를 늘 보임(가리킴 · 0.46.3) */
 .bb-tp-check { margin: 0 2px 0 0; flex: none; }
 .bb-tp-row.is-done.bb-tp-todo .bb-tp-text { text-decoration: line-through; }
+/* 할 일 비우기·고정(0.49 · 11-15 초안 B) — 머리말에 올리면 지우개·되돌리기 · 고정 줄은 오른쪽 핀(올리면 핀 풀기 단추가 대신) */
+.bb-tp-sec-head .bb-tp-hb { display: none; flex: none; padding: 2px; }
+.bb-tp-sec-head:hover .bb-tp-hb, .bb-tp-sec-head .bb-tp-hb:focus { display: flex; }
+.bb-tp-sec-head .bb-tp-hb svg { width: 14px; height: 14px; }
+.bb-tp-kp { display: flex; flex: none; color: var(--text-muted); }
+.bb-tp-kp svg { width: 14px; height: 14px; }
+.bb-tp-row:hover .bb-tp-kp { display: none; }
 .bb-chip-card { color: var(--interactive-accent); }
 
 /* 외부뇌 홈(R7 · 0.17 초안 A) — 가운데 탭 · 두 단 · 주제 패널과 같은 줄 꼴(bb-tp-*) */

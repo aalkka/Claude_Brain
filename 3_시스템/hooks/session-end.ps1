@@ -14,22 +14,31 @@ $today = Get-Date -Format 'yyyy-MM-dd'
 #   (incident 2026-07-19). 시정: ① 커밋은 Stop 훅(턴마다)이 이미 수행 → 여기선 best-effort 백업.
 #   ② ML은 맨 끝에서 **디태치**(비대기) → 이 훅은 절대 블록 안 함. 셧다운이 kill해도 커밋은 이미 안전.
 
-# 1. 볼트 커밋 (1_수집 제외 = Claude 소유 변경분 → Claude author로 인간과 분리)
-git add -A -- ':!1_수집'
-git diff --cached --quiet
-if ($LASTEXITCODE -ne 0) {
-    git commit -m "session: $today" --author="Claude <claude@local>" | Out-Null
-    # pre-commit 차단(frontmatter/secret)으로 커밋 실패 시 스테이지 잔존 → 무성 좌초 가시화.
+# 1~2. 볼트 커밋(Claude) → 1_수집 커밋(User) — Stop 훅·서버와 같은 함수(stop-check.py --commit-only · 자동 커밋 잠금을 잡음)로.
+#   왜(11-15): 이 훅만 잠금 없이 git add -A 를 해서, 같은 순간 도는 다른 커밋의 pre-commit 이 민감 노트를 내린 뒤 틈에
+#   다시 올렸다(01:32:55 SessionEnd → 01:32:56 민감 노트 2건 커밋 · 격리 재현 134회 중 24). 잠금을 30초 못 잡으면 건너뛴다
+#   (다음 커밋이 담음). 파이썬이 없거나 결과를 못 내면 아래 예전 길(잠금 없음)로 한다 — 커밋을 아예 거르지는 않는다.
+$sc = Join-Path $PSScriptRoot 'stop-check.py'
+$res = $null
+if (Test-Path $sc) { $res = (& py -3 $sc --commit-only --vault $vault --tag SessionEnd 2>$null) -join '' }
+if ($res -notmatch '"result"') {
+    # 1. 볼트 커밋 (1_수집 제외 = Claude 소유 변경분 → Claude author로 인간과 분리)
+    git add -A -- ':!1_수집'
     git diff --cached --quiet
     if ($LASTEXITCODE -ne 0) {
-        Add-Content -Path (Join-Path $vault '3_시스템\_index\hooks.log') -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') SessionEnd commit BLOCKED by pre-commit - staged changes remain" -ErrorAction SilentlyContinue
+        git commit -m "session: $today" --author="Claude <claude@local>" | Out-Null
+        # pre-commit 차단(frontmatter/secret)으로 커밋 실패 시 스테이지 잔존 → 무성 좌초 가시화.
+        git diff --cached --quiet
+        if ($LASTEXITCODE -ne 0) {
+            Add-Content -Path (Join-Path $vault '3_시스템\_index\hooks.log') -Value "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') SessionEnd commit BLOCKED by pre-commit - staged changes remain" -ErrorAction SilentlyContinue
+        }
     }
-}
 
-# 2. 1_수집(사용자 저작물) 별도 커밋 — author 분리
-git add 1_수집
-git diff --cached --quiet
-if ($LASTEXITCODE -ne 0) { git commit -m "user: $today" --author="User <user@local>" | Out-Null }
+    # 2. 1_수집(사용자 저작물) 별도 커밋 — author 분리
+    git add 1_수집
+    git diff --cached --quiet
+    if ($LASTEXITCODE -ne 0) { git commit -m "user: $today" --author="User <user@local>" | Out-Null }
+}
 
 # 3. push (원격 있고 개인화 완료 시만, 실패 무시)
 #    C5: 미치환 슬롯({{...}})이 남았으면 = 개인화 전 → push 스킵.

@@ -208,6 +208,15 @@ def ops_rows():
             rows.append(("운영", "민감 노트", f"{n}건이 git 추적 중 — 자동 push 로 원격에 간다 · .gitignore 에 넣고 추적 해제"))
     except (OSError, subprocess.SubprocessError):
         pass
+    # 안 보낸 커밋에 민감 노트 — pre-push 가 막으면 자동 push(세션 시작·끝)가 조용히 멈춘다(11-15 · 막힌 push 는 훅 밖에서 안 보임)
+    try:
+        r = subprocess.run([sys.executable, os.path.join(VAULT, "3_시스템", "hooks", "pre-push-scan.py"), "--check"],
+                           cwd=VAULT, capture_output=True, timeout=20)
+        hits = json.loads(r.stdout.decode("utf-8", "replace") or "{}").get("hits") or []
+        if hits:
+            rows.append(("운영", "push 막힘", f"안 보낸 커밋에 민감 노트 {len(hits)}건({hits[0][1]}) — pre-push 가 막아 자동 push 가 멈춤 · Claude 에게 «push 막힘»"))
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
     # Stop 훅이 커밋 뒤 스테이지가 남으면 적는 줄 — 세션 시작에 안 보여 쌓이기만 했다(07-30~11-03 157줄)
     # 막힌 뒤 자동 커밋(claude@local·user@local)이 한 번이라도 됐으면 풀린 것 — 그 앞 줄은 세지 않는다.
     # 11-12 잼: 24시간 안 5회 중 4회는 전날 밤 고친 진짜 막힘(옵시디언 CSS 사본 비밀값 오탐 · 23:05 고침), 1회는 Stop 훅 둘이
