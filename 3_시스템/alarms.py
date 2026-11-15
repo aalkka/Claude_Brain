@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import threading
+import urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -39,7 +40,6 @@ PENDING = '(판정 대기)'
 MAX_ITEMS = 400                         # 안드로이드는 앱당 알람 500개에서 예외를 낸다
 EVENT_DAYS = 7                          # 폰이 이만큼 못 당기면 사건은 사라진다
 NOTICE_DAYS = 7                         # 게시일이 이보다 오래된 공지는 새 공지로 안 친다(새 출처 첫 수집이 몰아 울리지 않게)
-NOTICE_BUNDLE = 3                       # 한 번에 이보다 많으면 «새 공지 N건» 하나로
 PROBE_AT = dt.time(3, 17)               # 재기: 폰이 깊이 잠들어 있을 때
 PROBE_NIGHTS = 3                        # 며칠 PC 가 잠들어도 이어지게
 WD = '월화수목금토일'
@@ -50,6 +50,8 @@ RING = re.compile(r'^(?:(당일)|(\d{1,3})일 전) ([01]?\d|2[0-3]):([0-5]\d)$|^
 KEY = re.compile(r'^[A-Za-z0-9-]{1,64}(?:@(\d{4}-\d{2}-\d{2}))?$')     # «열쇠@날짜» = 그 회차만(캘린더가 넘김을 풀거나 회차를 따로 정할 때)
 REP_SERIES = re.compile(r'^(rep-[0-9a-f]{8})-\d{8}$')    # 반복 회차 id → 그 반복 전체(schedule.py repeat · 캘린더 repeat.ts)
 OPEN = 'obsidian://brain-calendar?date={date}&key={key}'
+OPEN_HOME = 'obsidian://brain-server'   # 폰 brain-server 0.7.6~ — file 을 주면 그 노트(폰에 없으면 PC 에서 받음) · 없으면 홈
+VAULT = os.path.dirname(HERE)
 STATE = os.path.join(HERE, '_index', 'alarms')
 FIRED = os.path.join(STATE, 'fired.jsonl')
 SEEN = os.path.join(STATE, 'seen.json')
@@ -411,6 +413,11 @@ def where(ln):
     return {'date': ln['date'], 'key': ln['key'], 'open': OPEN.format(date=ln['date'], key=ln['key'])}
 
 
+def open_note(path):
+    """알림 누름이 갈 노트 — 볼트 경로(«1_수집/…/글.md»)를 폰 brain-server 주소로."""
+    return f"{OPEN_HOME}?file={urllib.parse.quote(path, safe='')}"
+
+
 def blocked_lines(path=None):
     """수집-대기열에서 사용자 손이 필요한 열린 줄 [(시각, 무엇)]."""
     path = path or QUEUE
@@ -435,7 +442,7 @@ def heading(path):
 
 
 def new_notices():
-    """판정을 통과해 볼트에 든 공지 글(판정 층이 있는 조리법의 폴더) [(파일 이름, 제목, 게시일)]."""
+    """판정을 통과해 볼트에 든 공지 글(판정 층이 있는 조리법의 폴더) [(파일 이름, 제목, 게시일, 볼트 경로)]."""
     import roles
     out = []
     for p in glob.glob(os.path.join(HERE, 'collect', '*.json')):
@@ -451,7 +458,7 @@ def new_notices():
                     title = name[11:]
                     if '_' in title or len(title) >= 120:       # 파일 이름은 «/ : * ? …» 를 «_» 로 바꾸고 120자에서 자른다 — 원제는 글의 머리줄에(제목이 다르면 일정 줄과 «새 공지 ↔ 늦게 앎» 짝이 빗나간다)
                         title = heading(a) or title
-                    out.append((name, title, name[:10]))
+                    out.append((name, title, name[:10], os.path.relpath(a, VAULT).replace(os.sep, '/')))
         except (OSError, ValueError, KeyError):
             continue
     return out
@@ -472,19 +479,17 @@ def refresh(st, lines, now, s, problems, queue, notices):
         if ln['due'] > now:
             cur.setdefault(ln['key'], []).append(ln['date'])
 
-    def add(kind, mark, title, text, due, wanted=True, ln=None):
+    def add(kind, mark, title, text, due, wanted=True, ln=None, to=None):
         if not first and mark not in known and wanted:
-            events.append({'id': f'ev-{kind}-{hashlib.sha1(mark.encode("utf-8")).hexdigest()[:12]}', 'at': ms(awake(now, due, s)), 'title': title, 'text': text, 'made': now_ms, **(where(ln) if ln else {})})
+            events.append({'id': f'ev-{kind}-{hashlib.sha1(mark.encode("utf-8")).hexdigest()[:12]}', 'at': ms(awake(now, due, s)), 'title': title, 'text': text, 'made': now_ms, **(where(ln) if ln else {'open': to} if to else {})})
         known.add(mark)
 
     # 공지 먼저 — 같은 글의 마감 줄이 함께 처음 보이면 공지 한 번만 울린다. 이름으로 표시해 파일을 옮겨도 다시 안 울린다.
+    # 공지마다 한 줄(사용자 11-15 «알림을 누르면 해당 문서로» · 묶음 대신 낱개 고름) — 폰은 한 알림에 «k / n»·넘김으로 하나씩 보인다
     since = (now.date() - dt.timedelta(days=NOTICE_DAYS)).isoformat()
     fresh = [n for n in notices if f'n|{n[0]}' not in known and n[2] >= since] if on['새_공지'] and not first else []
-    if len(fresh) > NOTICE_BUNDLE:
-        add('notice', 'n|묶음|' + '|'.join(sorted(n[0] for n in fresh)), f'새 공지 {len(fresh)}건', fresh[0][1], far)
-    else:
-        for name, title, _ in fresh:
-            add('notice', f'n|{name}', title, '새 공지', far)
+    for n in fresh:
+        add('notice', f'n|{n[0]}', n[1], '새 공지', far, to=open_note(n[3]) if len(n) > 3 else None)
     known.update(f'n|{n[0]}' for n in notices)
     fresh_titles = [re.sub(r'^\[[^\]]*\]\s*', '', n[1])[:50] for n in fresh]
 
@@ -503,12 +508,12 @@ def refresh(st, lines, now, s, problems, queue, notices):
             known.add(mark)
     said = set()                        # 출처 여럿이 같은 까닭(구독 아님·사용량 경고 등)을 대기열에 적어도 같은 말은 한 번만 — 폰에 같은 알림이 줄줄이 뜨지 않게
     for stamp, what in queue:
-        add('blocked', f'q|{stamp}|{what}', '수집 막힘', what, far, on['막힘'] and what not in said)
+        add('blocked', f'q|{stamp}|{what}', '수집 막힘', what, far, on['막힘'] and what not in said, to=OPEN_HOME)     # 대기열 파일은 폰에 안 줌(3_시스템) — 홈 «수집»이 막힌 출처를 빨갛게 보인다
         said.add(what)
     # 설정이 틀리면 첫 실행이어도 알린다(틀린 채 설치되는 경우)
     if problems and not any(e['id'] == cfg_id for e in events) and f'c|{cfg_id}' not in known:
         extra = f' 외 {len(problems) - 1}칸' if len(problems) > 1 else ''
-        events.append({'id': cfg_id, 'at': ms(awake(now, far, s)), 'title': '알림 설정 틀림', 'text': f'{problems[0][:80]}{extra} · 그 칸만 기본값으로 울림', 'made': now_ms})
+        events.append({'id': cfg_id, 'at': ms(awake(now, far, s)), 'title': '알림 설정 틀림', 'text': f'{problems[0][:80]}{extra} · 그 칸만 기본값으로 울림', 'made': now_ms, 'open': open_note(os.path.relpath(SETTINGS, VAULT).replace(os.sep, '/'))})
     if problems:
         known.add(f'c|{cfg_id}')
     today = now.date().isoformat()

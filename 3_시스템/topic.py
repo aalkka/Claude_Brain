@@ -10,7 +10,7 @@ Claude 셸이 같은 엔진을 쓰도록 여기 한 곳에서 만든다(자리�
   py -3 3_시스템/topic.py card <주제> --json           → 패널용 JSON(카드 글은 "card" 칸)
   행위: brain.py run topic.card topic=<주제>
 
-읽기만 한다(LLM 0 · 쓰는 파일 없음).
+읽기만 한다(LLM 0 · 쓰는 파일 없음). 할 일의 치움·고정은 패널이 `_index/topic-todo.json` 에 쓰고 여기선 읽는다.
 """
 import json
 import os
@@ -36,6 +36,7 @@ STUB_META = re.compile(r"^기간 (\S+) (\S+?)~(\S+).*?최대컨텍스트 ([\d,]+
 SKIP_DIRS = {".git", ".obsidian", ".trash", "node_modules", "__pycache__"}
 N = {"deadlines": 3, "work": 8, "notes": 12, "records": 5, "chats": 5, "recent": 10, "status": 12, "todos": 12, "ops": 5}
 TODO = re.compile(r"^\s*- \[ \] (.+?)\s*$")
+POOL = 100   # 할 일 후보 상한 — 고정 줄을 앞으로 올리고 패널 «비우기»가 보이는 12줄 너머까지 치우도록 넉넉히
 
 
 def rel(p):
@@ -189,9 +190,10 @@ def clean_line(text):
     return clean, src.group(1) if src else ""
 
 
-def status(t, today, back=30, now=None):
+def status(t, today, back=30, now=None, limit=None):
     """마감·제출 현황(설계안 §19.4) — 이 주제 일정 줄을 지난 back 일부터 · 체크 = 냄(LMS 마감은 «내 제출»으로 [x]) ·
-    지났는데(날짜 · 오늘이면 시각까지) 체크 없으면 «놓침» · 아직이면 «남음»."""
+    지났는데(날짜 · 오늘이면 시각까지) 체크 없으면 «놓침» · 아직이면 «남음».
+    limit = 돌려줄 줄 수(기본 N["status"] · work.py 의 «아직 하는 중» 검사는 앞으로 줄을 모두 본다)."""
     d = roles.abs("schedule")
     want = {n.lower() for n in names(t)}
     rows = []
@@ -216,12 +218,30 @@ def status(t, today, back=30, now=None):
                              "state": "냄" if done else ("놓침" if passed(dd, m.group(3), m.group(4), now) else "남음"), "file": rel(os.path.join(d, fn)), "line": i, "src": src})
     rows.sort(key=lambda r: (r["date"], r["time"].zfill(5)))
     # 지난 것은 가까운 것만 · 앞으로 것은 모두(위 N 안에서)
-    past = [r for r in rows if r["days"] < 0][-N["status"] // 2:]
-    return past + [r for r in rows if r["days"] >= 0][:N["status"] - len(past)]
+    n = limit or N["status"]
+    past = [r for r in rows if r["days"] < 0][-n // 2:]
+    return past + [r for r in rows if r["days"] >= 0][:n - len(past)]
 
 
-def todos(t, dirs, notes_list):
-    """할 일(설계안 §19.4) — open-loops 의 열린 줄 가운데 이 주제 이름·별칭이 든 것 + 이 주제 작업·노트(최근 바뀐 것부터)의 «- [ ]» 줄."""
+def todo_state(t):
+    """주제 패널 «할 일»에서 치운 줄·고정한 줄(brain-base topic.ts 가 `_index/topic-todo.json` 에 씀 · 11-15 초안 B).
+    열쇠 = (파일, 글) — 줄 번호는 밀리므로 안 씀. 원문 줄은 그대로라 글이 바뀌거나 새로 생긴 줄은 다시 뜬다.
+    → (치운 열쇠 집합, 고정 열쇠 집합, 치운 수)"""
+    try:
+        with open(os.path.join(roles.abs("system"), "_index", "topic-todo.json"), encoding="utf-8") as fh:
+            d = json.load(fh).get(t["이름"]) or {}
+        hide, pin = d.get("hide") or [], d.get("pin") or []
+        key = lambda xs: {(x.get("f"), x.get("t")) for x in xs if isinstance(x, dict)}
+        return key(hide), key(pin), len(hide)
+    except (KeyError, OSError, ValueError, AttributeError, TypeError):   # 파일 없음·깨짐·역할 표 없음 = 치운 것 없음
+        return set(), set(), 0
+
+
+def todos(t, dirs, notes_list, limit=None):
+    """할 일(설계안 §19.4) — open-loops 의 열린 줄 가운데 이 주제 이름·별칭이 든 것 + 이 주제 작업·노트(최근 바뀐 것부터)의 «- [ ]» 줄.
+    치운 줄은 상한 앞에서 거르고(새 줄이 상한 밖에 묻히지 않게) 고정한 줄은 앞으로. limit = 몇 줄까지(기본 N["todos"] · 패널은 비우기 후보 전부)."""
+    limit = limit or N["todos"]
+    hide, pin, _ = todo_state(t)
     want = [n.lower() for n in names(t) if len(n) >= 2]
     out = []
 
@@ -233,8 +253,10 @@ def todos(t, dirs, notes_list):
         for i, ln in enumerate(lines, 1):
             m = TODO.match(ln)
             if m and pick(m.group(1)):
-                out.append({"text": " ".join(re.sub(r"\[\[(?:[^\]|]*\|)?([^\]]*)\]\]", r"\1", m.group(1)).split())[:200], "file": rel(a), "line": i})
-            if len(out) >= N["todos"]:
+                text = " ".join(re.sub(r"\[\[(?:[^\]|]*\|)?([^\]]*)\]\]", r"\1", m.group(1)).split())[:200]
+                if (rel(a), text) not in hide:
+                    out.append({"text": text, "file": rel(a), "line": i, **({"pin": True} if (rel(a), text) in pin else {})})
+            if len(out) >= POOL:
                 return
 
     try:
@@ -247,10 +269,10 @@ def todos(t, dirs, notes_list):
              for f in walk_files(os.path.join(roles.VAULT, *p.split("/"))) if f.endswith(".md")]
     files += [os.path.join(roles.VAULT, *n["path"].split("/")) for n in notes_list if n["path"].endswith(".md")]
     for f in sorted(set(files), key=lambda f: -os.path.getmtime(f))[:40]:
-        if len(out) >= N["todos"]:
+        if len(out) >= POOL:
             break
         scan(f, lambda x: True)
-    return out[:N["todos"]]
+    return sorted(out, key=lambda x: not x.get("pin"))[:limit]
 
 
 def ledger(dirs):
@@ -434,7 +456,9 @@ def build(name):
          "deadlines": deadlines(t, today), "work": work(dirs), "sources": sources(dirs),
          "notes": nl, "notes_total": n_notes, "records": records(t), "chats": chats(t, dirs, mods),
          "recent": recent(dirs, mods), "today": today.isoformat(),
-         "status": status(t, today), "todos": todos(t, dirs, nl), "ops": ledger(dirs)}
+         "status": status(t, today), "todos_hidden": todo_state(t)[2], "ops": ledger(dirs)}
+    td = todos(t, dirs, nl, POOL)
+    c["todos"], c["todos_rest"] = td[:N["todos"]], td[N["todos"]:]   # rest = 안 보이는 후보(패널 «비우기»가 함께 치움 · 옛 패널은 모름)
     c["card"] = card_text(c)
     return c
 

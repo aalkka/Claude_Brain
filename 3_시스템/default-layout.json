@@ -69,7 +69,6 @@
  "ribbonHidden": {
   "brain-base": false,
   "brain-calendar": false,
-  "claude-vault-view": false,
   "graph": false,
   "switcher": false,
   "templates": true,

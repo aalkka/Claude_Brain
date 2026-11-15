@@ -29,7 +29,7 @@
 .bc-ev.is-soon { color: var(--text-error); font-weight: var(--font-medium); }
 .bc-ev.is-done { color: var(--text-faint); text-decoration: line-through; background: transparent; }
 .bc-ev.bc-more { background: transparent; color: var(--text-faint); }
-@container (max-width: 760px) { .bc-day { min-height: 54px; } .bc-ev { display: none; } .bc-day:has(.bc-ev)::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--text-muted); margin: 2px auto 0; } .bc-day:has(.bc-ev.is-soon)::after { background: var(--text-error); } }
+@container (max-width: 760px) { .bc-day { min-height: 54px; } .bc-ev { display: none; } .bc-day:has(.bc-ev)::after { content: ""; width: 16px; height: 3px; border-radius: 2px; background: var(--text-muted); margin: 3px 0 0 4px; } .bc-day:has(.bc-ev):not(:has(.bc-ev:not(.is-done)))::after { background: var(--text-faint); } .bc-day:has(.bc-ev.is-soon)::after { background: var(--text-error); } } /* 0.8 숫자 밑 짧은 막대(2차 B · 숫자 왼쪽 선) */
 
 /* 묶음(세부 · 간략 공통) */
 .bc-side { display: flex; flex-direction: column; gap: 26px; min-width: 0; }
@@ -189,3 +189,22 @@ body.bc-dragging, body.bc-dragging * { user-select: none; cursor: grabbing !impo
 .bc-al-row .bc-al-ic { padding: 3px; margin-right: 0; color: var(--text-faint); }
 .bc-al-row.is-off .bc-al-n, .bc-al-row.is-off select, .bc-al-row.is-off .bc-al-t, .bc-al-row.is-off .bc-al-when { opacity: 0.5; }
 .bc-al-row.is-off .bc-al-when { text-decoration: line-through; }
+
+/* 0.8 세부 줄(사용자 11-15 2차 B «두 단 줄 · 출처 이름») — 넓은 칸 = 한 줄 그대로(.bc-meta 풀림 · 순서로 시각 → 글 → 반복 → 단추) ·
+   좁은 칸(폰) = 위 단 시각·반복·출처·단추 / 아래 단 글 전체 폭 · 시각 없는 줄도 위 단이 출처로 차서 빈 줄이 없다 */
+.bc-meta { display: contents; }
+.bc-row.is-item .bc-time { order: 1; }
+.bc-row.is-item .bc-text { order: 2; }
+.bc-row.is-item .bc-rep-ic { order: 3; }
+.bc-row.is-item .bc-btn { order: 4; }
+.bc-from, .bc-meta-sp { display: none; }
+@container (max-width: 760px) {
+  .bc-row.is-item { display: grid; grid-template-columns: 14px auto minmax(0, 1fr); column-gap: 8px; row-gap: 2px; align-items: center; padding: 6px; }
+  .bc-row.is-item .bc-meta { grid-column: 3; display: flex; align-items: center; gap: 6px; min-height: 22px; min-width: 0; }
+  .bc-row.is-item .bc-meta > * { order: 0; }
+  .bc-row.is-item .bc-time { width: auto; white-space: nowrap; }
+  .bc-row.is-item .bc-text { grid-column: 3; min-width: 0; }
+  .bc-row.is-item .bc-row-edit { grid-column: 3; }
+  .bc-from { display: block; min-width: 0; font-size: var(--font-ui-smaller); color: var(--text-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bc-meta-sp { display: block; flex: 1; }
+}

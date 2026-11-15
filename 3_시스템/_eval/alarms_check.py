@@ -200,6 +200,7 @@ class Wrong(unittest.TestCase):
         first = alarms.build({'probe': False}, now=NOW, rows=[], st=st, queue=[], settings=s, notices=[])['items']
         self.assertEqual(first[0]['title'], '알림 설정 틀림')
         self.assertIn('기본.시각', first[0]['text'])
+        self.assertEqual(first[0]['open'], alarms.open_note('2_지식/일/외부뇌/알림-설정.md'))     # 누름 = 알림 설정 노트
         again = alarms.build({'probe': False}, now=later(hours=1), rows=[], st=st, queue=[], settings=s, notices=[])['items']
         self.assertEqual(again[0]['id'], first[0]['id'])
 
@@ -346,14 +347,22 @@ class RightAway(unittest.TestCase):
         pull(st)
         self.assertEqual(self.events(pull(st, notices=[('2026-09-01 글', '글', '2026-09-01')], now=later(hours=1))), [])
 
-    def test_many_at_once_become_one_ring(self):
+    def test_many_at_once_ring_one_by_one_each_opening_its_note(self):
+        # 사용자 11-15 «알림을 누르면 해당 문서로» · 묶음 대신 낱개 — 폰은 한 알림에 «k / n»으로 보인다
         st = {}
         pull(st)
-        many = [(f'2026-11-05 글{i}', f'글{i}', '2026-11-05') for i in range(5)]
+        many = [(f'2026-11-05 글{i}', f'글{i}', '2026-11-05', f'1_수집/공지/2026-11-05 글{i}.md') for i in range(5)]
         got = self.events(pull(st, notices=many, now=later(hours=1)))
-        self.assertEqual(len(got), 1)
-        self.assertEqual(got[0]['title'], '새 공지 5건')
-        self.assertEqual(len(self.events(pull(st, notices=many, now=later(hours=2)))), 1)
+        self.assertEqual(sorted(a['title'] for a in got), [f'글{i}' for i in range(5)])
+        self.assertEqual(next(a for a in got if a['title'] == '글0')['open'],'obsidian://brain-server?file=1_%EC%88%98%EC%A7%91%2F%EA%B3%B5%EC%A7%80%2F2026-11-05%20%EA%B8%800.md')
+        self.assertTrue(all('key' not in a and 'date' not in a for a in got))     # 폰 앱이 일정 줄로 짚지 않고 이 주소를 그대로 연다
+        self.assertEqual(len(self.events(pull(st, notices=many, now=later(hours=2)))), 5)
+
+    def test_blocked_opens_the_phone_home(self):
+        st = {}
+        pull(st)
+        got = self.events(pull(st, queue=[('2026-11-05 13:00:00', '로그인 끊김')], now=later(hours=1)))
+        self.assertEqual([(a['title'], a['open']) for a in got], [('수집 막힘', 'obsidian://brain-server')])
 
     def test_moved_file_does_not_ring_again(self):
         st = {}

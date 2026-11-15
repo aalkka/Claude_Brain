@@ -10,8 +10,9 @@
 
   py -3 3_시스템/hooks/stop-check.py            (Stop 훅 · stdin = 훅 입력)
   py -3 stop-check.py --check-only --vault <V>   (재기·대조용 — git·가드·받은함 쓰기 없음 · 판정과 걸린 시간만)
-  py -3 stop-check.py --commit-only [--vault <V>] (서버 — 마지막 커밋이 24시간 넘으면 «외부뇌 서버»가 부른다 · 11-12 사용자 안 A)
-      검사·가드·받은함 없이 아래 autocommit 만 · index.lock 이 있으면 건너뜀 · push 없음 · pre-commit(비밀값·프론트매터) 그대로
+  py -3 stop-check.py --commit-only [--vault <V>] [--tag <장부 머리>]
+      (서버 — 마지막 커밋이 24시간 넘으면 «외부뇌 서버»가 부른다 · 11-12 사용자 안 A · 세션 끝 훅 = --tag SessionEnd · 11-15)
+      검사·가드·받은함 없이 아래 autocommit 만(자동 커밋 잠금을 잡음) · index.lock 이 있으면 건너뜀 · push 없음 · pre-commit(비밀값·프론트매터) 그대로
       stdout = {"result": "없음|커밋|막힘|잠금|add 실패"} 한 줄
 
 v2(11-06 perf-system-2 · 치명 경우 대조 뒤):
@@ -124,11 +125,15 @@ def why(msg):
     return pick[0][:160] if pick else ""
 
 
+BUSY = object()  # 잠금을 wait 초 안에 못 잡음 — 이번 커밋은 건너뛴다
+
+
 def one_at_a_time(vault, wait=30):
-    """자동 커밋을 프로세스끼리 하나씩 — 세션 여럿의 Stop 훅·서버가 같은 순간 add·commit 을 섞지 않게
+    """자동 커밋을 프로세스끼리 하나씩 — 세션 여럿의 Stop 훅·서버·세션 끝 훅이 같은 순간 add·commit 을 섞지 않게
     (섞이면 한쪽 add 가 잠금에 막히고, «user:» 커밋에 다른 세션의 볼트 파일이 든다 · 10-15~11-12 20건 넘음).
     msvcrt 바이트 잠금이라 프로세스가 죽으면 OS 가 푼다 — 죽은 잠금이 남지 않는다.
-    못 잡으면 wait 초까지 기다리고, 그래도 못 잡거나 잠글 수 없는 곳이면 None(= 지금처럼 그냥 한다)."""
+    못 잡으면 wait 초까지 기다리고, 그래도 못 잡으면 BUSY(= 이번엔 커밋하지 않는다) · 잠글 수 없는 곳이면 None(= 그냥 한다).
+    11-15: 예전엔 BUSY 에서도 그냥 했다 — 잠금 없이 add -A 를 하면 도는 커밋의 pre-commit 이 민감 노트를 내린 뒤 틈에 다시 올린다(격리 재현)."""
     try:
         import msvcrt
         f = open(os.path.join(vault, "3_시스템", "_index", ".autocommit.lock"), "a+b")
@@ -143,7 +148,7 @@ def one_at_a_time(vault, wait=30):
         except OSError:
             if time.time() - t0 > wait:
                 f.close()
-                return None
+                return BUSY
             time.sleep(0.2)
 
 
@@ -154,6 +159,9 @@ def autocommit(vault, hlog, tag="Stop"):
     if rc == 0 and not out.strip():
         return "없음"
     mx = one_at_a_time(vault)
+    if mx is BUSY:                                 # 다음 턴·서버·세션 끝이 담는다(바뀐 것은 그대로 남음)
+        log(hlog, tag + " 자동 커밋 잠금을 못 잡음 — 이번 커밋 건너뜀(다음 커밋이 담음)")
+        return "잠금"
     try:
         return _autocommit(vault, hlog, tag)
     finally:
@@ -270,9 +278,10 @@ def main():
         sys.stdout.reconfigure(encoding="utf-8", newline="")
     except Exception:
         pass
-    if "--commit-only" in sys.argv:                # 서버(11-12) — 검사·가드·받은함 없이 커밋만 · 잠금이 있으면 건너뜀(커밋이 도는 중)
+    if "--commit-only" in sys.argv:                # 서버(11-12)·세션 끝 훅(11-15) — 검사·가드·받은함 없이 커밋만 · 잠금이 있으면 건너뜀(커밋이 도는 중)
         hlog = os.path.join(vault, "3_시스템", "_index", "hooks.log")
-        res = "잠금" if os.path.exists(os.path.join(vault, ".git", "index.lock")) else autocommit(vault, hlog, "서버")
+        tag = sys.argv[sys.argv.index("--tag") + 1] if "--tag" in sys.argv else "서버"
+        res = "잠금" if os.path.exists(os.path.join(vault, ".git", "index.lock")) else autocommit(vault, hlog, tag)
         sys.stdout.write(json.dumps({"result": res}, ensure_ascii=False))
         return 0
     inp = {}

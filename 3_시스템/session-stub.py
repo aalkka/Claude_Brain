@@ -334,6 +334,24 @@ def _titles_save(outdir, cache):
             pass
 
 
+# 볼트클로드 대화창(brain-base chat.ts send)이 요청 앞에 붙이는 접두: 블록들을 "\n" 으로 잇고 요청과는
+# "\n\n" 로 가른다. ev 의 발화는 줄바꿈이 공백으로 바뀌어 있으므로(위 ev.append) 경계 = 첫 공백 두 칸.
+# 라벨은 chat.ts·context.ts·past.ts PRE 와 같다. 접두만 있으면(400자 절단 포함) 경계가 없어 «빈 본문».
+_CHAT_PRE = re.compile(r"^\[(맥락 — |일 모드로 바뀜|묻기 모드로 바뀜|사용자가 대화창에서 되돌림|지난 대화 색인|주제 카드 — |튜토리얼 |고른 그림|고른 상자의 글자)")
+_CHAT_MODE = re.compile(r"^일 모드로 전환했습니다\. 아까 부탁을 이어서 해 주세요(?: — )?")
+
+
+def _utter_body(u):
+    """제목용 발화 본문: 대화창 접두를 걷고 요청만 남긴다(없으면 ""). 타임라인 원문에는 쓰지 않는다."""
+    u = u.strip()
+    while _CHAT_PRE.match(u):
+        i = u.find("  ")
+        if i < 0:
+            return ""
+        u = u[i:].strip()
+    return _CHAT_MODE.sub("", u, count=1).strip()
+
+
 def session_title(tdir, sh, st, names=None, cache=None):
     """알림에 붙일 세션 제목. id 만으로는 기록할지 고를 수 없다(사용자 2026-10-03).
 
@@ -356,7 +374,11 @@ def session_title(tdir, sh, st, names=None, cache=None):
     except Exception:
         t = ""
     if not t:
-        t = next((e[2] for e in st.get("ev", []) if e[1] == "발화"), "")
+        for e in st.get("ev", []):
+            if e[1] == "발화":
+                t = _utter_body(e[2])
+                if t:
+                    break
     t = re.sub(r"[\s«»]+", " ", t).strip()
     return (t[:40] + "…") if len(t) > 40 else t
 

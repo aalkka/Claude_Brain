@@ -1,5 +1,5 @@
 #!/bin/sh
-# 외부뇌 pre-commit: secret 차단 + sensitive unstage + frontmatter lint(경고)
+# 외부뇌 pre-commit: secret 차단 + sensitive unstage·exclude + frontmatter lint(경고)
 # 스펙: 제작가이드 §15-1
 
 fail=0
@@ -17,16 +17,31 @@ staged=$(git -c core.quotepath=false diff --cached --name-only --diff-filter=ACM
 
 # 스테이지에서 내린다. 다른 세션의 git 이 index.lock 을 쥐면 실패하므로 몇 번 더 하고, 끝내 못 내리면 1(커밋을 막는다).
 # 실패를 안 봐서 민감 노트가 커밋에 들었다(11-05 격리 재현 · 볼트는 세션 여럿이 턴마다 git add -A).
+# 경로는 글자 그대로(--literal-pathspecs) — 아니면 «[2026-2] 세미나.md» 의 [..] 가 글자 묶음이 되어 «2 세미나.md» 까지 내린다(11-15).
 unstage() {
 	for _try in 1 2 3 4 5; do
 		if git rev-parse --verify HEAD >/dev/null 2>&1; then
-			git reset -q HEAD -- "$1" 2>/dev/null && return 0
+			git --literal-pathspecs reset -q HEAD -- "$1" 2>/dev/null && return 0
 		else
-			git rm --cached -q -- "$1" 2>/dev/null && return 0
+			git --literal-pathspecs rm --cached -q -- "$1" 2>/dev/null && return 0
 		fi
 		sleep 1
 	done
 	return 1
+}
+
+# 민감 노트를 내리기 전에 .git/info/exclude 에 적는다(파이썬 판 exclude_sync 와 같은 두 줄 — 지우기는 파이썬 판만).
+# 내리기만으로는 마지막 확인 뒤 틈에 다른 세션의 add -A 가 다시 올려 샜다(11-15 격리 재현 134회 중 24 · 적으면 0/149).
+EX_MARK='# 외부뇌 민감 노트(pre-commit) — 노트에서 sensitive: true 를 빼거나 지우면 다음 커밋 때 이 두 줄이 지워진다'
+exclude_add() {
+	ex=$(git rev-parse --git-path info/exclude 2>/dev/null) || return 0
+	p="/$(printf '%s' "$1" | sed 's/[[*?\\]/\\&/g')"
+	grep -qxF -- "$p" "$ex" 2>/dev/null && return 0
+	mkdir -p "$(dirname "$ex")" 2>/dev/null
+	printf '%s\n%s\n' "$EX_MARK" "$p" >> "$ex"
+}
+hlog() {
+	printf '%s pre-commit %s\r\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$1" >> 3_시스템/_index/hooks.log 2>/dev/null
 }
 
 IFS='
@@ -48,8 +63,10 @@ for f in $staged; do
 		# 3. sensitive:true → unstage (push 제외)
 		#    frontmatter 필드만: 값 뒤 줄끝 앵커로 문서 산문("sensitive: true 시…") 오탐 제외
 		if git show ":$f" | grep -Eq '^sensitive:[[:space:]]*true[[:space:]]*$'; then
+			exclude_add "$f"
 			if unstage "$f"; then
 				echo "⚠ sensitive 노트 unstage: $f (push 제외)"
+				hlog "민감 노트 내림·제외: $f"
 			else
 				echo "❌ sensitive 노트를 못 내림(잠금?): $f (커밋 차단)"
 				fail=1
