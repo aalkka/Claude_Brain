@@ -5,9 +5,13 @@
   400파일 커밋이 3.5~7.6분 — 훅 시간 제한에 닿을 수 있다. 여기서는 커밋마다 git 4번(+ 내릴 민감 노트마다 1번).
 판정은 sh 판 그대로: 비밀 의심 = 막음 · sensitive: true = 스테이지에서 내림(못 내리면 막음) ·
   2_지식 = 앞머리 없음·links 따옴표 없음 막음 · 1_수집 = 앞머리 없음 경고 · 마지막에 민감 노트가 다시 올라왔으면 막음.
-민감 노트는 내리기 전에 `.git/info/exclude` 에 적는다(11-15) — 내리기만으로는 마지막 확인 뒤 ~ 커밋이 스테이지를 다시 읽기 전 틈에
+민감 노트는 내리기 전에 무시 목록에 적는다(11-15) — 내리기만으로는 마지막 확인 뒤 ~ 커밋이 스테이지를 다시 읽기 전 틈에
   다른 세션의 `git add -A` 가 다시 올려 샜다(격리 재현 134회 중 24 · 적으면 149회 중 0). 적은 뒤로는 `add -A` 가 아예 올리지 않는다.
-  이 대본이 적은 줄(EX_MARK 다음 줄)만 다루고, 노트가 없어졌거나 더는 민감이 아니면 다음 커밋 때 지운다 · 내림·제외·풀림은 hooks.log 에 한 줄.
+  자리: 맨 위 폴더의 `.gitignore`(예 `0_작업/.gitignore`)가 스스로 무시되고 추적되지 않으면 거기, 아니면 `.git/info/exclude`.
+  왜 둘인가: 저장소 `.gitignore` 의 되살림(`!0_작업/**/*.md`)이 info/exclude 보다 앞서 info/exclude 줄이 안 먹는다(11-15 볼트 실측 —
+  12:55 판이 0_작업 민감 노트를 커밋마다 다시 내림). 아래 폴더 .gitignore 는 위를 이기고, 스스로 무시되는 자리라 이름이 원격·배포판에 안 간다.
+  이 대본이 적은 줄(EX_MARK 다음 줄)만 다루고, 노트가 없어졌거나 더는 민감이 아니면 다음 커밋 때 지운다 · 적은 뒤 정말 무시되는지 다시 잰다 ·
+  내림·제외·풀림·안 먹음은 hooks.log 에 한 줄.
 끝 코드: 0 = 통과 · 3 = 막음 · 그 밖(예외·파이썬 없음) = pre-commit 의 sh 검사가 처음부터 다시 한다.
 """
 import os
@@ -107,42 +111,105 @@ def still_sensitive(path):
         return False
 
 
+def read_lines(p):
+    try:
+        with open(p, encoding="utf-8") as f:
+            return f.read().splitlines()
+    except FileNotFoundError:
+        return []
+
+
+def split_managed(lines, base):
+    """(사람 줄, [경로]) — 이 대본이 적은 짝(EX_MARK + 줄)을 떼어 낸다 · base = 그 파일의 자리 앞머리('' = 뿌리 · '0_작업/')."""
+    keep, raws, i = [], [], 0
+    while i < len(lines):
+        if lines[i] == EX_MARK and i + 1 < len(lines):
+            r = ex_raw(lines[i + 1])
+            if r is not None:
+                raws.append(base + r)
+            i += 2
+            continue
+        keep.append(lines[i])
+        i += 1
+    return keep, raws
+
+
+def write_lines(p, lines):
+    """임시 파일 → 바꿔치기(반쯤 쓴 무시 목록을 git 이 읽지 않게)."""
+    os.makedirs(os.path.dirname(p) or ".", exist_ok=True)
+    tmp = "{}.tmp-{}".format(p, os.getpid())
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines) + "\n" if lines else "")
+    os.replace(tmp, p)
+
+
+def ignored(path):
+    """지금 무시되나 — 스테이지를 안 보고(--no-index) 무시 규칙만 잰다."""
+    return git("check-ignore", "--no-index", "-q", "--", path).returncode == 0
+
+
+def local_ignore(top, cache):
+    """맨 위 폴더 top 의 .gitignore 가 스스로 무시되고 추적되지 않으면 그 경로 · 아니면 None(거기 적으면 이름이 커밋된다)."""
+    if top not in cache:
+        p = top + "/.gitignore"
+        tracked = git("--literal-pathspecs", "ls-files", "--", p).stdout.strip()
+        cache[top] = p if ignored(p) and not tracked else None
+    return cache[top]
+
+
 def exclude_sync(add):
-    """민감 노트(add)를 `.git/info/exclude` 에 적고, 이 대본이 적은 줄 중 노트가 없어졌거나 더는 민감이 아닌 것은 지운다.
-    사람이 적은 줄은 그대로 · 쓰기는 임시 파일 → 바꿔치기(반쯤 쓴 exclude 를 git 이 읽지 않게)."""
+    """민감 노트(add)를 무시 목록에 적고, 이 대본이 적은 짝 중 노트가 없어졌거나 더는 민감이 아닌 것은 지운다.
+    자리 = 맨 위 폴더의 스스로 무시되는 .gitignore · 없으면 .git/info/exclude(머리말 «자리») — 예전 판이 info/exclude 에 적은 것도 옮긴다.
+    사람이 적은 줄은 그대로 · 이 대본 몫은 그 파일 맨 끝(같은 파일의 되살림 줄보다 뒤)."""
     r = git("rev-parse", "--git-path", "info/exclude")
     if r.returncode:
         return
     ep = r.stdout.strip().decode("utf-8")
-    try:
-        with open(ep, encoding="utf-8") as f:
-            lines = f.read().splitlines()
-    except FileNotFoundError:
-        lines = []
-    out, have, i = [], set(), 0
-    while i < len(lines):
-        if lines[i] == EX_MARK and i + 1 < len(lines):
-            raw = ex_raw(lines[i + 1])
-            if raw is not None and (raw in add or still_sensitive(raw)):
-                if raw not in have:
-                    out += lines[i:i + 2]
-                    have.add(raw)
-            else:
-                log("민감 노트 제외 풀림(없어졌거나 민감 아님): " + (raw or lines[i + 1]))
-            i += 2
+    # info/exclude 는 worktree 끼리 같이 쓴다 — 연결된 worktree(예: 배포판 worktree)에는 본 worktree 의 노트가 없어
+    # «없어짐»으로 보고 지웠다(11-15 실측: 배포판 커밋 한 번에 두 줄 풀림). 거기서는 info/exclude 줄을 지우거나 옮기지 않는다.
+    gd = git("rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir").stdout.decode("utf-8", "replace").split()
+    linked = len(gd) == 2 and os.path.normcase(gd[0]) != os.path.normcase(gd[1])
+    ep_have = set()
+    files = {ep: ""}
+    for d in sorted(os.listdir(".")):
+        if not d.startswith(".") and os.path.isfile(os.path.join(d, ".gitignore")):
+            files[d + "/.gitignore"] = d + "/"
+    state, raws = {}, []
+    for p, base in files.items():
+        lines = read_lines(p)
+        if p == ep and linked:  # 같이 쓰는 info/exclude 의 이 대본 몫은 그대로 둔다(사람 줄로 친다) · 더하기만 한다
+            state[p] = (lines, lines)
+            ep_have = set(split_managed(lines, "")[1])
             continue
-        out.append(lines[i])
-        i += 1
-    for p in add:
-        if p not in have:
-            out += [EX_MARK, ex_pat(p)]
-            have.add(p)
-    if out != lines:
-        os.makedirs(os.path.dirname(ep) or ".", exist_ok=True)
-        tmp = "{}.tmp-{}".format(ep, os.getpid())
-        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-            f.write("\n".join(out) + "\n")
-        os.replace(tmp, ep)
+        keep, rs = split_managed(lines, base)
+        if p == ep or rs:  # 이 대본 몫이 없는 폴더 .gitignore 는 건드리지 않는다
+            state[p] = (lines, keep)
+            raws += rs
+    want = []
+    for r_ in raws:
+        if r_ in add or still_sensitive(r_):
+            if r_ not in want:
+                want.append(r_)
+        else:
+            log("민감 노트 제외 풀림(없어졌거나 민감 아님): " + r_)
+    want += [a for a in add if a not in want]
+    cache, place = {}, {}
+    for r_ in want:
+        top = r_.split("/", 1)[0] if "/" in r_ else ""
+        dst = (local_ignore(top, cache) if top else None) or ep
+        if not (dst == ep and r_ in ep_have):  # 연결된 worktree: 이미 있는 줄은 다시 안 적음
+            place.setdefault(dst, []).append(r_)
+    for p in set(place) | set(state):
+        lines, keep = state.get(p) or (read_lines(p), read_lines(p))
+        base = "" if p == ep else p[:-len(".gitignore")]
+        out = list(keep)
+        for r_ in place.get(p, []):
+            out += [EX_MARK, ex_pat(r_[len(base):])]
+        if out != lines:
+            write_lines(p, out)
+    for a in add:
+        if not ignored(a):
+            log("민감 노트 제외가 안 먹음(되살림 규칙 등 · 내리기만 함): " + a)
 
 
 def exclude(add):

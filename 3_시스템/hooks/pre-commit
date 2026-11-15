@@ -30,8 +30,10 @@ unstage() {
 	return 1
 }
 
-# 민감 노트를 내리기 전에 .git/info/exclude 에 적는다(파이썬 판 exclude_sync 와 같은 두 줄 — 지우기는 파이썬 판만).
+# 민감 노트를 내리기 전에 .git/info/exclude 에 적는다(파이썬 판 exclude_sync 와 같은 두 줄 — 지우기·자리 옮기기는 파이썬 판만).
 # 내리기만으로는 마지막 확인 뒤 틈에 다른 세션의 add -A 가 다시 올려 샜다(11-15 격리 재현 134회 중 24 · 적으면 0/149).
+# sh 판은 info/exclude 에만 적는다 — 저장소 .gitignore 의 되살림(!0_작업/**/*.md)에 눌리는 자리는 파이썬 판이 다음 커밋 때
+# 맨 위 폴더의 .gitignore 로 옮긴다(그때까지는 내리기만 · pre-push 가 마지막 그물).
 EX_MARK='# 외부뇌 민감 노트(pre-commit) — 노트에서 sensitive: true 를 빼거나 지우면 다음 커밋 때 이 두 줄이 지워진다'
 exclude_add() {
 	ex=$(git rev-parse --git-path info/exclude 2>/dev/null) || return 0
