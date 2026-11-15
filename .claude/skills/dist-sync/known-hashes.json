@@ -800,13 +800,15 @@
 "6575695c9573": "40fdfb96f975df4d",
 "846bc2f8d04d": "193fee0f03d08dbe",
 "96295e67b3d9": "8a0a4657c4dc9872",
+"c143be3f0625": "9d7040955c6addb0",
 "c1713b5f876a": "935932c063789e7e",
 "e7835562f27b": "be0fb4ca38f60503",
 "f294b8fdc557": "212b016cc89e35e6"
 },
 "3_시스템/hooks/pre-commit-scan.py": {
 "73233cf2f15b": "d66c65439a0bead4",
-"a797c9423b2c": "19791e0eccc79d6a"
+"a797c9423b2c": "19791e0eccc79d6a",
+"d1f2e39d04cc": "820a56f233fc930c"
 },
 "3_시스템/hooks/pre-push": {
 "e2d8e7c9dddf": "026ea81103c67c00"
@@ -1230,6 +1232,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "04436a1b531e",
+"rev": "ac95ec7043ec",
 "schema": 1
 }
