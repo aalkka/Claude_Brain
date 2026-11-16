@@ -155,7 +155,8 @@
 "d84dafb8d9aa": "cefecc403de852f8"
 },
 ".claude/skills/dist-sync/ship.json": {
-"a7f96d3235c2": "c1433ed91c2765d5"
+"a7f96d3235c2": "c1433ed91c2765d5",
+"c1646afcc03b": "0c4efbe01204a384"
 },
 ".claude/skills/dist-sync/skills/outside/SKILL.md": {
 "2d4e37f082b6": "cd9d7038070e721c"
@@ -656,6 +657,9 @@
 },
 "3_시스템/_ref/incident-2026-11-15-폰앱-자기갱신-자동차단기가-조용히막음.md": {
 "bf88dcb6e8a0": "7f49312eef603bd9"
+},
+"3_시스템/_ref/incident-2026-11-16-배포판-잘못실림-자리면-기본싣기.md": {
+"004f839fce76": "d152233f3fd49fd3"
 },
 "3_시스템/_ref/measure-module-toggle.md": {
 "40026e81a7d8": "c3fd4f83d5e6cecd"
@@ -1269,6 +1273,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "3446a3f77b05",
+"rev": "429d852a501a",
 "schema": 1
 }
