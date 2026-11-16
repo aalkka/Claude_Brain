@@ -48,6 +48,7 @@
 ".claude/skills/collect_desk/skills/add/SKILL.md": {
 "2f30e33282bc": "03a99a07fcd646f8",
 "95d266f18e11": "4c022f541db42e8b",
+"dab75cf5d224": "2b94f41b01c20756",
 "dc49cb93b13b": "628712aa2fc2fcd2",
 "ef67d912e468": "93e7bac1fde3372c"
 },
@@ -404,6 +405,7 @@
 "bdcc47725953": "16b8593d82c6a166"
 },
 "3_시스템/_eval/collect_at_check.py": {
+"144c6cb5682b": "a3f5e2a7faf983f6",
 "424fc61fb218": "124002ddbe44f2f4",
 "9f513b99e999": "9c39a71263343024"
 },
@@ -430,18 +432,21 @@
 "2cea629d4afb": "0d444176bc844bce",
 "377768f18cb1": "e7548798e80e8ffe",
 "6eb63d340b33": "7cf0ecd4c81a7097",
+"7239a8fb0f93": "0af2f3b6f94806b6",
 "7a68930605ca": "ef22e23c918940dc",
 "dbc50edcd49d": "ade6d972baca834c"
 },
 "3_시스템/_eval/collect_reject_check.py": {
 "1481b94828ab": "5911590081809965",
 "b7e119e837bd": "a7714036c9fa4e2e",
+"dd16de2fa229": "026a63f8e7d82715",
 "f517e094d710": "6f95e132012f15f5"
 },
 "3_시스템/_eval/door_check.py": {
 "f1437e88d6b5": "536a4c1bd8ec9ade"
 },
 "3_시스템/_eval/filter_learn_check.py": {
+"0adf9fb878a4": "64e099ec100374df",
 "0de253efaddd": "2d34782bc5faeae1",
 "923cfd270e21": "2aa6bad903068a09",
 "9727299446fa": "6a4fda564da18c61",
@@ -553,7 +558,8 @@
 "c36dd5c9fb39": "a769a8be7c76def0"
 },
 "3_시스템/_eval/web_expire_check.py": {
-"a5e9160e65f3": "b55a8cfe32aac03e"
+"a5e9160e65f3": "b55a8cfe32aac03e",
+"a7538c99d302": "790df654aa1eb592"
 },
 "3_시스템/_eval/work_check.py": {
 "6abe46adea67": "edecb8f8e0c77aef"
@@ -946,6 +952,7 @@
 "3_시스템/notice-filter.py": {
 "645ca237d1f5": "732ccfd11965fd9c",
 "a39c8b5b2b99": "4262a8d323cdaab7",
+"a92b7572cf13": "f625968b5edef457",
 "cea5b6cc4f1c": "8c15c9666c107280",
 "e943a4f7cdc1": "e693b3ef99eb8747",
 "eefdbc57b073": "0444ff410d88fd51"
@@ -1188,6 +1195,7 @@
 "d9c512a89b33": "9acdfd7f61041131"
 },
 "3_시스템/설명서/설명서-모아보기.md": {
+"6c702a009ac8": "8f3618282e525216",
 "d081b0ea6896": "82511d301976d5d0"
 },
 "3_시스템/설명서/설명서-문제-해결.md": {
@@ -1273,6 +1281,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "429d852a501a",
+"rev": "675341f70367",
 "schema": 1
 }
