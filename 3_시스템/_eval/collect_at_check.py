@@ -60,40 +60,40 @@ def desk_cases(root):
     tv, ts, env = ccc.temp_vault(root)
     log = os.path.join(root, 'lms-state', 'tasks-sync.log')
     rp = lambda i: os.path.join(ts, 'collect', i + '.json')
-    for i, extra in (('uni-a', {'filter': {'title_skip': 'x'}}), ('uni-b', {'filter': {'title_skip': 'x'}}), ('uni-c', {}), ('uni-off', {'enabled': False, 'at': ['07:00']})):
+    for i, extra in (('school-a', {'filter': {'title_skip': 'x'}}), ('school-b', {'filter': {'title_skip': 'x'}}), ('school-c', {}), ('school-off', {'enabled': False, 'at': ['07:00']})):
         ccc.put(rp(i), {'id': i, 'name': i.upper(), 'family': 'regex', 'contract': '시험', 'page': 'https://example.org/' + i, 'recheck_hours': 12, **extra})
     run = lambda *a: subprocess.run([sys.executable, os.path.join(tv, '.claude', 'skills', 'collect_desk', 'scripts', 'collect_desk.py'), *a], cwd=tv, env=env,
                                     capture_output=True, encoding='utf-8', errors='replace', timeout=120)
     last = lambda: (ccc.read(log).strip().splitlines() or [''])[-1]
     view = lambda: {s['id']: s for s in json.loads(run('view').stdout.strip().splitlines()[-1])['sources']}
-    r = run('set', 'uni-a', 'at', '9:00')
-    a = ccc.load(rp('uni-a'))
-    ok('[창] uni-a 시각 9:00 = 조리법 at [09:00]·at_since · 예약 맞추기 = mylms + uni-a(잠든 PC 기본 = 깨움) · 끈 출처는 예약 없음',
-       r.returncode == 0 and a.get('at') == ['09:00'] and a.get('at_since') and '외부뇌-수집 uni-a 등록(09:00 · 깨우기 켬)' in last() and '외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)' in last()
-       and 'uni-off' not in last(), (r.returncode, r.stderr[-200:], a, last()))
-    v = view()['uni-a']
+    r = run('set', 'school-a', 'at', '9:00')
+    a = ccc.load(rp('school-a'))
+    ok('[창] school-a 시각 9:00 = 조리법 at [09:00]·at_since · 예약 맞추기 = mylms + school-a(잠든 PC 기본 = 깨움) · 끈 출처는 예약 없음',
+       r.returncode == 0 and a.get('at') == ['09:00'] and a.get('at_since') and '외부뇌-수집 school-a 등록(09:00 · 깨우기 켬)' in last() and '외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)' in last()
+       and 'school-off' not in last(), (r.returncode, r.stderr[-200:], a, last()))
+    v = view()['school-a']
     ok('[창] 보기 = 방법 web · 시각 꼴 · 다음 = 시각 · 줄 글 «09:00»', v['method'] == 'web' and v['mode'] == 'at' and v['at'] == ['09:00'] and v['hourWord'] == '09:00' and v['next'].endswith('09:00'), v)
     r = run('set', '*', 'wake_pc', 'false')
     sw = ccc.load(os.path.join(ts, 'collect.local.json')) or {}
-    ok('[창] 잠든 PC «깬 뒤» = collect.local.json wake_pc false · 예약 mylms·uni-a 모두 깨우기 끔 · 보기 wakePc false',
-       r.returncode == 0 and sw.get('wake_pc') is False and '외부뇌-수집 mylms 등록(06:55 · 깨우기 끔)' in last() and '외부뇌-수집 uni-a 등록(09:00 · 깨우기 끔)' in last()
+    ok('[창] 잠든 PC «깬 뒤» = collect.local.json wake_pc false · 예약 mylms·school-a 모두 깨우기 끔 · 보기 wakePc false',
+       r.returncode == 0 and sw.get('wake_pc') is False and '외부뇌-수집 mylms 등록(06:55 · 깨우기 끔)' in last() and '외부뇌-수집 school-a 등록(09:00 · 깨우기 끔)' in last()
        and json.loads(run('view').stdout.strip().splitlines()[-1])['wakePc'] is False, (r.stderr[-200:], sw, last()))
     r = run('set', '*', 'wake_pc', 'true')
-    ok('[창] 잠든 PC «깨움» = 모두 깨우기 켬', r.returncode == 0 and '외부뇌-수집 uni-a 등록(09:00 · 깨우기 켬)' in last() and '외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)' in last(), last())
+    ok('[창] 잠든 PC «깨움» = 모두 깨우기 켬', r.returncode == 0 and '외부뇌-수집 school-a 등록(09:00 · 깨우기 켬)' in last() and '외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)' in last(), last())
     ccc.put(os.path.join(ts, 'collect.local.json'), None)
-    r = run('set', 'uni-a', 'at', '18:30,09:00')
-    ok('[창] 시각 둘 = 정렬 [09:00, 18:30]', r.returncode == 0 and ccc.load(rp('uni-a'))['at'] == ['09:00', '18:30'] and '(09:00 18:30 · 깨우기 켬)' in last(), (r.stderr[-200:], last()))
+    r = run('set', 'school-a', 'at', '18:30,09:00')
+    ok('[창] 시각 둘 = 정렬 [09:00, 18:30]', r.returncode == 0 and ccc.load(rp('school-a'))['at'] == ['09:00', '18:30'] and '(09:00 18:30 · 깨우기 켬)' in last(), (r.stderr[-200:], last()))
     n = len(ccc.read(log).splitlines())
-    bad = [run('set', 'uni-a', 'at', v) for v in ('25:00', '9시', '01:00,02:00,03:00,04:00,05:00')]
-    ok('[창] 틀린 시각·다섯 개 = 거절 · 조리법 그대로 · 맞추기 안 부름', all(b.returncode for b in bad) and ccc.load(rp('uni-a'))['at'] == ['09:00', '18:30'] and len(ccc.read(log).splitlines()) == n,
+    bad = [run('set', 'school-a', 'at', v) for v in ('25:00', '9시', '01:00,02:00,03:00,04:00,05:00')]
+    ok('[창] 틀린 시각·다섯 개 = 거절 · 조리법 그대로 · 맞추기 안 부름', all(b.returncode for b in bad) and ccc.load(rp('school-a'))['at'] == ['09:00', '18:30'] and len(ccc.read(log).splitlines()) == n,
        [b.stderr[-80:] for b in bad])
-    r = run('set', 'uni-a', 'hours', '6')
-    a = ccc.load(rp('uni-a'))
-    ok('[창] 주기 6 = 시각 걷음(at·at_since 없음) · 예약에서 빠짐', r.returncode == 0 and a.get('recheck_hours') == 6 and 'at' not in a and 'at_since' not in a and 'uni-a' not in last(), (a, last()))
+    r = run('set', 'school-a', 'hours', '6')
+    a = ccc.load(rp('school-a'))
+    ok('[창] 주기 6 = 시각 걷음(at·at_since 없음) · 예약에서 빠짐', r.returncode == 0 and a.get('recheck_hours') == 6 and 'at' not in a and 'at_since' not in a and 'school-a' not in last(), (a, last()))
     r = run('set', '@공지', 'at', '07:30')
-    ok('[창] 묶음 @공지 시각 07:30 = 거르는 출처 둘(uni-a·uni-b)만 · 구독(uni-c) 그대로 · 맞추기 한 번',
-       r.returncode == 0 and ccc.load(rp('uni-a')).get('at') == ['07:30'] and ccc.load(rp('uni-b')).get('at') == ['07:30'] and 'at' not in ccc.load(rp('uni-c'))
-       and 'uni-a 등록(07:30' in last() and 'uni-b 등록(07:30' in last() and len(ccc.read(log).splitlines()) == n + 2, (r.stderr[-200:], last()))
+    ok('[창] 묶음 @공지 시각 07:30 = 거르는 출처 둘(school-a·school-b)만 · 구독(school-c) 그대로 · 맞추기 한 번',
+       r.returncode == 0 and ccc.load(rp('school-a')).get('at') == ['07:30'] and ccc.load(rp('school-b')).get('at') == ['07:30'] and 'at' not in ccc.load(rp('school-c'))
+       and 'school-a 등록(07:30' in last() and 'school-b 등록(07:30' in last() and len(ccc.read(log).splitlines()) == n + 2, (r.stderr[-200:], last()))
     r = run('set', '@강의', 'at', '08:00,20:00')
     ok('[창] 묶음 @강의 = mylms 시각(desk.json at) · 예약 mylms 08:00 20:00 깨우기 켬', r.returncode == 0 and ccc.load(os.path.join(ts, 'lms', 'desk.json')).get('at') == ['08:00', '20:00']
        and '외부뇌-수집 mylms 등록(08:00 20:00 · 깨우기 켬)' in last() and view()['mylms']['at'] == ['08:00', '20:00'], (r.stderr[-200:], last()))
@@ -102,18 +102,18 @@ def desk_cases(root):
     r = run('set', '@없는묶음', 'at', '07:00')
     r2 = run('set', '@공지', 'enabled', 'false')
     ok('[창] 없는 묶음·묶음 스위치 = 거절', r.returncode and r2.returncode, (r.stderr[-80:], r2.stderr[-80:]))
-    r = run('set', 'uni-b', 'enabled', 'false')
-    ok('[창] 시각 있는 출처를 끔 = 예약에서 빠짐', r.returncode == 0 and 'uni-b' not in last() and 'uni-a 등록(07:30' in last(), last())
+    r = run('set', 'school-b', 'enabled', 'false')
+    ok('[창] 시각 있는 출처를 끔 = 예약에서 빠짐', r.returncode == 0 and 'school-b' not in last() and 'school-a 등록(07:30' in last(), last())
 
     # ④ --at — 받을 차례 아님 · 전체 끔
     la = os.path.join(ts, 'lms-auto.py')
-    st = os.path.join(ts, '_index', 'collect', 'uni-a.json')
+    st = os.path.join(ts, '_index', 'collect', 'school-a.json')
     ccc.put(st, {'last_run': time.time(), 'last_try': time.time(), 'items': {}})
-    r = subprocess.run([sys.executable, la, '--at', 'uni-a'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
+    r = subprocess.run([sys.executable, la, '--at', 'school-a'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
     alog = ccc.read(os.path.join(root, 'lms-state', 'auto.log'))
-    ok('[--at] 방금 받은 출처 = «받을 차례 아님» 기록 · 웹 새 글 0', r.returncode == 0 and '시각 uni-a: web-collect rc=0 받을 차례 아님' in alog and '웹 새 글 0' in r.stdout, (r.stdout[-200:], r.stderr[-200:], alog[-300:]))
+    ok('[--at] 방금 받은 출처 = «받을 차례 아님» 기록 · 웹 새 글 0', r.returncode == 0 and '시각 school-a: web-collect rc=0 받을 차례 아님' in alog and '웹 새 글 0' in r.stdout, (r.stdout[-200:], r.stderr[-200:], alog[-300:]))
     ccc.put(os.path.join(ts, 'collect.local.json'), {'all_off': True})
-    r = subprocess.run([sys.executable, la, '--at', 'uni-a'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
+    r = subprocess.run([sys.executable, la, '--at', 'school-a'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
     r2 = subprocess.run([sys.executable, la, '--sync-tasks'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
     ok('[--at] 전체 끔 = 건너뜀 · 맞추기 = 시각 예약 없음', '전체 꺼짐' in r.stdout and r2.stdout.strip() == '시각 예약: 없음', (r.stdout[-100:], r2.stdout[-200:]))
     ccc.put(os.path.join(ts, 'collect.local.json'), None)
@@ -121,7 +121,7 @@ def desk_cases(root):
 
 
 def xml_cases(la):
-    x = la.task_xml(['09:00', '21:30'], False, ['collect.lms', '--', '--at', 'uni-a'], '장학 & 학사 <시험>')
+    x = la.task_xml(['09:00', '21:30'], False, ['collect.lms', '--', '--at', 'school-a'], '장학 & 학사 <시험>')
     ns = {'t': 'http://schemas.microsoft.com/windows/2004/02/mit/task'}
     try:
         root = ET.fromstring(x.split('\n', 1)[1])
@@ -132,8 +132,8 @@ def xml_cases(la):
     ok('[예약] XML · 시각 둘 = 매일 트리거 둘 · 시작점은 지금 뒤 하루 안 · 깨우기 끔 · 놓치면 곧',
        len(st) == 2 and all(0 < s - time.time() <= 86400 for s in st) and root.find('.//t:WakeToRun', ns).text == 'false'
        and root.find('.//t:StartWhenAvailable', ns).text == 'true' and all(root.find('.//t:DaysInterval', ns) is not None for _ in st), (st, x[:300]))
-    ok('[예약] 명령 줄 = brain.py run collect.lms --by schedule -- --at uni-a · 설명 글 그대로(꺾쇠·& 이스케이프)',
-       args.endswith('brain.py" run collect.lms --by schedule -- --at uni-a') and '장학 & 학사 <시험>' in root.find('.//t:Description', ns).text, args)
+    ok('[예약] 명령 줄 = brain.py run collect.lms --by schedule -- --at school-a · 설명 글 그대로(꺾쇠·& 이스케이프)',
+       args.endswith('brain.py" run collect.lms --by schedule -- --at school-a') and '장학 & 학사 <시험>' in root.find('.//t:Description', ns).text, args)
     ok('[예약] 깨우기 켬 = WakeToRun true', '<WakeToRun>true</WakeToRun>' in la.task_xml(['06:55'], True, ['collect.lms.wake'], 'mylms'))
 
 

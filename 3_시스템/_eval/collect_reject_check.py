@@ -27,8 +27,8 @@ def load(name, path):
 cd = load('cd', os.path.join(AN, '.claude', 'skills', 'collect_desk', 'scripts', 'collect_desk.py'))
 
 # 제목 낱말
-w = cd.title_words('[기아] 26년 엔지니어(생산직) 설비기술인력 채용 (~11/18(수) 15시까지)')
-ok('낱말: 날짜·숫자 빠지고 기관·직무 남음', w[:4] == ['기아', '엔지니어', '생산직', '설비기술인력'] and '26년' not in w and '11' not in w, w)
+w = cd.title_words('[회사A] 26년 엔지니어(생산직) 설비기술인력 채용 (~11/18(수) 15시까지)')
+ok('낱말: 날짜·숫자 빠지고 기관·직무 남음', w[:4] == ['회사A', '엔지니어', '생산직', '설비기술인력'] and '26년' not in w and '11' not in w, w)
 w = cd.title_words('2026학년도 비교과과정 및 진로포털 만족도 조사 안내')
 ok('낱말: 흔한 말(안내)·학년도 빠짐', '안내' not in w and '2026학년도' not in w and '진로포털' in w, w)
 ok('낱말: 12개까지', len(cd.title_words(' '.join(f'낱말{i}가' for i in range(30)))) == 12)
@@ -37,7 +37,7 @@ ok('낱말: 12개까지', len(cd.title_words(' '.join(f'낱말{i}가' for i in r
 calls = []
 cd.engine = lambda *a: calls.append(a)
 cd.recipe_of = lambda sid: {}
-ITEMS = {'1882': {'title': '[기아] 설비기술인력 채용', 'url': 'u'},                       # 판정 대기(stage·verdict 없음)
+ITEMS = {'1882': {'title': '[회사A] 설비기술인력 채용', 'url': 'u'},                       # 판정 대기(stage·verdict 없음)
          '9': {'title': '볼트 글', 'path': 'x.md'}}
 cd.load = lambda *p, default=None: {'items': ITEMS} if p[-1].endswith('.json') and p[-1] != '평가.json' else default
 
@@ -54,12 +54,12 @@ class NoBusy:
 
 
 cd.Busy = NoBusy
-cd.reject('uni-ee-job', '1882', '기아|설비기술인력|기아', '-생산직 안 함')
-ok('reject: 낱말(겹침 하나)·메모(대시)가 = 꼴로 넘어감 · 다음 판정', calls == [('notice-filter.py', 'reject', '1882', '--button', '--word=기아', '--word=설비기술인력', '--memo=-생산직 안 함'), ('notice-filter.py', 'judge')], calls)
+cd.reject('school-job-b', '1882', '회사A|설비기술인력|회사A', '-생산직 안 함')
+ok('reject: 낱말(겹침 하나)·메모(대시)가 = 꼴로 넘어감 · 다음 판정', calls == [('notice-filter.py', 'reject', '1882', '--button', '--word=회사A', '--word=설비기술인력', '--memo=-생산직 안 함'), ('notice-filter.py', 'judge')], calls)
 calls.clear()
-cd.reject('uni-ee-job', '1882', '', '')
+cd.reject('school-job-b', '1882', '', '')
 ok('reject 빈칸: 낱말 없이 · 빈 메모', calls[0] == ('notice-filter.py', 'reject', '1882', '--button', '--memo='), calls)
-for args, why in ((('uni-ee-job', '1882', '삼성', ''), '제목에 없는 낱말'), (('uni-ee-job', '9', '', ''), '판정 대기 글만'), (('uni-ee-job', '없음', '', ''), '없는 글')):
+for args, why in ((('school-job-b', '1882', '회사B', ''), '제목에 없는 낱말'), (('school-job-b', '9', '', ''), '판정 대기 글만'), (('school-job-b', '없음', '', ''), '없는 글')):
     calls.clear()
     try:
         cd.reject(*args)
@@ -67,12 +67,12 @@ for args, why in ((('uni-ee-job', '1882', '삼성', ''), '제목에 없는 낱�
     except cd.Refuse as e:
         ok(f'거부: {why} · 엔진 0', why in str(e) and not calls, (str(e), calls))
 calls.clear()
-cd.item('uni-ee-job', '1882', 'reject')
+cd.item('school-job-b', '1882', 'reject')
 ok('옛 item reject: 까닭 «거절» 대신 --button', calls[0] == ('notice-filter.py', 'reject', '1882', '--button'), calls)
 
 # 연습 화면 흉내
 import datetime as dt
-src = 'uni-x'
+src = 'school-x'
 F = {f'3_시스템/collect/{src}.json': {'id': src}, f'3_시스템/_index/collect/{src}.json': {'items': {'n1': {'title': '학생회 설문 참여 부탁', 'stage': 1}}},
      '3_시스템/lms/desk.json': {}}
 cd.practice_act(F, {'id': 'collect_desk.reject', 'args': {'source': src, 'id': 'n1', 'words': '학생회|설문', 'memo': '관심 없음'}}, dt.datetime(2026, 11, 9))
@@ -93,10 +93,10 @@ ok('actions.json: collect_desk.reject 선언 · 인자 넷 · -- 뒤 위치 인�
 nf = load('nf', os.path.join(AN, '3_시스템', 'notice-filter.py'))
 got = []
 nf.reject = lambda *a, **k: got.append((a, k))
-for argv in (['reject', '1882', '--button', '--word=기아', '--memo=-생산직'], ['reject', '1882', '--button'], ['reject', '1882', '말로', '뺀', '까닭']):
+for argv in (['reject', '1882', '--button', '--word=회사A', '--memo=-생산직'], ['reject', '1882', '--button'], ['reject', '1882', '말로', '뺀', '까닭']):
     sys.argv = ['notice-filter.py'] + argv
     nf.main()
-ok('CLI: 단추 · 낱말 · 대시 메모', got[0] == (('1882', '-생산직', ['기아']), {'button': True}), got[0])
+ok('CLI: 단추 · 낱말 · 대시 메모', got[0] == (('1882', '-생산직', ['회사A']), {'button': True}), got[0])
 ok('CLI: 단추 빈칸', got[1] == (('1882', '', []), {'button': True}), got[1])
 ok('CLI: Claude 가 받아 적는 옛 꼴 그대로', got[2] == (('1882', '말로 뺀 까닭'), {}), got[2])
 for argv in (['reject', '1882'], ['reject', '1882', 'a', '--button']):

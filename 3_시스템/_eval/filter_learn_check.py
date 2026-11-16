@@ -54,11 +54,11 @@ try:
         'b1': {'title': '[진로포털] 비교과 만족도 조사', 'date': '2026-10-06', 'path': 'v/b1.md', 'hash': 'f'},   # 단추 · 낱말 진로포털 → 제외어
         'b2': {'title': '[SSC] 수요조사 참여 이벤트', 'date': '2026-10-06', 'path': 'v/b2.md', 'hash': 'g'},       # 단추 · 까닭 없음 → 경고 없음
         'b3': {'title': '태재연구재단 연구지원금 선발', 'date': '2026-10-06', 'path': 'v/b3.md', 'hash': 'h'},     # 단추 · 메모만 → 거절 메모 대기열
-        'b4': {'title': '[기아] 설비기술인력 채용', 'date': '2026-10-06', 'path': 'v/b4.md', 'hash': 'i'},          # 옛 단추 기록(메모 «거절») → 경고 없음
-        's1': {'title': '삼성 신입사원 채용', 'date': '2026-10-04', 'stage': True, 'hash': 'd', 'url': 'http://x/s1'},   # 대기 칸 판정 전 → 장부
+        'b4': {'title': '[회사A] 설비기술인력 채용', 'date': '2026-10-06', 'path': 'v/b4.md', 'hash': 'i'},          # 옛 단추 기록(메모 «거절») → 경고 없음
+        's1': {'title': '회사B 신입사원 채용', 'date': '2026-10-04', 'stage': True, 'hash': 'd', 'url': 'http://x/s1'},   # 대기 칸 판정 전 → 장부
     }
     json.dump({'items': items}, open(os.path.join(T, 'state', 'src-a.json'), 'w', encoding='utf-8'), ensure_ascii=False)
-    open(os.path.join(T, 'state', 'stage', 'src-a', 's1.md'), 'w', encoding='utf-8').write('# 삼성 신입사원 채용\n\n---\n본문')
+    open(os.path.join(T, 'state', 'stage', 'src-a', 's1.md'), 'w', encoding='utf-8').write('# 회사B 신입사원 채용\n\n---\n본문')
     os.makedirs(os.path.join(T, 'v'))
     for k in ('b1', 'b2', 'b3', 'b4'):
         open(os.path.join(T, 'v', k + '.md'), 'w', encoding='utf-8').write(f'# {items[k]["title"]}\n\n---\n본문')
@@ -81,9 +81,9 @@ try:
 
     row = lambda t: {'title': t, 'date': '2026-10-05'}
     rc0 = json.load(open(rp, encoding='utf-8'))
-    ok('카드 규칙: 조리법에 없어도 제목 관문에 걸림 · 근거 = 묶음 이름', nf.gate(rc0, row('현대 신입사원 모집')) == ('비해당', '제목 규칙(신입 채용)'))
-    ok('카드 규칙: 거르기 없는 출처(filter {})엔 안 걸림', nf.gate({'id': 'x', 'filter': {}}, row('현대 신입사원 모집')) is None)
-    n0 = {'sid': 'x', 'id': '1', 'title': '현대 신입사원 모집', 'rc': {'filter': {}}, 'text': '', 'att': []}
+    ok('카드 규칙: 조리법에 없어도 제목 관문에 걸림 · 근거 = 묶음 이름', nf.gate(rc0, row('회사C 신입사원 모집')) == ('비해당', '제목 규칙(신입 채용)'))
+    ok('카드 규칙: 거르기 없는 출처(filter {})엔 안 걸림', nf.gate({'id': 'x', 'filter': {}}, row('회사C 신입사원 모집')) is None)
+    n0 = {'sid': 'x', 'id': '1', 'title': '회사C 신입사원 모집', 'rc': {'filter': {}}, 'text': '', 'att': []}
     ok('카드 규칙: LMS 글(filter {}) 판정에도 안 걸림', nf.judge_rules(n0, {'조건': []}, nf.card())[0] == '확인 필요')
     ok('카드 규칙: 거르는 출처 판정에 걸림', nf.judge_rules(dict(n0, rc=rc0), {'조건': []}, nf.card())[0] == '비해당')
     ok('카드 규칙: 관심 주제면 안 뺌', nf.card_rule('신입사원 반도체', {'관심': ['반도체'], '제목규칙': [{'이름': 'x', '말': ['신입사원']}]}) is None)
@@ -117,15 +117,15 @@ try:
     ok('단추 까닭 없음: 경고 없음 · 되먹음 적힘', 'SSC' not in qt and '까닭 없음' in mk['src-a:b2']['되먹음'])
     ok('단추 메모: «거절 메모» 대기열 · 까닭 안 맞음 아님', r['거절 메모'] == 1 and '거절 메모' in qt and '대학원생 연구자용' in qt and '태재연구재단' in qt and '태재연구재단 연구지원금 선발 (`src-a:b3`)' in qt.split('까닭이 글과 안 맞음')[0] + qt)
     ok('단추 메모: 낱말 규칙은 안 올림', nf.gate({'id': '다른', 'filter': {'kind': '자격'}}, row('대학원생 연구 안내')) is None)
-    ok('옛 단추 기록(«거절»): 경고 없음', '기아' not in qt and '까닭 없음' in mk['src-a:b4']['되먹음'])
+    ok('옛 단추 기록(«거절»): 경고 없음', '회사A' not in qt and '까닭 없음' in mk['src-a:b4']['되먹음'])
     ok('까닭 안 맞음은 관정재단 하나뿐', qt.count('까닭이 글과 안 맞음') == 1)
     r2 = fl.learn(quiet=True)
     ok('되풀이해도 또 안 함', not any(r2.values()))
 
     t0 = open(cf, encoding='utf-8').read()
-    ok('카드 조건 전: 신입 채용 켜짐', nf.gate(rc2, row('현대 신입사원 모집')) is not None)
+    ok('카드 조건 전: 신입 채용 켜짐', nf.gate(rc2, row('회사C 신입사원 모집')) is not None)
     fl.card_set('학년', '4', '시험')
-    ok('카드 조건이 깨지면 묶음이 꺼짐(4학년 → 신입 채용 풀림)', nf.gate(rc2, row('현대 신입사원 모집')) is None)
+    ok('카드 조건이 깨지면 묶음이 꺼짐(4학년 → 신입 채용 풀림)', nf.gate(rc2, row('회사C 신입사원 모집')) is None)
     t1 = open(cf, encoding='utf-8').read()
     ok('카드: JSON 밖 글이 남고 근거 줄이 붙음', '그대로 남아야 함' in t1 and '**[사실] 학년**' in t1 and t1.count('```json') == t0.count('```json'))
 

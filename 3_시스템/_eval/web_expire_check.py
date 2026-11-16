@@ -14,7 +14,7 @@ res = []
 today = datetime.date.today()
 old = (today - datetime.timedelta(days=31)).isoformat()      # 마감 + 30일 지남
 edge = (today - datetime.timedelta(days=30)).isoformat()     # 딱 30일 — 아직 둠
-SID = "uni-test"
+SID = "school-test"
 N = R["school_notice"] + "/장학"
 NB = N.replace("/", "\\")
 
