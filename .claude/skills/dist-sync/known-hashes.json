@@ -23,6 +23,7 @@
 "70230f00886f": "753f7d3536996b4a",
 "92fd8e46aeeb": "d561d699231b3e0c",
 "de619e32902a": "f3326956613bce5d",
+"f66ab8e1d595": "781ec27afcffb725",
 "f8233f173114": "11cdf5d4b29142ed"
 },
 ".claude/skills/canvas/scripts/canvas-build.py": {
@@ -38,6 +39,7 @@
 "2679ecd411cf": "2da29fb18fb4c145",
 "47eba9e0e411": "3dca320f3c0b37f5",
 "550df6050b16": "8dc80de98e4016f7",
+"7bec513f5e4f": "a2fc85653b86552f",
 "85b1c05191a9": "fdfdd91d43316761",
 "935108da48b3": "cbe398b00d17f44e",
 "a1e6dc8ab40b": "fec5cf4c3e3f6b63",
@@ -45,6 +47,7 @@
 },
 ".claude/skills/collect_desk/skills/add/SKILL.md": {
 "2f30e33282bc": "03a99a07fcd646f8",
+"95d266f18e11": "4c022f541db42e8b",
 "dc49cb93b13b": "628712aa2fc2fcd2",
 "ef67d912e468": "93e7bac1fde3372c"
 },
@@ -54,6 +57,7 @@
 },
 ".claude/skills/collect_desk/view/index.html": {
 "2083183f13eb": "4be91633cebad0c3",
+"3ae025ed600d": "cb456a970f7c3825",
 "5912284f32bf": "1f4cacd5d74c212e",
 "803533a53d09": "ed004971112472ac",
 "dbdfc23355fe": "92e6f31e1b90dea3",
@@ -98,6 +102,7 @@
 "2bfb37cc06a9": "4db0d1318b481e98",
 "305539f715d0": "28566e58489d909e",
 "77e74afd57bd": "69f9c0ae6f0b2817",
+"9bbc2c1f7015": "2292a84b46421ed9",
 "d56f6baca481": "2dc7207dbd5b4e02"
 },
 ".claude/skills/dist-sync/external.json": {
@@ -106,6 +111,7 @@
 },
 ".claude/skills/dist-sync/manual/설명서-dist-sync.md": {
 "6550858ec4f9": "00bcc8dee695987e",
+"7e580cb12cd4": "abcef9b1d1c306e3",
 "be3bcd439ef7": "bb9be40d8541ebca"
 },
 ".claude/skills/dist-sync/module.json": {
@@ -117,6 +123,7 @@
 },
 ".claude/skills/dist-sync/scripts/dist-check.py": {
 "67ddea63d070": "e141848f5268dd8a",
+"beb38bff815d": "1e22b65409f22bd0",
 "fb408acda8bf": "c4e1b6b17ddac672",
 "ffa4bdeb3f36": "17c825d593f0f861"
 },
@@ -128,6 +135,7 @@
 "80300757f0b1": "46cebe33a82e961b",
 "8f7e97c07dd7": "42c92e0d9a946a27",
 "a582b89d3810": "e7d851bf03162fac",
+"c27c40f47307": "4c2b4565977b4fa6",
 "cfb58015c306": "c9aa0e503eab6c8c",
 "df39b0a50a57": "6c33d5b66177f232",
 "fa39f2997571": "9a3a1a13a8586a8d",
@@ -142,8 +150,12 @@
 "92cc8ee90a63": "bc0dcea1fa6a1498"
 },
 ".claude/skills/dist-sync/scripts/test_dist_check.py": {
+"3f5124c086a1": "726d10de6e05912c",
 "b2507c5ca19e": "a24afa8868bb3b97",
 "d84dafb8d9aa": "cefecc403de852f8"
+},
+".claude/skills/dist-sync/ship.json": {
+"a7f96d3235c2": "c1433ed91c2765d5"
 },
 ".claude/skills/dist-sync/skills/outside/SKILL.md": {
 "2d4e37f082b6": "cd9d7038070e721c"
@@ -154,6 +166,7 @@
 "7d3aca584536": "3de822b39fd05f21",
 "98683c724762": "038464d1d9a94cb4",
 "a03cea231509": "1d3e9f6e1df1791c",
+"be0593105623": "b4cb6b18fc4f8aef",
 "dc66e7abc1db": "98bbfbc4fc281932",
 "ec3bbfe21d8a": "c2420238b81cf4ea"
 },
@@ -276,7 +289,8 @@
 "392953b5838c": "e46a63abadd7c182"
 },
 ".claude/skills/options/SKILL.md": {
-"904c2e3f4b27": "cc16b0738b155a85"
+"904c2e3f4b27": "cc16b0738b155a85",
+"f8aa3fa39027": "d6b846a5a4a66557"
 },
 ".claude/skills/pdf-ingest/SKILL.md": {
 "1b1e978324ec": "c92886acb4148af7",
@@ -380,13 +394,16 @@
 "cb2b77699b1d": "b3080f7ce5718e24"
 },
 "3_시스템/_eval/collect_add_e2e.mjs": {
+"acb818830860": "ba4c024406f4084b",
 "c7c6437cdeb0": "0a5cbe092fbf016c"
 },
 "3_시스템/_eval/collect_add_view_check.mjs": {
+"85595f32b9b8": "154e57a59b7d5051",
 "bdcc47725953": "16b8593d82c6a166"
 },
 "3_시스템/_eval/collect_at_check.py": {
-"424fc61fb218": "124002ddbe44f2f4"
+"424fc61fb218": "124002ddbe44f2f4",
+"9f513b99e999": "9c39a71263343024"
 },
 "3_시스템/_eval/collect_chrome_at_check.py": {
 "97c2c274b7dc": "94c50d5cad1f7e56"
@@ -394,6 +411,7 @@
 "3_시스템/_eval/collect_core_check.py": {
 "3ee517b301f0": "b72c2ad04bd4afec",
 "4ff8babaf204": "12042ee0f12b2c63",
+"93f89aa22c57": "67b9d7335b1379b8",
 "950610571d0d": "cc04c7376680cd0c"
 },
 "3_시스템/_eval/collect_desk_chrome_check.py": {
@@ -407,6 +425,7 @@
 "9ad80162556a": "4cae0177a14edc17"
 },
 "3_시스템/_eval/collect_desk_view_check.mjs": {
+"2cea629d4afb": "0d444176bc844bce",
 "377768f18cb1": "e7548798e80e8ffe",
 "6eb63d340b33": "7cf0ecd4c81a7097",
 "7a68930605ca": "ef22e23c918940dc",
@@ -514,7 +533,8 @@
 "62aac92accad": "3fbb3b3967afe043"
 },
 "3_시스템/_eval/subguard_check.py": {
-"82c2830556b7": "9cc2e8cfd254205f"
+"82c2830556b7": "9cc2e8cfd254205f",
+"8af89bd96f1e": "3de2b4717f795791"
 },
 "3_시스템/_eval/tutorial_lint_check.py": {
 "425e3eb9703c": "8b95c4b08932ed88"
@@ -523,6 +543,7 @@
 "2b861de36fac": "94f37646768a99e5"
 },
 "3_시스템/_eval/vault-baseline.py": {
+"269aaf4626ff": "a3be702d8f28bd2b",
 "c36dd5c9fb39": "a769a8be7c76def0"
 },
 "3_시스템/_eval/web_expire_check.py": {
@@ -719,6 +740,9 @@
 "7c59d28451e6": "355f2e1eb09f44e7",
 "7fa6f53ad52a": "f86ddaacae849244",
 "974b679fca90": "44a29db818a07216"
+},
+"3_시스템/filecheck.py": {
+"84b6d2fc2437": "e6fabd17ec4ef89b"
 },
 "3_시스템/fileops.py": {
 "0046d8298c38": "b68c84f227d24e74",
@@ -917,7 +941,8 @@
 "eefdbc57b073": "0444ff410d88fd51"
 },
 "3_시스템/options.py": {
-"76125615b076": "7ecf427859798bc3"
+"76125615b076": "7ecf427859798bc3",
+"b9a3c27d9ccb": "1f69ff3bc1a6f521"
 },
 "3_시스템/options.registry.json": {
 "30b24d535795": "a960c3659eb0dc3e"
@@ -1089,6 +1114,7 @@
 "c28905880755": "3318e5fb1faa613c"
 },
 "3_시스템/tutorial/찾아보기.md": {
+"155047fe9719": "67fda24d19f782d8",
 "259faa54dae0": "120f77e81f9cbe14",
 "84d78ff2587b": "67b9c8bf3c2a2e76",
 "9515b012ef0c": "44a82657068a2875",
@@ -1120,7 +1146,8 @@
 "001156e0766f": "6357dccff388e6fc",
 "34de88eca043": "ded681fc30be2d8b",
 "43c46a8f17cf": "52a51b13b118aa89",
-"5d43dffbb96c": "461b8a5f933cc062"
+"5d43dffbb96c": "461b8a5f933cc062",
+"f6ef4a4e381b": "e6a958fda8c9a235"
 },
 "3_시스템/weekly.py": {
 "df0d8c674abb": "a5d2832635922875",
@@ -1235,6 +1262,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "cda6bbdeb667",
+"rev": "aa75bc088141",
 "schema": 1
 }
