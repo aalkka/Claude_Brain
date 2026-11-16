@@ -86,6 +86,13 @@ def _valid(f):
             and isinstance(f.get("levels"), list) and "high" in f["levels"])
 
 
+def _installed(f, vault):
+    """owner 를 적은 코어 선언은 그 대본이 하나라도 있어야 이 볼트의 기능이다 — 다 없으면 «그 기능 없음»으로 뺀다.
+    11-16: 배포판에 개인 모듈(학교 LMS)의 «LMS 아침 받기» 칸이 보이고 check 가 «owner 없음» 둘로 실패했다. 일부만 없으면 지금처럼 check 가 잡는다."""
+    own = [o for o in f.get("owner") or [] if isinstance(o, str)] if isinstance(f.get("owner"), list) else []
+    return not own or any(os.path.exists(os.path.join(_v(vault), o)) for o in own)
+
+
 def _norm(f, source):
     g = dict(f)
     g["levels"] = [x for x in f["levels"] if isinstance(x, str)]
@@ -132,6 +139,8 @@ def declarations(vault=None, only=None, problems=None):
                 problems.append("같은 id 두 번(%s) — 처음 것만" % f["id"])
             continue
         seen.add(f["id"])
+        if src == "core" and not _installed(f, vault):
+            continue
         feats.append(_norm(f, src))
     return [f for f in feats if f["id"] == only] if only else feats
 

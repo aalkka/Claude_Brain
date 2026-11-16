@@ -1,0 +1,229 @@
+{
+ "_": "배포 목록 — 배포판에 싣는 것만 적는다(기본 = 안 실음). 칸 이름 = «본체 · 기능» 또는 «모듈 · 이름»(모듈 = module.json 이 있는 것만). 경로 또는 이름 붙은 폴더(끝 /: 스킬·모듈·플러그인·한 기능만 쓰는 폴더). 여러 기능이 같이 쓰는 자리(3_시스템/ · _ref/ · _eval/ · hooks/ · 설명서/ · tutorial/ · .claude/skills/)는 폴더째 적지 않는다. 싣기 = 그 칸에 경로를 더함 · 안 싣기 = dist-check.py --ack <경로> --always --why · 뺄 기능은 칸째 지운다.",
+ "기능": {
+  "본체 · 수집 창": [
+   ".claude/skills/collect_desk/",
+   "3_시스템/_eval/collect_add_check.py",
+   "3_시스템/_eval/collect_add_e2e.mjs",
+   "3_시스템/_eval/collect_add_view_check.mjs",
+   "3_시스템/_eval/collect_at_check.py",
+   "3_시스템/_eval/collect_core_check.py",
+   "3_시스템/_eval/collect_desk_set_view_check.mjs",
+   "3_시스템/_eval/collect_desk_sw_check.mjs",
+   "3_시스템/_eval/collect_desk_view_check.mjs",
+   "3_시스템/_eval/collect_reject_check.py",
+   "3_시스템/_eval/filter_learn_check.py",
+   "3_시스템/_eval/notice_filter_other_check.py",
+   "3_시스템/_eval/web_expire_check.py",
+   "3_시스템/filecheck.py",
+   "3_시스템/filter-learn.py",
+   "3_시스템/notice-filter.py",
+   "3_시스템/tutorial/8-수집.md",
+   "3_시스템/web-collect.py",
+   "3_시스템/설명서/설명서-수집.md"
+  ],
+  "본체 · 모아보기": [
+   "3_시스템/gather/",
+   "3_시스템/설명서/설명서-모아보기.md"
+  ],
+  "본체 · 초안 비교(스킬 draft)": [
+   ".claude/skills/draft/",
+   "3_시스템/draft.py",
+   "3_시스템/draft/"
+  ],
+  "본체 · 검색": [
+   "3_시스템/_eval/measure.md",
+   "3_시스템/_eval/results-b1-neighbors.md",
+   "3_시스템/_eval/results-hybrid.md",
+   "3_시스템/search.py",
+   "3_시스템/설명서/설명서-찾기.md"
+  ],
+  "본체 · 원본 색인": [
+   "3_시스템/_eval/ingest_check.py",
+   "3_시스템/handwriting/README.md",
+   "3_시스템/hwlayout.py",
+   "3_시스템/ingest.py",
+   "3_시스템/ingest_vision.py",
+   "3_시스템/설명서/설명서-원본-보기와-고치기.md"
+  ],
+  "본체 · 훅·코어 게이트": [
+   "3_시스템/_eval/gate-cases.tsv",
+   "3_시스템/_eval/gate-verify.ps1",
+   "3_시스템/_eval/idle_save_check.py",
+   "3_시스템/_eval/precommit_sensitive_check.sh",
+   "3_시스템/_eval/stop_inbox_check.py",
+   "3_시스템/hooks/core-gate-decide.ps1",
+   "3_시스템/hooks/core-gate-front.py",
+   "3_시스템/hooks/core-gate.ps1",
+   "3_시스템/hooks/idle-save.py",
+   "3_시스템/hooks/loop-pin.py",
+   "3_시스템/hooks/ops-guard.ps1",
+   "3_시스템/hooks/options-level.ps1",
+   "3_시스템/hooks/permission-probe.ps1",
+   "3_시스템/hooks/pre-commit",
+   "3_시스템/hooks/pre-commit-scan.py",
+   "3_시스템/hooks/pre-push",
+   "3_시스템/hooks/pre-push-scan.py",
+   "3_시스템/hooks/session-end.ps1",
+   "3_시스템/hooks/session-notice.py",
+   "3_시스템/hooks/session-start.ps1",
+   "3_시스템/hooks/statusline.py",
+   "3_시스템/hooks/stop-check.ps1",
+   "3_시스템/hooks/stop-check.py"
+  ],
+  "본체 · 튜토리얼": [
+   "3_시스템/_eval/tutorial_lint_check.py",
+   "3_시스템/tutorial/1-세-자리.md",
+   "3_시스템/tutorial/2-자료-넣기.md",
+   "3_시스템/tutorial/3-보면서-묻기.md",
+   "3_시스템/tutorial/4-일-맡기기.md",
+   "3_시스템/tutorial/5-지운-것-되살리기.md",
+   "3_시스템/tutorial/6-마감과-주제.md",
+   "3_시스템/tutorial/7-기록과-이어-가기.md",
+   "3_시스템/tutorial/연습-주제.md",
+   "3_시스템/tutorial/찾아보기.md",
+   "3_시스템/tutorial_lint.py"
+  ],
+  "본체 · 사용자설명서 장": [
+   "3_시스템/설명서/설명서-Claude.md",
+   "3_시스템/설명서/설명서-공부와-과제.md",
+   "3_시스템/설명서/설명서-되돌리기와-안전.md",
+   "3_시스템/설명서/설명서-문제-해결.md",
+   "3_시스템/설명서/설명서-사용법.md",
+   "3_시스템/설명서/설명서-설정과-표.md",
+   "3_시스템/설명서/설명서-일정과-주제.md",
+   "3_시스템/설명서/설명서-자료-받기.md",
+   "3_시스템/설명서/설명서-작업과-기록.md",
+   "3_시스템/설명서/설명서-화면과-층.md",
+   "3_시스템/설명서/설명서-활용법.md"
+  ],
+  "본체 · 진단 기록": [
+   "3_시스템/_ref/.gitkeep",
+   "3_시스템/_ref/2026-07-11-규약단계-침묵생략.md",
+   "3_시스템/_ref/incident-2026-07-03-스펙-실측-괴리.md",
+   "3_시스템/_ref/incident-2026-07-04-search-stdout-cp949.md",
+   "3_시스템/_ref/incident-2026-07-04-writer-crlf-eol-churn.md",
+   "3_시스템/_ref/incident-2026-07-19-SessionEnd-커밋정지.md",
+   "3_시스템/_ref/incident-2026-07-19-빈약청크-허위이웃.md",
+   "3_시스템/_ref/incident-2026-07-26-obsidian-svg-style-stripping.md",
+   "3_시스템/_ref/incident-2026-07-27-SessionStart-동기reindex-23초-블로킹.md",
+   "3_시스템/_ref/incident-2026-07-27-frontmatter-title-부분인용-YAML파싱오류.md",
+   "3_시스템/_ref/incident-2026-07-27-obsidian-블록수식-연속-날것노출.md",
+   "3_시스템/_ref/incident-2026-07-27-weekly자동실행-권한대기-사망.md",
+   "3_시스템/_ref/incident-2026-07-30-유저전역설정-classifier차단.md",
+   "3_시스템/_ref/incident-2026-07-30-조건부-instruction-로딩-미작동.md",
+   "3_시스템/_ref/incident-2026-08-02-git-index-lock-62시간-자동커밋사망.md",
+   "3_시스템/_ref/incident-2026-08-02-코어게이트-ask사유-모델미도달.md",
+   "3_시스템/_ref/incident-2026-08-08-StartProcess-디태치-569ms.md",
+   "3_시스템/_ref/incident-2026-09-04-배경태스크-15분유휴-무성종료.md",
+   "3_시스템/_ref/incident-2026-09-05-hasattr-없는메서드-조용한무동작.md",
+   "3_시스템/_ref/incident-2026-09-19-git잠금-자동커밋-사흘침묵.md",
+   "3_시스템/_ref/incident-2026-09-24-데스크탑-훅알림-두경로-모두막힘.md",
+   "3_시스템/_ref/incident-2026-09-30-자동모드-서버판정-무응답-무인진행정지.md",
+   "3_시스템/_ref/incident-2026-10-13-배포판-autocrlf-번들-줄바꿈변환.md",
+   "3_시스템/_ref/incident-2026-11-13-dist-check-새파일-시각거름-조용히빠짐.md",
+   "3_시스템/_ref/incident-2026-11-13-일모드전환-CLI가-거부글로-바꿈.md",
+   "3_시스템/_ref/incident-2026-11-15-민감노트-커밋경합-유출.md",
+   "3_시스템/_ref/incident-2026-11-15-작업자동비움-제출하나로-폴더통째-휴지통.md",
+   "3_시스템/_ref/measure-module-toggle.md",
+   "3_시스템/_ref/ref-2026-08-30-claude-p-부트스트랩-40배-옵션.md",
+   "3_시스템/_ref/코어수정-준수사항-체크리스트.md"
+  ],
+  "본체 · 시험": [
+   "3_시스템/_eval/.gitkeep",
+   "3_시스템/_eval/door_check.py",
+   "3_시스템/_eval/follow_check.py",
+   "3_시스템/_eval/hardpaths.py",
+   "3_시스템/_eval/outside_check.py",
+   "3_시스템/_eval/props_fill_check.py",
+   "3_시스템/_eval/r8_cleanup_check.py",
+   "3_시스템/_eval/r9_copy_check.py",
+   "3_시스템/_eval/r9_inbox_check.py",
+   "3_시스템/_eval/subguard/fake_claude.cs",
+   "3_시스템/_eval/subguard/fake_claude.py",
+   "3_시스템/_eval/subguard_check.py",
+   "3_시스템/_eval/update_sim.py",
+   "3_시스템/_eval/vault-baseline.py",
+   "3_시스템/_eval/work_check.py"
+  ],
+  "본체 · 대화창 규약": [
+   "3_시스템/vault-chat/"
+  ],
+  "본체 · 볼트 이전": [
+   "3_시스템/migrations/"
+  ],
+  "본체 · 볼트 대본": [
+   "3_시스템/actions.json",
+   "3_시스템/brain.py",
+   "3_시스템/claude_bin.py",
+   "3_시스템/cleanup.py",
+   "3_시스템/conventions.md",
+   "3_시스템/default-layout.json",
+   "3_시스템/docpdf.py",
+   "3_시스템/door.py",
+   "3_시스템/drift.py",
+   "3_시스템/fileops.py",
+   "3_시스템/follow.py",
+   "3_시스템/graph_topics.py",
+   "3_시스템/holidays.py",
+   "3_시스템/inbox.py",
+   "3_시스템/mdtable.py",
+   "3_시스템/moc.py",
+   "3_시스템/options.py",
+   "3_시스템/options.registry.json",
+   "3_시스템/outside.py",
+   "3_시스템/props-sync.py",
+   "3_시스템/quietwin.mjs",
+   "3_시스템/quietwin.py",
+   "3_시스템/record.py",
+   "3_시스템/restructure.py",
+   "3_시스템/roles.json",
+   "3_시스템/roles.py",
+   "3_시스템/schedule.py",
+   "3_시스템/session-stub.py",
+   "3_시스템/skillstat.py",
+   "3_시스템/tokens.py",
+   "3_시스템/topic.py",
+   "3_시스템/views.json",
+   "3_시스템/weekly.py",
+   "3_시스템/winwatch.py",
+   "3_시스템/work.json",
+   "3_시스템/work.py"
+  ],
+  "본체 · 플러그인 brain-base": [
+   ".obsidian/plugins/brain-base/"
+  ],
+  "본체 · 플러그인 brain-calendar": [
+   ".obsidian/plugins/brain-calendar/"
+  ],
+  "본체 · 플러그인 brain-source": [
+   ".obsidian/plugins/brain-source/"
+  ],
+  "모듈 · dist-sync": [
+   ".claude/skills/dist-sync/"
+  ],
+  "모듈 · module-forge": [
+   ".claude/skills/module-forge/"
+  ],
+  "본체 · 스킬": [
+   ".claude/skills/VENDOR.txt",
+   ".claude/skills/canvas/",
+   ".claude/skills/deep-loop/",
+   ".claude/skills/defuddle/",
+   ".claude/skills/options/",
+   ".claude/skills/pdf-ingest/",
+   ".claude/skills/session-record/",
+   ".claude/skills/setup-interview/",
+   ".claude/skills/weekly-review/"
+  ],
+  "본체 · 뿌리": [
+   ".claude/output-styles/lean.md",
+   ".claude/settings.json",
+   ".gitattributes",
+   ".gitignore",
+   "2_지식/원본 목록.base",
+   "LICENSE",
+   "README.md"
+  ]
+ }
+}

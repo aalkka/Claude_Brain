@@ -29,7 +29,8 @@ const cp = (rel) => {
 };
 fs.rmSync(TV, { recursive: true, force: true });
 for (const r of [MOD, "3_시스템/views.json", "3_시스템/collect", "3_시스템/tutorial", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/lms/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/auto.log", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/일/외부뇌/알림-설정.md", "2_지식/일정"]) cp(r);
-for (const f of ["brain.py", "roles.py", "roles.json", "fileops.py", "claude_bin.py", "alarms.py", "schedule.py", "web-collect.py", "lms-auto.py", "notice-filter.py"]) cp("3_시스템/" + f);
+for (const f of ["brain.py", "roles.py", "roles.json", "fileops.py", "claude_bin.py", "schedule.py", "web-collect.py", "lms-auto.py", "notice-filter.py"]) cp("3_시스템/" + f);
+cp(".claude/skills/mobility/scripts/alarms.py");   // 폰 알림 엔진 = mobility(11-16 · 없으면 수집 창이 «알림» 칸을 안 그림)
 for (const f of fs.readdirSync(path.join(REAL, "3_시스템/_index/collect"))) if (f.endsWith(".json")) cp("3_시스템/_index/collect/" + f);
 fs.rmSync(path.join(TV, MOD, "scripts/__pycache__"), { recursive: true, force: true });
 fs.writeFileSync(path.join(TV, "3_시스템/ingest_vision.py"), "def subscription():\n    return '시험 멈춤'\n"); // 판정은 구독 관문에서 멈춘다

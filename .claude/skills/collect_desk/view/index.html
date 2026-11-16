@@ -352,17 +352,17 @@ function editor(s){
     r.push(`<label>로그인</label><div class="line">${s.login==='out'?'<span class="flair err">끊김</span>':s.login?'<span>됨</span>':'<span class="sm">—</span>'}<span class="sm">${esc(s.loginAt)}</span><button class="btn ${s.login==='out'?'err':''}" data-open="${esc(s.id)}">${s.login==='out'?'로그인':'열기'}</button></div>`);
     r.push(`<label>확장</label><div class="line"><span>${esc(s.ext.have||'—')}</span>${s.ext.have&&s.ext.want&&s.ext.have!==s.ext.want?`<span class="flair warn">옛 판</span>`:''}</div>`);
     r.push(recvRow(s));
-    r.push(`<label>알림</label>${alarmCell(s.alarm)}`);
+    if(s.alarm)r.push(`<label>알림</label>${alarmCell(s.alarm)}`);
     r.push(`<label>과목</label><div>${s.courses.map(c=>`<div class="crow ${c.on?'':'off'}"><span class="n">${esc(c.name)}</span><span class="sm">${c.on?`글 ${c.posts} · 파일 ${c.files} · 게시판 ${c.board}`:'뺌'}</span><button class="sw ${c.on?'on':''}" data-src="${esc(s.id)}" data-f="course" data-v="${esc(c.id)}=${c.on?'off':'on'}" aria-label="${c.on?'빼기':'넣기'}"><i></i></button></div>`).join('')}</div>`);
     return`<div class="ed">${r.join('')}</div>`;
   }
-  if(s.fixed){r.push(`<label>주기</label><span class="sm">주간 점검 · 30일</span>`);r.push(`<label>알림</label>${alarmCell(s.alarm)}`);return`<div class="ed">${r.join('')}</div>`}
+  if(s.fixed){r.push(`<label>주기</label><span class="sm">주간 점검 · 30일</span>`);if(s.alarm)r.push(`<label>알림</label>${alarmCell(s.alarm)}`);return`<div class="ed">${r.join('')}</div>`}
   if(s.keep)r.push(`<label>남길 말</label>${chips(s.keep,s.id,'keep')}`);
   r.push(`<label>뺄 말</label><div>${chips(s.skip,s.id,'skip')}</div>`);
   if(s.target)r.push(`<label>대상</label><span class="chip" style="justify-self:start">${esc(s.target)}</span>`);
   r.push(recvRow(s));
   if(s.cnt&&D.autoJudge)r.push(`<label>자동 판정</label><div class="line">${sw(s.auto,'자동 판정',s.id,'auto')}<span class="sm">대기 칸 ${esc(s.keepDays)}일</span></div>`);
-  r.push(`<label>알림</label>${alarmCell(s.alarm)}`);
+  if(s.alarm)r.push(`<label>알림</label>${alarmCell(s.alarm)}`);
   return`<div class="ed">${r.join('')}</div>`;
 }
 const evs=s=>s.events.length?`<div class="ev">${s.events.map(e=>`<span>${esc(e.t)}</span><span class="${e.bad?'bad':e.me?'me':''}">${esc(e.s)}</span>`).join('')}</div>`:'<span class="sm">—</span>';

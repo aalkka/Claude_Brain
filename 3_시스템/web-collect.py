@@ -10,7 +10,7 @@
 층: L0 원시 응답 = 1_수집/.web/<id>/<글번호>.html(점 폴더 = 색인·옵시디언 제외 · git 제외)
     L1 원본 = 조리법 folder 의 md(보이는 글자 그대로 · 시각·작성자도 출처 값 그대로) + 첨부 = 같은 이름 폴더(<글 md 이름>/)
     L2 색인 = ingest(첨부·그림 글자 · OCR) · L3 지식 = 수요가 있을 때.
-받기만: 네트워크 함수는 GET 하나뿐이다(요청 본문을 보내는 길 자체가 없다). 첨부는 격리 → lms-intake 검사 → 통과만 들인다.
+받기만: 네트워크 함수는 GET 하나뿐이다(요청 본문을 보내는 길 자체가 없다). 첨부는 격리 → filecheck 검사 → 통과만 들인다.
 
   py -3 3_시스템/web-collect.py                        # 모든 조리법(받을 차례만 — 조리법 at 시각이 지났거나 · 없으면 recheck_hours(기본 20)가 지남)
   py -3 3_시스템/web-collect.py --source <id> --due    # 그 출처를 받을 차례일 때만(시각 예약 «외부뇌-수집 <id>» → lms-auto.py --at)
@@ -397,8 +397,9 @@ _intake = []
 
 
 def intake():
+    """받은 파일 검사(본체 filecheck.py) — 11-16 까지는 개인 층 lms-intake.py 를 불러 배포판에서 «첨부»를 켜면 깨졌다."""
     if not _intake:
-        spec = importlib.util.spec_from_file_location('lms_intake', os.path.join(SYS, 'lms-intake.py'))
+        spec = importlib.util.spec_from_file_location('filecheck', os.path.join(SYS, 'filecheck.py'))
         m = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(m)
         _intake.append(m)

@@ -1,6 +1,6 @@
 ---
 name: canvas
-description: Obsidian 캔버스(.canvas)를 만들거나 고친다. "캔버스 만들어줘"·"이거 캔버스로"·"그림으로 펼쳐줘"·"카드로 늘어놓고 보자"·"캔버스 고쳐줘"에 발동. 노트를 카드로 임베드해 2차원에 배치하고 엣지로 잇는다. ⛔ 단순 도해·순서도는 `study-helper:illustrate`(SVG/Mermaid), 표로 될 일은 표.
+description: Obsidian 캔버스(.canvas)를 만들거나 고친다. "캔버스 만들어줘"·"이거 캔버스로"·"그림으로 펼쳐줘"·"카드로 늘어놓고 보자"·"캔버스 고쳐줘"에 발동. 노트를 카드로 임베드해 2차원에 배치하고 엣지로 잇는다. ⛔ 단순 도해·순서도는 SVG/Mermaid 도해(study-helper 모듈이 있으면 `study-helper:illustrate`), 표로 될 일은 표.
 ---
 # canvas — Obsidian 캔버스 제작
 

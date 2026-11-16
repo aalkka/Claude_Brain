@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """**vault-baseline** — 볼트 개혁 전·후를 같은 자로 잰다 (2026-10-29 · 로드맵 R1 · R10 에서 다시).
 
-  py -3 3_시스템/_eval/vault-baseline.py --topic 과목G,실험과목           재고 저장
+  py -3 3_시스템/_eval/vault-baseline.py --topic 과목이름,별칭           재고 저장
   py -3 3_시스템/_eval/vault-baseline.py --compare 3_시스템/_index/baseline/2026-10-29.json   지금과 비교
 
 잰 것(설계안 §15.1): 탐색기에 보이는 폴더(사람 공간·시스템·색인) · 사람 공간 최대 깊이 · 주제 흩어짐(그 이름이 든 폴더 수와 층)

@@ -115,6 +115,96 @@ def external_tests(A, E):
         FAIL.append("있는 기능만 물음")
 
 
+def ship_tests(root):
+    """배포 목록(기본 거부) — 목록 밖 새 코어 = 정할 것(① 아님) · 배포판에 있는데 목록 밖 = 빼기 후보 · 자리째 ack · 폴더째 적은 자리 ·
+    ⑥ 배포판 글이 배포판에 없는 모듈·코드를 가리킴 · publish 리포트 갈래."""
+    A, B = os.path.join(root, "vault"), os.path.join(root, "dist")
+    SHIP = ".claude/skills/dist-sync/ship.json"  # mf:allow-path  (임시 사본 안)
+    NEWP = "3_시스템/_eval/phone_only_check.py"   # mf:allow-path  (임시 사본 안 — 개인 프로젝트 대본 흉내)
+    OLDP = "3_시스템/_eval/old_personal_check.py"  # mf:allow-path  (임시 사본 안 — 잘못 실린 것 흉내)
+    LIST = '{"기능": {"데모": [".claude/skills/demo/", ".claude/skills/dist-sync/", "README.md", "' + PY + '"%s]}}\n'
+    os.makedirs(A)
+    run(A, "init")
+    put(A, ".claude/skills/demo/SKILL.md", "demo\n")
+    put(A, "README.md", "사용법\n")
+    put(A, PY, "print(1)\n")
+    put(A, OLDP, "print('개인')\n")
+    put(A, ".claude/skills/secret/SKILL.md", "개인 모듈\n")
+    put(A, SHIP, LIST % "")
+    run(A, "add", ".")
+    run(A, "commit", "-m", "vault")
+    run(A, "worktree", "add", "-q", "--orphan", "-b", "dist-sync", B)
+    STRAY = "3_시스템/stray-x.py"   # mf:allow-path  (임시 사본 안 — 층 규칙에 없는 자리(미분류)에 손으로 실린 것)
+    for rel, txt in ((".claude/skills/demo/SKILL.md", "demo\n"), (PY, "print(1)\n"), (OLDP, "print('개인')\n"), (SHIP, LIST % ""), ("README.md", "사용법\n"),
+                     (STRAY, "print('손')\n")):
+        put(B, rel, txt)
+    run(B, "add", ".")
+    run(B, "commit", "-m", "sync(dist): 처음")
+    t = int(run(B, "log", "-1", "--format=%ct"))
+    for rel in (".claude/skills/demo/SKILL.md", PY, OLDP, SHIP, ".claude/skills/secret/SKILL.md", "README.md"):
+        os.utime(os.path.join(A, rel), (t - 100, t - 100))
+    ok = True
+
+    def say(name, cond, detail=""):
+        nonlocal ok
+        print("%s 배포 목록 — %s%s" % ("✓" if cond else "✗", name, (" · " + str(detail)) if detail else ""))
+        if not cond:
+            ok = False
+            FAIL.append("배포 목록 " + name)
+
+    r = dc.check(A, B)
+    say("빼기 후보 = 배포판에 있는데 목록 밖(코어·미분류)", [x["path"] for x in r["drops"]] == [OLDP, STRAY], [x["path"] for x in r["drops"]])
+    say("목록 밖 새 모듈 = 정할 것", [x["path"] for x in r["undecided"]] == [".claude/skills/secret/SKILL.md"], r["undecided"])
+    dc.ack(A, [".claude/skills/secret/SKILL.md"], "개인 모듈", always=True)
+    r = dc.check(A, B)
+    say("목록 안 · 같은 파일 = ① 0", r["unsynced"] == [] and r["undecided"] == [], (r["unsynced"], r["undecided"]))
+    put(A, NEWP, "print('폰')\n")
+    r = dc.check(A, B)
+    say("목록 밖 새 코어 = 정할 것(① 아님)", [x["path"] for x in r["undecided"]] == [NEWP] and r["unsynced"] == [],
+        ([x["path"] for x in r["undecided"]], [x["path"] for x in r["unsynced"]]))
+    s = dc.summary(r)
+    say("건강 줄에 정할 것·빼기 후보", "정할 것 1" in s and "빼기 후보 2" in s and "정하기" in s, s)
+    try:
+        dc.ack(A, [NEWP], always=True)
+        say("자리째 ack 는 까닭 없으면 거부", False)
+    except ValueError:
+        say("자리째 ack 는 까닭 없으면 거부", True)
+    dc.ack(A, [NEWP], "개인 프로젝트", always=True)
+    put(A, NEWP, "print('폰 2')\n", time.time() + 100)
+    say("자리째 ack 뒤 다시 고쳐도 안 뜸", dc.check(A, B)["undecided"] == [])
+    put(A, ".claude/skills/demo/new.md", "모듈 폴더 안 새 파일\n")
+    r = dc.check(A, B)
+    say("목록에 적은 모듈 폴더 안 새 파일 = ①", [x["path"] for x in r["unsynced"]] == [".claude/skills/demo/new.md"], [x["path"] for x in r["unsynced"]])
+    # ⑥ — 배포판 글이 배포판에 없는 모듈·볼트에만 있는 코드를 가리킴
+    put(B, "README.md", "사용법 · /secret:run 으로 · phone_only_check.py 가 울린다\n")
+    r = dc.check(A, B)
+    got = {x["path"]: x["why"] for x in r["pointers"]}
+    say("가리킴 — 없는 스킬(module.json 없음)·볼트에만 있는 코드", sorted(got.get("README.md", [])) == ["배포판에 없는 스킬 secret", "볼트에만 있는 phone_only_check.py"], got)
+    dc.ack(A, ["README.md"], "시험 — 안내 글", ref_of=r["pointers"])
+    say("가리킴 확인함 뒤 0", dc.check(A, B)["pointers"] == [])
+    put(B, "README.md", "사용법 · /secret:run · phone_only_check.py · old_personal_check.py 도\n")
+    r = dc.check(A, B)
+    # old_personal_check.py 는 배포판에 있으니 «볼트에만»이 아니다 — 새 이름 없음 → 그대로 0
+    say("배포판에 있는 이름은 가리킴 아님", r["pointers"] == [], r["pointers"])
+    put(A, "3_시스템/server-x.py", "print('서버')\n")   # mf:allow-path  (임시 사본 안)
+    put(B, "README.md", "사용법 · /secret:run · phone_only_check.py · server-x.py\n")
+    r = dc.check(A, B)
+    say("확인한 뒤 새 이름 = 다시 뜸", [x["why"] for x in r["pointers"]] == [["볼트에만 있는 server-x.py"]], r["pointers"])
+    # 목록 잘못 — 여러 기능이 같이 쓰는 자리를 폴더째
+    put(A, SHIP, LIST % ', "3_시스템/_ref/"')  # mf:allow-path  (임시 사본 안 — 폴더째 적은 자리 흉내)
+    r = dc.check(A, B)
+    say("폴더째 적은 자리 = 목록 잘못", r["ship"]["잘못"] == ["3_시스템/_ref/"], r["ship"])  # mf:allow-path  (임시 사본 안)
+    put(A, SHIP, LIST % "")
+    # publish 리포트 — 목록 밖은 «통째 교체»에 안 넣고 «정할 것» · 빼기 후보
+    text, _ = dc.dd.report(A, B, "publish")
+    core = text.split("## 코어 — 통째 교체 가능")[1].split("\n## ")[0] if "## 코어 — 통째 교체 가능" in text else ""
+    say("리포트 — 목록 밖 새 파일은 통째 교체에 없음", NEWP not in core and ".claude/skills/demo/new.md" in core, core.strip()[:120])
+    sec = lambda h: text.split(h)[1].split("\n## ")[0] if h in text else ""
+    say("리포트 — 정할 것 칸에 목록 밖 새 코어", ("`%s`" % NEWP) in sec("## 배포 목록 밖 — 옮기지 않는다(정할 것)"), sec("## 배포 목록 밖 — 옮기지 않는다(정할 것)").strip()[:160])
+    say("리포트 — 빼기 후보 칸", ("`%s`" % OLDP) in sec("## 배포판에 있는데 목록 밖 — 빼기 후보"), sec("## 배포판에 있는데 목록 밖 — 빼기 후보").strip()[:160])
+    return ok
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -231,6 +321,8 @@ def main():
         print("%s 안 보던 자리·가를 까닭 — 처음 %s · 적은 뒤 남음 %s · 부르는데 안 실음 %s" % ("✓" if ok else "✗", sorted(got), sorted(left), back.get(NEED)))
         if not ok:
             FAIL.append("안 보던 자리")
+
+        ship_tests(os.path.join(tmp, "ship"))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("통과" if not FAIL else "실패: " + ", ".join(FAIL))
