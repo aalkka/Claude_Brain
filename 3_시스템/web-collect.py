@@ -449,7 +449,7 @@ def take_attachments(rc, run, post_md, v):
         fn = att_name(name, ct, cd, url, k)
         ext = os.path.splitext(fn)[1].lower()
         rec['file'] = fn
-        # 파일 대신 HTML 이 오면 권한 안내·만료 페이지다(10-27 OO대 포털 «Access is denied» 10건) — 격리가 아니라 «권한 없음»
+        # 파일 대신 HTML 이 오면 권한 안내·만료 페이지다(10-27 학교 포털 «Access is denied» 10건) — 격리가 아니라 «권한 없음»
         if ext not in ('.html', '.htm', '.txt') and (ct == 'text/html' or re.match(rb'\s*(<!doctype|<html|<link|<script|<meta)', data[:200], re.I)):
             rec['denied'] = 'HTML 응답(로그인 필요·권한 없음 의심)'
             out.append(rec)

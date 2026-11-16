@@ -467,8 +467,14 @@ def yes(x):
 
 def other(t, me):
     """«기타» 자유 서술 조건 — 자주 나오는 꼴만 결정적으로. 나머지는 모름(10-27 장학 30건에서 뽑은 꼴)."""
-    if re.search(r'서울캠퍼스|본교', t):
-        return ('충족', '서울캠퍼스') if me.get('캠퍼스') == '서울' else ('모름', '캠퍼스')
+    # 캠퍼스 — 이름은 카드에서(«캠퍼스» · «캠퍼스별칭» 목록 = 캠퍼스를 부르는 다른 이름). 학교 이름을 코드에 박지 않는다(11-16)
+    camp = me.get('캠퍼스') if isinstance(me.get('캠퍼스'), str) else ''
+    alias = [a for a in me.get('캠퍼스별칭') or [] if isinstance(a, str) and a]
+    m = re.search(r'([가-힣]{1,8})캠퍼스', t)
+    if (camp and m and m.group(1).endswith(camp)) or any(a in t for a in alias):
+        return ('충족', camp + '캠퍼스')
+    if m and not camp:
+        return ('모름', '캠퍼스')
     if re.search(r'국가장학금.{0,12}신청', t):
         v = me.get('국가장학금신청')
         return ('모름', '국가장학금 신청 여부 모름') if v is None else (('충족', '국가장학금 신청함') if yes(v) else ('불충족', '국가장학금 미신청'))

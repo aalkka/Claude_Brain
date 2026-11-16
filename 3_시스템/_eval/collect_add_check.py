@@ -34,7 +34,7 @@ BOARD = [(305, '2026-11-05', '[모집] 인공지능 동아리 신입 모집'), (
          (302, '2026-11-02', '[모집] 반도체 연구실 학부연구생'), (301, '2026-10-01', '[행사] 지난달 행사')]
 ITEMS = [('a1', '2026-11-05', 'GPU 커널 최적화 이야기'), ('a2', '2026-11-03', '오늘의 브이로그'), ('a3', '2026-10-01', 'GPU 오래된 글')]
 LONG = [(400 + i, f'2026-10-{i + 1:02d}', f'[세미나] 긴 제목 {i:02d} — Engineering Electronic Transport in Two-Dimensional Materials: From Semiconductors to Superconductors')
-        for i in range(20)]     # 11-06 끝까지 시험의 OO학과 세미나 꼴(한 쪽 20줄 · 머리말이 제목 앞을 먹는다)
+        for i in range(20)]     # 11-06 끝까지 시험의 학과 세미나 꼴(한 쪽 20줄 · 머리말이 제목 앞을 먹는다)
 
 
 class Srv(http.server.BaseHTTPRequestHandler):
