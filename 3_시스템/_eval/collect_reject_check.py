@@ -29,8 +29,8 @@ cd = load('cd', os.path.join(AN, '.claude', 'skills', 'collect_desk', 'scripts',
 # 제목 낱말
 w = cd.title_words('[기아] 26년 엔지니어(생산직) 설비기술인력 채용 (~11/18(수) 15시까지)')
 ok('낱말: 날짜·숫자 빠지고 기관·직무 남음', w[:4] == ['기아', '엔지니어', '생산직', '설비기술인력'] and '26년' not in w and '11' not in w, w)
-w = cd.title_words('2026학년도 비교과과정 및 쿠카이브 만족도 조사 안내')
-ok('낱말: 흔한 말(안내)·학년도 빠짐', '안내' not in w and '2026학년도' not in w and '쿠카이브' in w, w)
+w = cd.title_words('2026학년도 비교과과정 및 진로포털 만족도 조사 안내')
+ok('낱말: 흔한 말(안내)·학년도 빠짐', '안내' not in w and '2026학년도' not in w and '진로포털' in w, w)
 ok('낱말: 12개까지', len(cd.title_words(' '.join(f'낱말{i}가' for i in range(30)))) == 12)
 
 # reject 명령 — 엔진 호출을 가로챈다

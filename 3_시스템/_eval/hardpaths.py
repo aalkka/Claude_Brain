@@ -6,7 +6,7 @@ R6 완료 기준 = 이 목록의 «움직이는 경로» 0(역할 이름으로 �
 
   py -3 3_시스템/_eval/hardpaths.py [--extra C:/brain-base/src ...] [--all] [--json]
 
-움직이는 경로(설계안 §1.3): 0_작업/<과목> · 2_지식/notes·sessions·decisions·_canvas · 1_수집/학교/고려대 공지.
+움직이는 경로(설계안 §1.3): 0_작업/<과목> · 2_지식/notes·sessions·decisions·_canvas · 1_수집/학교/<학교> 공지.
 그대로인 경로: 1_수집/학교/<과목>(공지 빼고) · 1_수집/받은함·_색인·_lms · 2_지식 뿌리 파일·일정·modules · 3_시스템.
 과목 이름 글자(정식·별칭)도 따로 센다 — 주제 등록부(2_지식/주제.md)로 옮길 후보.
 """
@@ -103,7 +103,7 @@ def scan(roots, all_paths=False):
             continue
         hits = [m.group(0) for m in LIT.finditer(text)]
         hits += ["%s/%s" % (m.group(1), m.group(2)) for m in JOIN.finditer(text)]
-        # 공백 든 움직이는 경로(«고려대 공지»)는 LIT 가 공백에서 끊어 못 본다 — 글자 그대로 한 번 더 센다(10-30 R9 준비에서 조리법 2곳 놓침)
+        # 공백 든 움직이는 경로(«<학교> 공지»)는 LIT 가 공백에서 끊어 못 본다 — 글자 그대로 한 번 더 센다(10-30 R9 준비에서 조리법 2곳 놓침)
         for m in MOVING:
             if " " in m:
                 hits += [m] * sum(text.count(v) for v in {m, m.replace("/", "\\"), m.replace("/", "\\\\")})
