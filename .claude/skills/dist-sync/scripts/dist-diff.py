@@ -56,11 +56,12 @@ PERSONAL = [
     "3_시스템/lms/*", "3_시스템/lms-*", "3_시스템/collect/*",  # mf:allow-path  (수집 엔진 web-collect·notice-filter 는 코어로 · 11-09)
     "3_시스템/labreport-*", "3_시스템/dsl-report-build.py", "3_시스템/md2docx-simple.py",  # mf:allow-path
     "3_시스템/ask.py", "3_시스템/travel-mode.ps1",  # mf:allow-path
-    # 2026-11-09 — 배포판에 안 싣는 모듈(빅보스·로드맵) · 이 PC 의 값 · 그래프 색표 · 손발 서버·예약·절전(폰 앱이 배포판에 없음)
+    # 2026-11-09 — 배포판에 안 싣는 모듈(빅보스·로드맵·폰 연결 mobility) · 이 PC 의 값 · 그래프 색표 · LMS 예약·깨우기 시험
     ".claude/skills/bigboss/*", ".claude/skills/interactive_roadmap/*", "3_시스템/*.local.json", "3_시스템/graph_topics.json",  # mf:allow-path
-    "3_시스템/server.py", "3_시스템/server-setup.ps1", "3_시스템/m2-setup.ps1", "3_시스템/wake-test.ps1",  # mf:allow-path
+    ".claude/skills/mobility/*",  # mf:allow-path  (폰 연결 모듈 · 11-16 — 폰 앱·폰 플러그인이 배포판에 없음)
+    "3_시스템/m2-setup.ps1", "3_시스템/wake-test.ps1",  # mf:allow-path  (LMS 무인 수집 예약·깨우기 시험 — 개인 층 · 서버는 11-16 mobility 로)
     # 개인 층 대상(학교 LMS 대본·서버·lms-intake·lms-auto)·안 싣는 모듈(로드맵·study-helper)을 돌리는 시험 · 제작자 노트를 묻는 검색 골든셋
-    "3_시스템/_eval/lms_*", "3_시스템/_eval/server_check.py", "3_시스템/_eval/flow_rehearsal_check.py",  # mf:allow-path
+    "3_시스템/_eval/lms_*", "3_시스템/_eval/flow_rehearsal_check.py",  # mf:allow-path
     "3_시스템/_eval/r6_intake_check.py", "3_시스템/_eval/collect_desk_off_check.py", "3_시스템/_eval/roadmap_engine_check.py", "3_시스템/_eval/module_toggle_check.py",  # mf:allow-path
     "3_시스템/_eval/golden.jsonl", "3_시스템/_eval/golden-paraphrase.jsonl",  # mf:allow-path
 ]
@@ -99,6 +100,50 @@ FIRST_ARRIVAL = {"brain-base": {"replaceExplorer": False}}
 # 판 해시 표(2026-11-03) — 배포판이 실어 보낸 코어의 과거 판. 안 고친 파일과 사용자가 고친·만든 파일을 가른다.
 # git 공통 조상에 기대지 않고(얕은 복제·이력 고쳐 쓰기에도 그대로) 내용 없이 해시만 싣는다. 만드는 곳 = publish(--build-known).
 KNOWN_REL = ".claude/skills/dist-sync/known-hashes.json"  # mf:allow-path
+
+# 배포 목록(2026-11-16) — publish 는 이 목록에 적힌 코어만 싣는다(기본 = 안 실음). 기능 → 파일 경로 또는 이름 붙은 폴더(끝 «/»).
+#   까닭: 코어가 «자리 와일드카드 − 개인 목록»이라 코어 자리에 새로 생긴 파일·기능의 기본이 «싣기»였다. 배포판 코어 245개 중 193개가
+#   와일드카드 한 줄로 실렸고(11-15 잼), 개인 목록은 아홉 번 모두 새어 나간 뒤에 늘었다 — 개인 프로젝트의 알림 대본·폰 사건 기록이 그렇게 실렸다.
+#   목록이 없는 볼트(배포판을 받는 쪽)는 옛 동작이다. update 는 이 목록을 쓰지 않는다(받는 쪽 층 규칙은 그대로).
+SHIP_REL = ".claude/skills/dist-sync/ship.json"  # mf:allow-path
+# 여러 기능이 같이 쓰는 자리 — 폴더째 적으면 그 자리의 새 파일이 다시 기본으로 실린다
+SHIP_NO_FOLDER = {"3_시스템/", "3_시스템/_ref/", "3_시스템/_eval/", "3_시스템/hooks/", "3_시스템/설명서/", "3_시스템/tutorial/",  # mf:allow-path
+                  ".claude/", ".claude/skills/", ".obsidian/", ".obsidian/plugins/", "2_지식/"}  # mf:allow-path
+
+
+def load_ship(root, path=None):
+    """배포 목록 {경로 또는 폴더/: 기능} — 파일이 없거나 못 읽으면 None(옛 동작). path = 미리 재 볼 초안."""
+    p = path or os.path.join(root, *SHIP_REL.split("/"))
+    try:
+        with open(p, encoding="utf-8") as f:
+            d = json.load(f)
+    except (OSError, ValueError):
+        return None
+    out = {}
+    for feat, items in (d.get("기능") or {}).items():
+        for x in items:
+            out[x.replace("\\", "/")] = feat
+    return out
+
+
+def shipped(ship, rel):
+    """rel 을 싣는 기능 이름 · None = 목록 밖(싣지 않음) · 목록이 없으면 ""(옛 동작 — 층만 본다)."""
+    if ship is None:
+        return ""
+    rel = rel.replace("\\", "/")
+    if rel in ship:
+        return ship[rel]
+    for x, feat in ship.items():
+        if x.endswith("/") and rel.startswith(x):
+            return feat
+    return None
+
+
+def ship_problems(ship):
+    """목록 자체의 잘못 — 여러 기능이 같이 쓰는 자리를 폴더째 적은 줄."""
+    return sorted(x for x in (ship or {}) if x in SHIP_NO_FOLDER)
+
+
 LINE_FILES = {".gitignore", ".gitattributes"}  # mf:allow-path  줄 모음 — 사용자 줄을 잃으면 숨긴 파일이 커밋된다. 겹치면 양쪽을 다 남긴다
 KEEP_IF_MODIFIED = {"3_시스템/default-layout.json"}  # mf:allow-path  사용자가 «지금 배치를 기본으로» 한 결과 — 합칠 것이 아니다
 RX_S0 = re.compile(r"^## §0.*?(?=^## )", re.S | re.M)
@@ -148,7 +193,10 @@ CORE = [
     "3_시스템/options.py", "3_시스템/options.registry.json", "3_시스템/views.json", "3_시스템/tutorial_lint.py",  # mf:allow-path
     "3_시스템/quietwin.py", "3_시스템/quietwin.mjs", "3_시스템/winwatch.py", "3_시스템/graph_topics.py",  # mf:allow-path
     # 수집 창(코어 화면 · 11-07 본체 통합)이 부르는 엔진 — 출처마다 다른 것은 조리법(3_시스템/collect/* · 개인)
-    "3_시스템/web-collect.py", "3_시스템/notice-filter.py", "3_시스템/alarms.py", "3_시스템/filter-learn.py",  # mf:allow-path
+    "3_시스템/web-collect.py", "3_시스템/notice-filter.py", "3_시스템/filter-learn.py",  # mf:allow-path
+    "3_시스템/filecheck.py",  # mf:allow-path  — 받은 파일 검사(웹 수집 첨부 · 11-16 학교 LMS 대본에서 떼어 냄)
+    # 3_시스템/alarms.py = 11-16 mobility 로 옮김(폰만 울림) — 볼트엔 없고 이 줄이 코어로 남아 dist-check «볼트에서 지움» → 다음 publish 가 배포판에서 지운다
+    "3_시스템/alarms.py",  # mf:allow-path
     # 모아보기(.moa · 11-12) — views.json formats 가 부르는 엔진·화면. 빠지면 배포판의 .moa 가 안 열린다
     "3_시스템/gather/*",  # mf:allow-path
     # 초안 비교 한 장(스킬 draft · 11-13) — 스킬이 부르는 그리기·검사 대본과 바탕 꼴. 빠지면 배포판의 draft 가 안 돈다
@@ -341,8 +389,9 @@ def plan_lines(plan):
     return L
 
 
-def report(A, B, mode, plan=None):
+def report(A, B, mode, plan=None, ship_path=None):
     fa, fb = walk(A), walk(B)
+    ship = load_ship(A, ship_path) if mode == "publish" else None
     added = sorted(set(fa) - set(fb))       # A 에만 = B 에 새로 들어갈 것
     # ⛔ B 에만 있는 것 ≠ «배포판이 지운 것». 대상 볼트가 스스로 만든 파일이 전부 여기 섞인다.
     #   실측(2026-09-12): 공통 조상 기준 0건인데 단순 집합차로는 51건이 나왔다.
@@ -394,6 +443,8 @@ def report(A, B, mode, plan=None):
         if mode == "update" and lay in ("코어", L_CLAUDE):     # 위 «할 일» 이 대신한다
             continue
         items = [r for r in added if layer(r) == lay] + [r for r in changed if layer(r) == lay]
+        if lay == "코어" and ship is not None:      # 목록 밖은 «통째 교체» 에 넣지 않는다 — 아래 «정할 것»으로
+            items = [r for r in items if shipped(ship, r) is not None]
         if not items:
             continue
         w("## %s — %s" % (lay, note))
@@ -402,11 +453,43 @@ def report(A, B, mode, plan=None):
             w("- `%s`%s" % (r, "  *(새 파일)*" if r in added else ""))
         w("")
 
+    if mode == "publish" and ship is None:
+        w("## ⚠ 배포 목록이 없다 — 옛 동작(층만 보고 싣는다)")
+        w("")
+        w("`%s` 가 없거나 못 읽는다. 코어 자리의 새 파일이 기본으로 실린다." % SHIP_REL)
+        w("")
+    if mode == "publish" and ship is not None:
+        bad = ship_problems(ship)
+        if bad:
+            w("## ⛔ 배포 목록의 잘못 — %d줄" % len(bad))
+            w("")
+            w("여러 기능이 같이 쓰는 자리를 폴더째 적었다. 그 자리의 새 파일이 다시 기본으로 실린다 — 낱개 경로로 적는다.")
+            w("")
+            w("\n".join("- `%s`" % x for x in bad))
+            w("")
+        out_list = sorted(r for r in set(added) | set(changed) if layer(r) == "코어" and shipped(ship, r) is None)
+        w("## 배포 목록 밖 — 옮기지 않는다(정할 것) — %d건" % len(out_list))
+        w("")
+        if out_list:
+            w("배포판 사용자에게 이 기능이 있는가(부르는 쪽과 내주는 쪽이 배포판에 다 있는가)로 정한다. «배포판 코어가 부른다»는 싣는 까닭이 아니다.")
+            w("싣는다 = `%s` 그 기능 칸에 경로를 더함 · 안 싣는다 = `dist-check.py --ack <경로> --always --why \"까닭\"` · 모르면 사용자에게." % SHIP_REL)
+            w("")
+            w("\n".join("- `%s`%s" % (r, "  *(새 파일)*" if r in added else "") for r in out_list))
+            w("")
+        drop = sorted(r for r in fb if layer(r) in ("코어", "미분류") and shipped(ship, r) is None)   # 층에서 빼도 숨지 않게
+        w("## 배포판에 있는데 목록 밖 — 빼기 후보 — %d건" % len(drop))
+        w("")
+        if drop:
+            w("한 번 잘못 실린 것은 고칠 때마다 다시 실린다 — 여기서 끊는다. 빼면 받는 쪽 업데이트에 «배포판이 뺀 것 휴지통»으로 뜬다(안 고친 판만).")
+            w("")
+            w("\n".join("- `%s`" % r for r in drop))
+            w("")
+
     if mode == "publish":
         local = load_local_leaks(A)
         if local:
             LEAK.extend(local)
-        leaks = scan_leaks({r: fa[r] for r in (added + changed) if r in fa})
+        leaks = scan_leaks({r: fa[r] for r in (added + changed) if r in fa and (layer(r) != "코어" or shipped(ship, r) is not None)})
         w("## 익명화 후보 — %d건" % len(leaks))
         w("")
         if local is None:
@@ -861,6 +944,7 @@ def main():
                     help="배포 플러그인 교체를 실행한다(update 리포트의 계획을 승인한 뒤에만)")
     ap.add_argument("--plan-out", help="(update) 업데이트 계획 JSON 저장 경로 — 실행은 배포판의 fileops.py update 가 한다")
     ap.add_argument("--build-known", metavar="배포판", help="(publish) 배포판 이력에서 판 해시 표를 만든다")
+    ap.add_argument("--ship", metavar="파일", help="(publish) 배포 목록 초안으로 미리 잰다(기본 = %s)" % SHIP_REL)
     a = ap.parse_args()
     if a.build_known:
         n_paths, n_vers = build_known(os.path.abspath(a.build_known))
@@ -887,7 +971,7 @@ def main():
         return 0 if ok else 1
 
     plan = update_plan(os.path.abspath(a.a), os.path.abspath(a.b)) if a.mode == "update" else None
-    text, (n_add, n_chg, n_del) = report(os.path.abspath(a.a), os.path.abspath(a.b), a.mode, plan)
+    text, (n_add, n_chg, n_del) = report(os.path.abspath(a.a), os.path.abspath(a.b), a.mode, plan, a.ship)
 
     # ⑤ 실측 게이트 — "산출물 존재 ≠ 완료". 괴리 0이면 그렇다고 자백한다.
     if n_add + n_chg + n_del == 0:

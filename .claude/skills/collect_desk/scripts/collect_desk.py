@@ -122,9 +122,15 @@ def open_queue():
 
 
 # ── 알림 ──
+ALARMS = os.path.join(VAULT, '.claude', 'skills', 'mobility', 'scripts')    # 폰 알림 엔진 = mobility 모듈(11-16 · 이 PC 전용 · 배포판엔 없음)
+
+
 def alarm_reader():
+    """(설정, 문제 수) · 폰 알림 엔진이 없으면 (False, 0) — 칸을 안 그린다(폰이 없으면 울릴 곳이 없다)"""
+    if not os.path.isfile(os.path.join(ALARMS, 'alarms.py')):
+        return False, 0
     try:
-        sys.path.insert(0, SYS)
+        sys.path.insert(0, ALARMS)
         import alarms
         s, problems = settings_of(alarms)
         return s, problems
@@ -140,7 +146,7 @@ def settings_of(alarms):
 
 
 def alarm_of(cfg, name):
-    if not name:
+    if not name or cfg is False:
         return None
     if not cfg:
         return {'file': name, 'on': None}

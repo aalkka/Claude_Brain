@@ -155,6 +155,10 @@ def main():
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
     due_cases(mod('wc', os.path.join(SYS, 'web-collect.py')))
+    if not os.path.isfile(os.path.join(SYS, 'lms-auto.py')):     # 시각 예약 엔진·mylms·크롬은 학교 LMS 대본 안(개인 층 · 배포판엔 없음) — ① 웹 due 만 잰다(11-16)
+        print('  (lms-auto.py 없음 — ② 수집 창 set · ③ 예약 꼴 · ④ --at · ⑤ chrome_up 건너뜀 · 통과로 세지 않음)')
+        print(f'\n{sum(res)}/{len(res)} 통과')
+        return 0 if all(res) else 1
     root = tempfile.mkdtemp(prefix='collect-at-')
     la = desk_cases(root)
     xml_cases(la)

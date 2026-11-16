@@ -140,7 +140,8 @@ def main():
     got = {a['id']: o for a, o in acts}
     mine_p = [p for p in problems if 'collect' in p]
     ok('brain.py 가 collect_desk.* 10 을 읽음 · 수집 행위 문제 0', all(i in got for i in IDS) and not mine_p, ([i for i in IDS if i not in got], mine_p))
-    ok('예약·홈이 부르는 id 그대로(collect.lms · collect.lms.wake · collect.web = 코어)', all(got.get(i) == 'core' for i in KEEP), {i: got.get(i) for i in KEEP})
+    keep = KEEP if os.path.isfile(os.path.join(SYS, 'lms-auto.py')) else tuple(i for i in KEEP if not i.startswith('collect.lms'))   # 학교 LMS 대본이 없으면(배포판) collect.lms* 행위는 optional 로 빠진다(11-16)
+    ok('예약·홈이 부르는 id 그대로(%s = 코어)' % ' · '.join(keep), all(got.get(i) == 'core' for i in keep), {i: got.get(i) for i in keep})
     ps = os.path.join(SYS, 'lms-tasks.ps1')
     if os.path.exists(ps):
         used = set(re.findall(r'\brun (collect\.[a-z.]+)', read(ps)))
@@ -159,14 +160,17 @@ def main():
     reach = [x for x in (con.get('touches') or []) + (con.get('reads') or []) + watch if x.startswith('1_수집')]
     ok('contract·watch 가 1_수집 에 안 닿음 · forbids 에 1_수집/**', '1_수집/**' in (con.get('forbids') or []) and not reach, (reach, con.get('forbids')))
 
-    # ── ⑤ 전체 스위치 ──
-    root = tempfile.mkdtemp(prefix='collect-core-')
-    try:
-        switch_cases(root)
-        mylms_url(root)
-        wake_cases(root)
-    finally:
-        shutil.rmtree(root, ignore_errors=True)
+    # ── ⑤ 전체 스위치 ── 엔진 셋 중 lms-auto(학교 LMS · 개인 층)가 없는 볼트(배포판)에선 ⑤·⑥·깨우기를 건너뛴다(11-16 · 통과로 세지 않음)
+    if not os.path.isfile(os.path.join(SYS, 'lms-auto.py')):
+        print('  (lms-auto.py 없음 — ⑤ 전체 스위치 · ⑥ mylms 주소 · 깨우기 통일 건너뜀)')
+    else:
+        root = tempfile.mkdtemp(prefix='collect-core-')
+        try:
+            switch_cases(root)
+            mylms_url(root)
+            wake_cases(root)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
 
     # ── ⑦ git 밖 ──
     try:

@@ -11,6 +11,7 @@ import json, os, shutil, subprocess, sys, tempfile, textwrap, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 SYS = os.path.dirname(HERE)
 VAULT = os.path.dirname(SYS)
+MOB = os.path.join(VAULT, ".claude", "skills", "mobility", "scripts")     # 폰 연결 모듈(11-16 · 배포판엔 없음) — server·alarms
 CSC = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 sys.path.insert(0, SYS)
 import claude_bin  # noqa: E402
@@ -62,6 +63,9 @@ def main():
     for f in os.listdir(SYS):
         if f.endswith((".py", ".json")) and os.path.isfile(os.path.join(SYS, f)) and not f.endswith(".local.json"):
             shutil.copy2(os.path.join(SYS, f), ts)
+    for f in ("server.py", "alarms.py"):            # 폰 연결 모듈이 있으면 시험 볼트 3_시스템 옆에(그 자리에서 볼트를 찾는다)
+        if os.path.isfile(os.path.join(MOB, f)):
+            shutil.copy2(os.path.join(MOB, f), ts)
     os.makedirs(os.path.join(tv, "1_수집", "시험"))
     os.makedirs(os.path.join(tv, "2_지식", "일정"))
     from PIL import Image, ImageDraw
@@ -154,8 +158,9 @@ def main():
         ok(f"[{m}] 자동 판정 = 멈춤 · 대기열 줄 0(폰 «수집 막힘» 되풀이 없음)", "stopped" in o3 and "stopped" in o4 and qlines() == q0, f"대기열 +{qlines() - q0} · {o3[-200:]}")
         c5, o5 = py(manual)
         ok(f"[{m}] 수동 판정 단추 = 까닭을 보이고 멈춤", "수동 멈춤" in o5, o5[-300:])
-        c6, o6 = py(rc_code)
-        ok(f"[{m}] 폰 RC 켜기 = 409 로 막음", "RC 막음 409" in o6, o6[-300:])
+        if os.path.isfile(os.path.join(MOB, "server.py")):     # 폰 연결이 없는 볼트(배포판)엔 이 칸이 없다
+            c6, o6 = py(rc_code)
+            ok(f"[{m}] 폰 RC 켜기 = 409 로 막음", "RC 막음 409" in o6, o6[-300:])
         ok(f"[{m}] 알림 = 끊김 한 번에 한 번", alerts() == 1, f"알림 {alerts()}번 · " + (open(slog, encoding='utf-8').read()[-300:] if os.path.exists(slog) else ""))
         ok(f"[{m}] 상태 파일 = off · {kind}", st().get("state") == "off" and st().get("kind") == kind, st())
 
@@ -174,8 +179,9 @@ def main():
     print("\n[구독 없이 도는 것]", flush=True)
     mode("lapsed")
     n0 = ncalls("")
-    c, o = py("import runpy; sys.argv=['alarms.py','--days','3']; runpy.run_path('3_시스템/alarms.py', run_name='__main__')")
-    ok("알림 목록(alarms.py) 돎", c == 0, o[-200:])
+    if os.path.isfile(os.path.join(MOB, "alarms.py")):
+        c, o = py("import runpy; sys.argv=['alarms.py','--days','3']; runpy.run_path('3_시스템/alarms.py', run_name='__main__')")
+        ok("알림 목록(alarms.py) 돎", c == 0, o[-200:])
     c, o = py("import runpy; sys.argv=['schedule.py','week','7']; runpy.run_path('3_시스템/schedule.py', run_name='__main__')")
     ok("일정(schedule.py week) 돎", c == 0, o[-200:])
     r = subprocess.run([sys.executable, "-X", "utf8", os.path.join(SYS, "search.py"), "--q", "장학", "--k", "3"], cwd=VAULT, env=env, capture_output=True, timeout=180)
