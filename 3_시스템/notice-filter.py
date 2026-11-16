@@ -959,7 +959,7 @@ def write_schedule(rows, SCHED, label):
         bid = f'sch-{n["id"]}' if len(n['id']) >= 12 else f'sch-{n["sid"]}-{n["id"]}'
         tag = ('' if v == '해당' else f' ({v})') + (' #꽁돈' if gold(n, d, me, v)[0] else '')   # 황금 태그(CSS 조각 꽁돈.css)
         name = re.sub(r'^\[[^\]]*\]\s*', '', n['title'])[:50]
-        if (dl, norm(name)) in seen:     # 같은 글을 여러 게시판이 올림(표본 공대·전기전자 공지 제목 3개가 같다) — 한 줄만
+        if (dl, norm(name)) in seen:     # 같은 글을 여러 게시판이 올림(표본 단과대·학부 공지 제목 3개가 같다) — 한 줄만
             continue
         seen.add((dl, norm(name)))
         link = f'[원문]({n["url"]})' if n['staged'] else sc.src_link(os.path.relpath(n['path'], VAULT))   # 대기 칸 글은 볼트에 없다

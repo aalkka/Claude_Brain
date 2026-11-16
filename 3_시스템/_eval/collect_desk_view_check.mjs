@@ -26,12 +26,19 @@ fs.writeFileSync(path.join(TV, "3_시스템/ingest_vision.py"), "def subscriptio
 // 행위는 수집 창 것(collect_desk.*)만 — 코어 actions.json 에서 · 화면·입구는 코어 views.json(수집 본체 통합 · 4단계부터 module.json 없음) · 다른 코어 행위는 안 둔다
 const deskActs = JSON.parse(fs.readFileSync(path.join(REAL, "3_시스템/actions.json"), "utf8")).actions.filter((a) => a.id.startsWith("collect_desk."));
 fs.writeFileSync(path.join(TV, "3_시스템/actions.json"), JSON.stringify({ schema: 1, actions: deskActs }));
-// 실제 상태에 기대지 않게 씨앗(11-06 실제는 후보 0 · 판정 대기 0 이라 «손이 필요한 곳»·후보 단추 시험이 비었다) — 후보 둘 · 과학 공지에 판정 대기 한 건
+// 실제 상태에 기대지 않게 씨앗(11-06 실제는 후보 0 · 판정 대기 0 이라 «손이 필요한 곳»·후보 단추 시험이 비었다) — 후보 둘 · 시험 출처에 판정 대기 한 건
 fs.writeFileSync(path.join(TV, "3_시스템/lms/candidates.json"), JSON.stringify({ candidates: [
   { id: "zz-cand-1", name: "시험 후보 하나", host: "one.example", url: "http://one.example/", measured: "시험", note: "시험" },
   { id: "zz-cand-2", name: "시험 후보 둘", host: "two.example", url: "http://two.example/", measured: "시험", note: "시험" }] }));
+// 시험 출처 = 진짜 조리법 가운데 거를 말(title_skip)이 있고 볼트에 둔 글이 있는 regex 출처의 이름순 첫째 — 출처 id 를 시험에 박지 않는다(11-16 배포판 개인 값 빼기)
+const readJ = (p, d) => { try { return JSON.parse(fs.readFileSync(p, "utf8")); } catch { return d; } };
+const SCI = fs.readdirSync(path.join(TV, "3_시스템/collect")).filter((f) => f.endsWith(".json")).sort()
+  .map((f) => readJ(path.join(TV, "3_시스템/collect", f), {}))
+  .find((r) => r.id && r.family === "regex" && r.filter?.title_skip && fs.existsSync(path.join(TV, `3_시스템/collect/${r.id}.json`))
+    && Object.values(readJ(path.join(TV, `3_시스템/_index/collect/${r.id}.json`), {}).items || {}).some((v) => v?.path))?.id;
+if (!SCI) throw new Error("시험 출처 없음 — 거를 말이 있고 볼트에 둔 글이 있는 regex 조리법이 필요");
 {
-  const sp = path.join(TV, "3_시스템/_index/collect/ku-science-notice.json");
+  const sp = path.join(TV, `3_시스템/_index/collect/${SCI}.json`);
   const st = fs.existsSync(sp) ? JSON.parse(fs.readFileSync(sp, "utf8")) : { items: {} };
   st.items.zz9001 = { title: "시험 판정 대기 글", date: "2026-11-01", run: "20261101-0000", stage: true };
   fs.writeFileSync(sp, JSON.stringify(st));
@@ -74,7 +81,6 @@ fs.writeFileSync(path.join(TV, `3_시스템/_index/collect/${LOCAL}.json`), JSON
 const J = (rel) => JSON.parse(fs.readFileSync(path.join(TV, rel), "utf8"));
 const ST = () => J(`3_시스템/_index/collect/${LOCAL}.json`).items;
 const LEDGER = () => fs.readFileSync(path.join(TV, "3_시스템/ledger/actions.jsonl"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
-const SCI = "ku-science-notice";
 const RC = `3_시스템/collect/${SCI}.json`;
 
 const IR = () => JSON.parse(execFileSync("py", ["-3", path.join(TV, MOD, "scripts/collect_desk.py"), "view"], { encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8" } }).trim());

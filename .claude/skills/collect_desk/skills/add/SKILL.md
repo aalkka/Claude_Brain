@@ -39,7 +39,7 @@ description: 새 수집 출처(공개 게시판·RSS 피드)를 사용자와 한
  "at": ["18:00"], "first_since": "2026-11-01", "folder": "@역할/하위",
  "explored": "2026-11-06 Claude 탐색: 잰 것 한 줄(요청 수 · robots · 쪽당 글 수)"}
 ```
-- `regex` 는 `list`(`page_url` 에 `{page}` · `row` · `fields` 의 `id`·`title`·`date` · 필요하면 `url`) + `view`(`url` 의 `{id}` · `title` · `body` · `meta` · `attachments`) + `date_field` + `attachments`(`download`·`images`·`max_mb`) — `3_시스템/collect/ku-science-notice.json` 이 본보기다. 첨부 경로를 robots 가 막으면 `download: false`.
+- `regex` 는 `list`(`page_url` 에 `{page}` · `row` · `fields` 의 `id`·`title`·`date` · 필요하면 `url`) + `view`(`url` 의 `{id}` · `title` · `body` · `meta` · `attachments`) + `date_field` + `attachments`(`download`·`images`·`max_mb`) — `3_시스템/collect/` 에 이미 있는 `regex` 조리법이 있으면 본보기로 본다. 첨부 경로를 robots 가 막으면 `download: false`.
 - `words` = 정규식 조각을 `|` 로 잇는다(대소문자 무시 · 수집 창 칩으로 고친다). 둘 다 비면 칸을 뺀다.
 - `first_since` = 첫 돌림에 받을 글의 시작 날(피드는 모든 글에 · 게시판은 2쪽부터). 보통 오늘에서 1~2주 전.
 - `filter`(판정 층 · 자격·할일 판정 · 사용량)는 학교 공지처럼 «나에게 해당하나»를 따질 글에만 붙인다. 그 밖은 `words` 만.
