@@ -25,8 +25,8 @@ if (cmd === "up") {
     if (fs.existsSync(a)) fs.cpSync(a, path.join(TV, rel), { recursive: true });
   };
   fs.rmSync(TV, { recursive: true, force: true });
-  for (const r of [MOD, "3_시스템/views.json", "CLAUDE.md", "3_시스템/collect", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/lms/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/일/외부뇌/알림-설정.md", "2_지식/일정"]) cp(r);
-  for (const f of ["brain.py", "roles.py", "roles.json", "fileops.py", "claude_bin.py", "schedule.py", "web-collect.py", "lms-auto.py", "notice-filter.py"]) cp("3_시스템/" + f);
+  for (const r of [MOD, "3_시스템/views.json", "CLAUDE.md", "3_시스템/collect", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/lms/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/modules/mobility/알림-설정.md", "2_지식/일정"]) cp(r);
+  for (const f of ["brain.py", "roles.py", "roles.json", "collectlib.py", "collect-schedule.py", "fileops.py", "claude_bin.py", "schedule.py", "lms-schedule.py", "web-collect.py", "notice-filter.py"]) cp("3_시스템/" + f);
   cp(".claude/skills/mobility/scripts/alarms.py");   // 폰 알림 엔진 = mobility(11-16 · 없으면 수집 창이 «알림» 칸을 안 그림)
   for (const f of fs.readdirSync(path.join(REAL, "3_시스템/_index/collect"))) if (f.endsWith(".json")) cp("3_시스템/_index/collect/" + f);
   fs.rmSync(path.join(TV, MOD, "scripts/__pycache__"), { recursive: true, force: true });

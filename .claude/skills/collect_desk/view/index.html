@@ -155,12 +155,26 @@ select{border:1px solid var(--line2);border-radius:5px;background:var(--bg);colo
 .fl{display:flex;gap:4px;align-items:center}
 .fl button{border:1px solid var(--line2);background:none;border-radius:5px;padding:2px 7px;cursor:pointer;display:inline-flex;color:var(--tx2)}.fl button.on{background:var(--ac2);border-color:transparent;color:var(--accent)}
 .day{font-size:12px;font-weight:600;color:var(--tx2);margin:14px 0 4px}
+/* 분류 체계(11-18 초안 B · 사용자) — 알림 줄(실패 줄 자리 · 자동 채택·가격선 바뀜) · 규칙 칸(숫자 칸 줄 · 누르면 아래에 체계별 규칙 줄) */
+.nt{display:flex;align-items:center;gap:7px;min-height:28px;padding:2px 4px 2px 9px;margin-top:12px;border-radius:5px;background:var(--ac2);font-size:12px}
+.nt .who{color:var(--tx2);white-space:nowrap}
+.nt .x{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt.r:hover::after{left:auto;right:0;transform:none}
+.stats .mk{margin-left:3px;vertical-align:-2px}
+.rg{display:flex;align-items:center;gap:6px;color:var(--tx2);font-size:12px;font-weight:600;min-height:24px;margin-top:6px}
+.rg svg{width:13px;height:13px}
+.rl{display:flex;align-items:center;gap:8px;min-height:27px;padding:1px 6px;margin-left:6px;border-left:1px solid var(--line2);border-radius:0 4px 4px 0}
+.rl:hover{background:var(--bg2)}
+.rl .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rl .to{color:var(--tx2);font-size:11.5px;white-space:nowrap;max-width:40%;overflow:hidden;text-overflow:ellipsis}
+.rl .c{color:var(--tx3);font-size:11.5px;font-variant-numeric:tabular-nums;min-width:22px;text-align:right}
+.rl .ib{display:none}.rl:hover .ib,.rl:focus-within .ib{display:inline-flex}.rl:hover .c.u,.rl:focus-within .c.u{display:none}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-const P={moa:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 4h7M14 9h7M14 15h7M14 20h7"/>',lms:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',note:'<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',plus:'<path d="M12 5v14M5 12h14"/>',run:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',rss:'<path d="M5 11a8 8 0 0 1 8 8"/><path d="M5 4a15 15 0 0 1 15 15"/><circle cx="6" cy="18" r="1.2"/>',
+const P={moa:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 4h7M14 9h7M14 15h7M14 20h7"/>',book:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',note:'<path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h8M8 17h5"/>',cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',plus:'<path d="M12 5v14M5 12h14"/>',run:'<path d="M12 3v12M7 10l5 5 5-5M4 20h16"/>',rss:'<path d="M5 11a8 8 0 0 1 8 8"/><path d="M5 4a15 15 0 0 1 15 15"/><circle cx="6" cy="18" r="1.2"/>',
 clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',repeat:'<path d="M17 2l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
 spark:'<path d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7z"/>',pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
 check:'<path d="M20 6 9 17l-5-5"/>',next:'<path d="M5 12h12M13 7l5 5-5 5"/>',moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
@@ -168,7 +182,7 @@ web:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M1
 gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'};
 const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const GROUP=[['강의','lms'],['공지','note'],['구독','rss'],['일정','cal']];
+const GROUP=[['강의','book'],['공지','note'],['구독','rss'],['일정','cal']];
 const LABEL={vault:'볼트',pend:'판정 대기',wait:'대기 칸',ledger:'장부',arch:'보관 칸'};
 const send=m=>parent.postMessage(m,'*');
 let D=null,sel=null,seg='vault';
@@ -189,9 +203,10 @@ const S=id=>D.sources.find(s=>s.id===id);
 P.user='<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>';
 P.alert='<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>';
 P.max='<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>';P.down='<path d="m6 9 6 6 6-6"/>';P.back='<path d="M19 12H5M11 6l-6 6 6 6"/>';
+P.split='<path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22v-8.3a4 4 0 0 0-1.17-2.87L3 3"/><path d="m15 9 6-6"/>';P.undo='<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>';
 const DRAFT='B';let hopen=null,hmore=8,full=false,hfilt='all';
 // 무엇이 돌렸나 = 그림 + 이름(마우스)
-const WHO={at:['clock','시각 예약'],tick:['repeat','15분 확인'],fetch:['run','지금 받기'],judge:['gauge','판정'],me:['user','사용자'],claude:['spark','Claude'],ext:['web','확장'],wake:['web','크롬 띄우기']};
+const WHO={at:['clock','시각 예약'],tick:['repeat','15분 확인'],fetch:['run','지금 받기'],judge:['gauge','판정'],me:['user','사용자'],claude:['spark','Claude'],ext:['web','확장'],wake:['web','크롬 띄우기'],sort:['spark','분류 알림']};   // sort = 알림 도구 alert.py 가 낸 알림(S9 11-18 · 줄 = 제목)
 const WL={vault:'볼트',pend:'판정 대기',wait:'대기 칸',ledger:'장부',arch:'보관 칸'};
 const quiet=r=>r.kind==='run'&&!(r.nums.new||r.nums.changed||r.nums.files||r.nums.wait||r.nums.ledger||(r.items||[]).length)&&r.ok;
 function headTx(r){
@@ -255,16 +270,16 @@ function candRow(c){return`<button class="lr ${sel==='cand:'+c.id?'sel':''} off"
 function firstMine(){return D.sources.find(s=>status(s).c==='err')||D.sources.find(s=>status(s).c==='warn')||D.sources[0]}
 function status(s){
   if(D.allOff||!s.on)return{w:'꺼짐',c:'off'};
-  if(s.family==='lms'&&s.login==='out')return{w:'로그인',c:'err'};
+  if(s.family==='browser'&&s.login==='out')return{w:'로그인',c:'err'};
   if(s.problems&&s.problems.length)return{w:'실패',c:'err'};
-  if(s.cnt&&s.cnt.pend)return{w:`판정 ${s.cnt.pend}`,c:'warn'};
+  if(s.cnt&&pendOf(s))return{w:`판정 ${pendOf(s)}`,c:'warn'};
   if(s.late)return{w:'늦음',c:'warn'};
   return{w:'',c:''};
 }
 const HOURS=[1,3,6,12,20,24];
 const atOpen=new Set();
 let edit=null,pop=false;
-const lmsOf=s=>s.family==='lms';
+const lmsOf=s=>s.family==='browser';   // 로그인 출처(조리법 collect/browser · S6)
 const recSame=s=>!s.rec||(s.mode==='at'||lmsOf(s))&&(s.at||[]).join()===s.rec.join();
 const differ=s=>s.rec&&!recSame(s)&&s.on&&!D.allOff;
 // 목록 오른쪽 작은 글 — 시각 = 첫 시각(+n) · 주기 = N시간
@@ -291,16 +306,16 @@ const recvRow=s=>`<label>받기</label>${edit===s.id?recvEdit(s):recvView(s)}`;
 // 네 칸 설명 — ? 에 마우스를 올리거나 누르면 뜬다(평소엔 안 보임)
 const HINT={
   wake_pc:['켜면 받을 시각에 잠든 PC 를 깨워 받습니다.','끄면 깨우지 않고, PC 가 깨어난 뒤 놓친 수집을 한 번 받습니다. 깨우기는 전원 연결 때만 됩니다. 종료한 PC 는 깨우지 못합니다.'],
-  wake:['켜면 mylms 시각에 크롬이 꺼져 있을 때 최소화 창으로 엽니다.','하던 창 앞으로 뜨지 않습니다. 끄면 크롬을 직접 켰을 때만 mylms 를 받습니다.'],
+  wake:['켜면 로그인 출처 시각에 크롬이 꺼져 있을 때 최소화 창으로 엽니다.','하던 창 앞으로 뜨지 않습니다. 끄면 크롬을 직접 켰을 때만 로그인 출처를 받습니다.'],
   auto_judge:['켜면 새로 받은 공지를 Claude 가 바로 읽고 판정합니다(한 번에 10건까지).','구독 사용량이 듭니다. 끄면 «판정 N» 단추를 누를 때만 판정합니다.'],
   all_off:['끄면 모든 수집과 시각 예약이 멈춥니다.','받은 글·일정은 그대로 둡니다. 다시 켜면 다음 차례부터 받습니다.']};
 const hint=f=>HINT[f]?`<span class="hint" tabindex="0" role="button" aria-label="설명" data-hint="${f}">?<span class="tip" role="tooltip"><b>${HINT[f][0]}</b>${HINT[f][1]}</span></span>`:'<span></span>';
 function popHtml(){
   const my=D.sources.find(x=>lmsOf(x));
-  const G=[['moon','PC 깨우기','*','wake_pc',D.wakePc],...(my?[['web','크롬 열기','mylms','wake',!!my.wakeOn]]:[]),['gauge','자동 판정','*','auto_judge',D.autoJudge],['power','전체','*','all_off',!D.allOff]];
-  return`<div class="pop">${G.map(([i,w,src,f,on])=>`${ic(i)}<span>${w}</span>${hint(f)}<button class="sw ${on?'on':''}" ${src==='mylms'&&!my.on?'disabled':''} data-src="${src}" data-f="${f}" data-v="${f==='all_off'?String(on):String(!on)}" aria-label="${w}" data-tt="${w}"><i></i></button>`).join('')}</div>`;
+  const G=[['moon','PC 깨우기','*','wake_pc',D.wakePc],...(my?[['web','크롬 열기',my.id,'wake',!!my.wakeOn]]:[]),['gauge','자동 판정','*','auto_judge',D.autoJudge],['power','전체','*','all_off',!D.allOff]];
+  return`<div class="pop">${G.map(([i,w,src,f,on])=>`${ic(i)}<span>${w}</span>${hint(f)}<button class="sw ${on?'on':''}" ${my&&src===my.id&&!my.on?'disabled':''} data-src="${src}" data-f="${f}" data-v="${f==='all_off'?String(on):String(!on)}" aria-label="${w}" data-tt="${w}"><i></i></button>`).join('')}</div>`;
 }
-// 시각 칩 + 더하기 칸(하루 4개) — 칩 × = 그 시각 빼기 · 다 빼면 웹 출처는 주기로 돌아감 · mylms 는 크롬을 안 띄움
+// 시각 칩 + 더하기 칸(하루 4개) — 칩 × = 그 시각 빼기 · 다 빼면 웹 출처는 주기로 돌아감 · 로그인 출처는 크롬을 안 띄움
 function atCell(s,dim){
   const v=s.at||[];
   return`<div class="chips ${dim?'dim':''}">${v.map(t=>`<span class="chip">${esc(t)}<button data-atdel="${esc(s.id)}" data-v="${esc(t)}" aria-label="빼기">×</button></span>`).join('')}${v.length<4?`<input data-atadd="${esc(s.id)}" aria-label="시각 더하기" placeholder="＋" inputmode="numeric" maxlength="5" data-tt="시각">`:''}</div>`;
@@ -348,7 +363,7 @@ function alarmCell(a){
 }
 function editor(s){
   const r=[s.fixed?`<label>목적</label><span class="sm">—</span>`:`<label>목적</label><input class="purpose" data-purpose="${esc(s.id)}" aria-label="목적" value="${esc(s.purpose)}">`];
-  if(s.family==='lms'){
+  if(s.family==='browser'){
     r.push(`<label>로그인</label><div class="line">${s.login==='out'?'<span class="flair err">끊김</span>':s.login?'<span>됨</span>':'<span class="sm">—</span>'}<span class="sm">${esc(s.loginAt)}</span><button class="btn ${s.login==='out'?'err':''}" data-open="${esc(s.id)}">${s.login==='out'?'로그인':'열기'}</button></div>`);
     r.push(`<label>확장</label><div class="line"><span>${esc(s.ext.have||'—')}</span>${s.ext.have&&s.ext.want&&s.ext.have!==s.ext.want?`<span class="flair warn">옛 판</span>`:''}</div>`);
     r.push(recvRow(s));
@@ -392,14 +407,25 @@ function topBand(sws){
   const row=(i,g,html)=>`<div class="tp-r"><span class="tp-g">${ic(i)}${g}</span><div class="tp-c">${html}</div></div>`;
   return`<div class="tp">${sws}${GROUP.map(([g,i])=>{const l=D.sources.filter(x=>x.group===g);return l.length?row(i,g,l.map(chip).join('')):''}).join('')}${(D.candidates||[]).length?row('plus','후보',D.candidates.map(candChip).join('')):''}<div class="tp-r"><span></span><div class="tp-c"><button class="ch add" data-add data-tt="수집 추가">${ic('plus')}<span class="n">수집 추가</span></button></div></div></div>`;
 }
+// 분류 체계(초안 B) — 규칙 칸 = 이 출처에 걸린 체계의 켠 규칙 수(✦ = 자동 채택 규칙이 있음) · 누르면 아래에 체계별 규칙 줄
+const ruleN=s=>((s.sort||{}).rules||[]).reduce((a,g)=>a+g.rules.length,0);
+const ruleAuto=s=>((s.sort||{}).rules||[]).some(g=>g.rules.some(r=>r.auto));
+const ruleTile=s=>ruleN(s)?`<button class="${seg==='rules'?'sel':''}" data-seg="rules" data-tt="규칙"><b>${ruleN(s)}</b><span>규칙${ruleAuto(s)?`<span class="mk">${ic('spark')}</span>`:''}</span></button>`:'';
+function rulesList(s){
+  const row=(g,r)=>`<div class="rl">${r.auto?`<span class="mk">${ic('spark')}</span>`:''}<span class="n" data-d title="${esc(r.full)}">${esc(r.say)}</span><span class="to" data-d>${esc(r.to)}</span><span class="c${r.auto?' u':''}">${r.n}</span>${r.auto?`<button class="ib tt r" data-sortop="rule" data-sid="${esc(g.id+'/'+r.id)}" aria-label="되돌리기">${ic('undo')}</button>`:''}</div>`;
+  return`<div style="margin-top:18px"><p class="sec">규칙</p>${s.sort.rules.map(g=>`<div class="rg">${ic('split')}<span data-d>${esc(g.name)}</span></div>${g.rules.map(r=>row(g,r)).join('')}`).join('')}</div>`;
+}
+// 알림 줄(실패 줄 자리) — 자동 채택·가격선 바뀜 … · 되돌리기 1누름 · 확인 = 그 체계가 걸린 출처 모두에서 닫힘
+const alertsOf=s=>((s.sort||{}).alerts||[]).map(a=>`<div class="nt" data-tt="알림"><span class="mk">${ic('spark')}</span><span class="who" data-d>${esc(a.sys)}</span><span class="x" data-d title="${esc(a.text)}">${esc(a.text)}</span>${a.undo?`<button class="ib tt r" data-sortop="revert" data-sid="${esc(a.id)}" aria-label="되돌리기">${ic('undo')}</button>`:''}<button class="ib tt r" data-sortop="ack" data-sid="${esc(a.id)}" aria-label="확인">${ic('check')}</button></div>`).join('');
 function statsOf(s){
   const c=s.cnt;
-  if(c)return`<div class="stats" data-tt="숫자 칸">${['vault','pend','wait','ledger','arch'].map(k=>`<button class="${seg===k?'sel':''} ${k==='pend'&&c[k]?'warn':''}" data-seg="${k}"><b>${c[k]}</b><span>${LABEL[k]}</span></button>`).join('')}</div>`;
-  if(s.tot){const on=s.courses.filter(x=>x.on).length;return`<div class="stats" data-tt="숫자 칸"><div><b>${s.tot.posts}</b><span>글</span></div><div><b>${s.tot.files}</b><span>파일</span></div><div><b>${s.tot.board}</b><span>게시판 글</span></div><div><b>${on}</b><span>과목</span></div><div><b>${s.courses.length-on}</b><span>뺀 과목</span></div></div>`}
+  if(c)return`<div class="stats" data-tt="숫자 칸">${['vault','pend','wait','ledger','arch'].map(k=>`<button class="${seg===k?'sel':''} ${k==='pend'&&c[k]?'warn':''}" data-seg="${k}"><b>${c[k]}</b><span>${LABEL[k]}</span></button>`).join('')}${ruleTile(s)}</div>`;
+  if(s.tot){const on=s.courses.filter(x=>x.on).length;return`<div class="stats" data-tt="숫자 칸"><div><b>${s.tot.posts}</b><span>글</span></div><div><b>${s.tot.files}</b><span>파일</span></div><div><b>${s.tot.board}</b><span>게시판 글</span></div><div><b>${on}</b><span>과목</span></div><div><b>${s.courses.length-on}</b><span>뺀 과목</span></div>${ruleTile(s)}</div>`}
   if(s.flow)return`<div class="stats" data-tt="숫자 칸"><div><b>${s.flow.in}</b><span>본 줄</span></div><div><b>${s.flow.keep}</b><span>일정</span></div><div><b>${Math.max(0,s.flow.in-s.flow.keep)}</b><span>뺌</span></div></div>`;
   return'<div style="height:16px"></div>';
 }
-function pendOf(s){return s.cnt?s.cnt.pend:s.pend||0}
+// «판정 N» = 그 출처에 걸린 모든 분류 체계의 판정 대기(sort · 한 대상 한 번) · sort 를 끈 PC·요약이 옛것이면 엔진 상태의 판정 대기(옛 셈)
+function pendOf(s){return s.judge!=null?s.judge:s.cnt?s.cnt.pend:s.pend||0}
 function headActs(s){
   if(s.fixed||!s.on||D.allOff)return'';
   if(s.busy)return`<span class="flair">${esc(s.busy)}</span>`;
@@ -411,11 +437,11 @@ function candDetail(c){
   <div class="ed" style="margin-top:16px"><label>잰 것</label><span>${esc(c.measured)}</span>${c.note?`<label>근거</label><button class="link" style="justify-self:start" data-note="${esc(c.note)}">${esc(c.note.split('/').pop().slice(0,-3))}</button>`:''}</div>`;
 }
 function detail(s){
-  const low=s.cnt?`<div style="margin-top:18px"><p class="sec">${LABEL[seg]}</p>${itemList(s,seg,200)}</div>`:s.family==='listing'?`<div style="margin-top:18px"><p class="sec">일정</p>${itemList(s,'vault',8)}</div>`:'';
+  const low=seg==='rules'&&ruleN(s)?rulesList(s):s.cnt?`<div style="margin-top:18px"><p class="sec">${LABEL[seg]||LABEL.vault}</p>${itemList(s,LABEL[seg]?seg:'vault',200)}</div>`:s.family==='listing'?`<div style="margin-top:18px"><p class="sec">일정</p>${itemList(s,'vault',8)}</div>`:'';
   const probs=(s.problems||[]).map((p,i)=>`<div class="prob"><span class="sm">${esc(p.t)}</span><span class="s">${esc(p.s)}</span>${s.fix&&i===0?`<button class="btn err" data-fix="${esc(s.id)}" data-tt="고침">고침</button>`:''}</div>`).join('');
   return`<div class="b-h"><h2>${esc(s.name)}</h2>${s.url?`<button class="link sm" data-open="${esc(s.id)}" data-tt="주소">${esc(s.host)}</button>`:`<span class="sm">${esc(s.host)}</span>`}${(s.moa||[]).map(m=>`<button class="moc" data-moa="${esc(m.path)}">${ic('moa')}${esc(m.name)}</button>`).join('')}<span style="flex:1"></span>${headActs(s)}<span data-tt="스위치" style="display:inline-flex">${sw(s.on,s.on?'끄기':'켜기',s.id,'enabled',s.fixed)}</span></div>
   <div class="meta"><span class="tt" aria-label="다음">${ic('next')}${esc(lmsOf(s)?(s.wakeOn&&s.on&&(s.at||[]).length?s.nextAt:'15분'):s.next)}</span><span class="tt" aria-label="마지막">${ic('check')}${esc(s.last||'—')}</span></div>
-  ${probs}${statsOf(s)}<div class="b-g"><div>${editor(s)}${low}</div><div data-tt="일어난 일">${hist(s)}</div></div>`;
+  ${probs}${alertsOf(s)}${statsOf(s)}<div class="b-g"><div>${editor(s)}${low}</div><div data-tt="일어난 일">${hist(s)}</div></div>`;
 }
 function draw(){
   const app=document.getElementById('app');
@@ -433,7 +459,7 @@ function draw(){
   const r=app.querySelector('.b-r');if(r)r.scrollTop=y;
 }
 document.addEventListener('click',e=>{
-  const t=e.target.closest('[data-sel],[data-seg],[data-note],[data-f],[data-item],[data-open],[data-fetch],[data-judge],[data-cand],[data-add],[data-fix],[data-options],[data-mode],[data-atdel],[data-pop],[data-edit],[data-follow],[data-moa]');
+  const t=e.target.closest('[data-sel],[data-seg],[data-note],[data-f],[data-item],[data-open],[data-fetch],[data-judge],[data-cand],[data-add],[data-fix],[data-options],[data-mode],[data-atdel],[data-pop],[data-edit],[data-follow],[data-moa],[data-sortop]');
   if(pop&&!e.target.closest('.pop,[data-pop],.dlg')){pop=false;if(!t)return draw()}
   if(!t||t.disabled)return;
   const d=t.dataset;
@@ -464,8 +490,9 @@ document.addEventListener('click',e=>{
     if((d.f==='auto'||d.f==='auto_judge')&&d.v==='true')return ask('구독 사용량을 씁니다. 자동 판정을 켜시겠습니까?','켜기',go);
     return go();
   }
-  if(d.sel){sel=d.sel;edit=null;const s=S(sel);if(s&&s.cnt&&!s.cnt[seg])seg=s.cnt.pend?'pend':'vault';return draw()}
-  if(d.seg){seg=d.seg;return draw()}
+  if(d.sortop)return send({t:'act',id:'collect_desk.sort',args:{op:d.sortop,id:d.sid}});   // 알림 확인·되돌리기 · 자동 규칙 되돌리기(1누름)
+  if(d.sel){sel=d.sel;edit=null;const s=S(sel);if(s&&seg==='rules'&&!ruleN(s))seg='vault';if(s&&s.cnt&&seg!=='rules'&&!s.cnt[seg])seg=s.cnt.pend?'pend':'vault';return draw()}
+  if(d.seg){const s=S(sel);seg=d.seg==='rules'&&seg==='rules'?(s&&s.cnt&&s.cnt.pend?'pend':'vault'):d.seg;return draw()}
   if(d.note)send({t:'open',target:{note:d.note}});
 });
 document.addEventListener('change',e=>{

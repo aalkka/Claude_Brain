@@ -18,14 +18,14 @@ V = os.path.join(root, 'vault')
 S = os.path.join(V, '3_시스템')
 for d in (os.path.join(S, 'collect'), os.path.join(S, 'lms'), os.path.join(S, '_index', 'collect', 'draft')):
     os.makedirs(d)
-for f in ('fileops.py', 'roles.py', 'roles.json', 'web-collect.py', 'brain.py', 'actions.json', 'claude_bin.py'):
+for f in ('fileops.py', 'roles.py', 'roles.json', 'collectlib.py', 'web-collect.py', 'brain.py', 'actions.json', 'claude_bin.py'):
     shutil.copy2(os.path.join(REAL, f), os.path.join(S, f))
 os.makedirs(os.path.join(V, '2_지식'))
 with open(os.path.join(V, '2_지식', 'profile.md'), 'w', encoding='utf-8') as f:
     f.write('# 프로필\n- **호칭**: 시험님\n')     # 호칭은 프로필에서(roles.me) — 계약 문구에 시험 볼트 값이 나오는가
 shutil.copytree(os.path.join(VAULT_REAL, '.claude', 'skills', 'collect_desk'), os.path.join(V, '.claude', 'skills', 'collect_desk'),
                 ignore=shutil.ignore_patterns('__pycache__'))
-ENV = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', LMS_AUTO_STATE=os.path.join(root, 'lms-state'), COLLECT_SITE_GAP='0')   # 사이트 1분 간격은 끝에서 2초로 따로 잰다
+ENV = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', COLLECT_TEST_STATE=os.path.join(root, 'lms-state'), COLLECT_SITE_GAP='0')   # 사이트 1분 간격은 끝에서 2초로 따로 잰다
 DRAFT = os.path.join(S, '_index', 'collect', 'draft')
 QUEUE = os.path.join(S, '_index', '수집-대기열.md')
 res, hits, mode = [], [], {'broken': False}

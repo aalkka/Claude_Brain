@@ -239,6 +239,8 @@ def main(argv):
     parts += ["", "### open-loops"] + loops()
     parts += ["", "### incident"] + incidents()
     parts += ["", "### 스킬 사용"] + skills()
+    # 속도 — 사람이 기다리는 시간(턴 끝·세션 시작·폰 홈·홈·찾기)과 한계 · 11-16 볼트속도 재발 방지
+    parts += ["", "### 속도"] + run(["py", "-3", os.path.join(HERE, "speed.py")] + (["--no-run"] if "--no-eval" in argv else []), 300).splitlines()
     if "--no-eval" not in argv and os.path.exists(GOLDEN):
         parts += ["", "### 골든셋", "```", run(["py", "-3", os.path.join(HERE, "search.py"), "--eval", GOLDEN, "--k", "8"], 900)[-800:], "```"]
     elif not os.path.exists(GOLDEN):

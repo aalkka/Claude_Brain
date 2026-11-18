@@ -44,6 +44,8 @@ def _load(name, fn):
 
 
 nf = _load('notice_filter', 'notice-filter.py')
+sys.path.insert(0, SYS)
+import collectlib as cl  # noqa: E402 — 수집 엔진 공통(대기열·스위치 · 11-16 S1)
 STOP.add(nf.ME)                                  # 메모 «○○님: …» 의 호칭(프로필)은 까닭 낱말이 아님
 
 
@@ -58,11 +60,7 @@ def note(kind, **kw):
 
 def queue(src, what):
     """수집 대기열 한 줄 — 엔진과 같은 꼴·같은 파일(열린 같은 줄이 있으면 또 안 쓴다). 엔진을 부르지 않는다."""
-    qf = nf.QUEUE
-    if os.path.exists(qf) and any(ln.startswith('- [ ] ') and ln.endswith(f'`{src}` (Claude) {what}') for ln in open(qf, encoding='utf-8').read().splitlines()):
-        return
-    with open(qf, 'a', encoding='utf-8', newline='\n') as f:
-        f.write(f'- [ ] {now()} `{src}` (Claude) {what}\n')
+    cl.queue_add(src, what, 'Claude', once='line', path=nf.QUEUE, head=None)
 
 
 # ───────── 카드 ─────────
@@ -449,15 +447,7 @@ def report():
 def switches():
     """수집 전체 스위치 all_off·auto_judge — 3_시스템/collect.local.json(이 PC 의 결정 · git 밖 · 수집 본체 통합 11-07).
     그 칸이 없으면 옛 자리 lms/desk.json 의 칸을 한 판 동안 읽는다. 둘 다 없거나 못 읽으면 수집 켜짐·자동 판정 끔(값은 true 일 때만 켬)."""
-    out = {}
-    for p in (os.path.join(SYS, 'lms', 'desk.json'), os.path.join(SYS, 'collect.local.json')):    # 뒤(새 자리)가 이긴다
-        try:
-            d = json.load(open(p, encoding='utf-8'))
-        except (OSError, ValueError):
-            continue
-        if isinstance(d, dict):
-            out.update((k, d[k]) for k in ('all_off', 'auto_judge') if k in d)
-    return out
+    return cl.switches(SYS, keys=('all_off', 'auto_judge'))
 
 
 def main():

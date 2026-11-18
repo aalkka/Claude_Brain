@@ -88,7 +88,8 @@ def _valid(f):
 
 def _installed(f, vault):
     """owner 를 적은 코어 선언은 그 대본이 하나라도 있어야 이 볼트의 기능이다 — 다 없으면 «그 기능 없음»으로 뺀다.
-    11-16: 배포판에 개인 모듈(학교 LMS)의 «LMS 아침 받기» 칸이 보이고 check 가 «owner 없음» 둘로 실패했다. 일부만 없으면 지금처럼 check 가 잡는다."""
+    11-16: 배포판에 개인 층 대본이 주인인 «아침 받기» 칸이 보이고 check 가 «owner 없음» 둘로 실패했다. 일부만 없으면 지금처럼 check 가 잡는다.
+    주인은 폴더여도 된다(S6 · «로그인 출처 아침 받기» = 3_시스템/collect/browser — 로그인 출처를 만든 볼트에만 칸이 생긴다)."""
     own = [o for o in f.get("owner") or [] if isinstance(o, str)] if isinstance(f.get("owner"), list) else []
     return not own or any(os.path.exists(os.path.join(_v(vault), o)) for o in own)
 
@@ -454,7 +455,7 @@ CHUNK = ("외부뇌는 옵시디언 볼트와 Claude Code 를 묶은 개인 지�
          "찾기는 낱말 점수와 뜻 점수를 섞어 순위를 낸다. 노트는 머리글 단위로 잘라 40줄 창으로 나누며 노트 점수는 가장 가까운 조각의 "
          "코사인 값이다. 하옵은 재색인을 여섯 시간에 한 번으로 미루고, 사용 안 함은 낱말 찾기만 남긴다. 자동 커밋은 턴이 끝날 때마다 "
          "바뀐 것을 저장소에 남기며, 하옵은 마지막 커밋 뒤 오 분이 지난 턴 끝과 세션 끝에 몰아서 남긴다. 동시 하위 세션은 보스 세션이 "
-         "큰 일을 나눠 맡기는 수이고, LMS 아침 받기는 새벽에 PC 를 깨워 크롬을 띄운 뒤 과제와 공지를 반영한다. 움직임은 기다림 표시의 "
+         "큰 일을 나눠 맡기는 수이고, 로그인 출처 아침 받기는 새벽에 PC 를 깨워 크롬을 띄운 뒤 과제와 공지를 반영한다. 움직임은 기다림 표시의 "
          "회전과 반짝임이고, 시트 보기는 표 계산 엔진으로 여는 화면이다. ")
 
 
@@ -747,7 +748,7 @@ def _r_sessions(m):
     return ("high" if m["ram_gb"] >= 16 else "low"), "램 %.0fGB · 세션 하나 0.45~0.6GB" % m["ram_gb"]
 
 
-def _r_lms(m):
+def _r_browser_wake(m):
     return ("high" if m["ram_gb"] > 8 else "low"), "램 %.0fGB · 크롬 25분이 아침 사용과 겹침" % m["ram_gb"]
 
 
@@ -765,7 +766,7 @@ def _r_sheet(m):
     return ("high" if m["ram_gb"] >= 12 and s >= 0.5 else "low"), why
 
 
-RULES = {"search": _r_search, "git": _r_git, "sessions": _r_sessions, "lms": _r_lms, "motion": _r_motion, "sheet": _r_sheet}
+RULES = {"search": _r_search, "git": _r_git, "sessions": _r_sessions, "browser_wake": _r_browser_wake, "motion": _r_motion, "sheet": _r_sheet}
 
 
 def decide(m, feats):

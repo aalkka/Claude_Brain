@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>외부뇌 로그인 수집기</title>
+<style>
+  body { font: 13px/1.5 system-ui, sans-serif; width: 320px; margin: 12px; color: #222; }
+  h1 { font-size: 14px; margin: 0 0 8px; }
+  .row { margin: 6px 0; }
+  .muted { color: #666; }
+  button { padding: 4px 10px; }
+  .src { border-top: 1px solid #ddd; padding: 6px 0; }
+  .need { color: #a40; }
+  pre { white-space: pre-wrap; background: #f4f4f4; padding: 6px; max-height: 140px; overflow: auto; font-size: 11px; margin: 4px 0 0; }
+</style>
+</head>
+<body>
+<h1>외부뇌 로그인 수집기</h1>
+<div class="row"><label><input type="checkbox" id="enabled"> 지켜보기</label></div>
+<div class="row"><button id="run">지금 수집</button> <span class="muted" id="msg"></span></div>
+<div id="sources"><div class="muted">출처 없음 — PC 반영이 아직 ext-state.json 을 안 씀</div></div>
+<script src="popup.js"></script>
+</body>
+</html>

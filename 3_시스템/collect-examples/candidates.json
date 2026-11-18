@@ -1,0 +1,7 @@
+{
+ "_": "예시 — 수집 후보(Claude 가 조사해 적은 새 출처 · 3_시스템/collect/candidates/candidates.json · 개인 층). 수집 창 «후보» 줄에 뜨고, «계약»을 누르면 대기열 한 줄 → Claude 가 조리법을 탐색해 쓴다. 만들기 = collect_desk.py new candidates(빈 목록).",
+ "candidates": [
+  {"id": "example-fair", "name": "예시 — 박람회 소식", "host": "example.org", "url": "https://example.org/fair",
+   "measured": "목록 20줄 · 글마다 날짜 · 주 1~2번 새 글", "note": "왜 후보인지 한 줄", "answer": ""}
+ ]
+}

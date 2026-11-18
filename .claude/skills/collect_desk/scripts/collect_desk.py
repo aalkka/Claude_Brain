@@ -3,22 +3,24 @@
 
   py -3 collect_desk.py view [--reason open|refresh]     # 화면 문이 부른다
   py -3 collect_desk.py view --practice [--acts JSON]    # 튜토리얼 연습 자료(E2) — 볼트를 안 읽고 안 쓴다 · acts = 쌓인 흉내 행위 [{id, args}]
-  py -3 collect_desk.py set <출처 | mylms | *> <칸> <값>   # 아래는 사용자 동작 하나씩 — brain.py run collect_desk.* 로 불러 장부에 남긴다
-  py -3 collect_desk.py fetch <출처 | mylms>              # 지금 받기 · 웹 = 그 자리에서 · mylms = 다음 15분 확인 때
-  py -3 collect_desk.py judge <출처 | mylms>              # 판정(구독 사용량) · 누를 때만
+  py -3 collect_desk.py set <출처 | *> <칸> <값>          # 아래는 사용자 동작 하나씩 — brain.py run collect_desk.* 로 불러 장부에 남긴다
+  py -3 collect_desk.py fetch <출처>                      # 지금 받기 · 웹 = 그 자리에서 · 로그인 출처 = 다음 15분 확인 때
+  py -3 collect_desk.py judge <출처>                      # 판정(구독 사용량) · 누를 때만 · 그 출처에 걸린 분류 체계 전부(sort.py judge --place · 끔·엔진 오류면 옛 추출)
+  py -3 collect_desk.py sort <ack|revert|rule> <id>       # 분류 칸 단추(S4 · 초안 B) — 알림 확인·되돌리기 · 자동 규칙 되돌리기(<체계>/<규칙>)
   py -3 collect_desk.py item <출처> <글번호> <rescue|reject|restore|useless|useful>
   py -3 collect_desk.py reject <출처> <글번호> <낱말|낱말…> <메모>   # 거절 단추(11-09) — 제목에서 고른 낱말(| 로 이음)·메모 · 둘 다 빈칸이어도 됨
-  py -3 collect_desk.py open <출처 | mylms | 후보 id>      # 사이트를 연다(화면은 sandbox 라 링크가 안 열린다)
+  py -3 collect_desk.py open <출처 | 후보 id>             # 사이트를 연다(화면은 sandbox 라 링크가 안 열린다)
   py -3 collect_desk.py contract <후보 id> <계약|안 함>    # 계약 = 대기열 한 줄 · 조리법은 Claude 가 탐색 뒤 쓴다
   py -3 collect_desk.py probe <주소>                       # 수집 추가(11-06 · 대화창 스킬 add·fix 가 부른다) — 한 쪽 탐색(피드 찾기·robots)
   py -3 collect_desk.py try <초안 id> [--view]             # 미리보기(저장 없음) — 초안 = 3_시스템/_index/collect/draft/<id>.json
   py -3 collect_desk.py add <초안 id>                      # 확정 = 초안 → 3_시스템/collect/<id>.json(사용자 «추가» 답 뒤 · 미리보기를 거친 그 초안만)
   py -3 collect_desk.py fix <초안 id>                      # 고침 = 구조 칸만 바꾼 초안 → 조리법 + 그 출처의 (Claude) 대기열 줄 닫기
+  py -3 collect_desk.py new <browser|card|candidates> …   # 개인 파일 처음 만들기(S6 · 빈 틀 = 3_시스템/collect-examples) — 이미 있으면 안 덮음
 
-출처 목록을 코드에 박지 않는다: 웹 = 3_시스템/collect/*.json · mylms = 3_시스템/lms/courses.json · 공휴일 = 2_지식/일정/공휴일.md · 후보 = 3_시스템/lms/candidates.json.
-없으면 그 줄이 안 나온다(출처 0 인 배포판에서도 돈다). enabled·purpose·desk.json·collect.local.json 은 있으면 읽는다(없으면 켜짐·빈칸).
-mylms 주소 = 확장 lms/manifest.json 의 host_permissions(코드에 학교를 박지 않는다).
-쓰는 곳 = 조리법의 허용 칸 · collect.local.json(전체 스위치) · lms/desk.json(mylms) · 기능 단계 «아침 받기»(깨우기 — options.py · 예약은 lms-auto.py --wake-sync) · lms/courses.json · lms/candidates.json · 대기열 한 줄 + 엔진 호출. 임시 파일 뒤 교체 · 주소·정규식·가족·계약 문구는 안 고친다.
+출처 목록을 코드에 박지 않는다: 웹 = 3_시스템/collect/*.json · 로그인 출처 = 3_시스템/collect/browser/*.json(그 칸 units·settings·state·manifest 가 자리를 말한다) · 공휴일 = 2_지식/일정/공휴일.md · 후보 = 3_시스템/collect/candidates/candidates.json.
+없으면 그 줄이 안 나온다(출처 0 인 배포판에서도 돈다). enabled·purpose·settings·collect.local.json 은 있으면 읽는다(없으면 켜짐·빈칸).
+로그인 출처 주소 = 그 조리법 ext.host(코드에 학교를 박지 않는다 · S5).
+쓰는 곳 = 조리법의 허용 칸 · collect.local.json(전체 스위치) · 로그인 출처 settings·units · 기능 단계 «로그인 출처 아침 받기»(깨우기 — options.py · 예약은 collect-schedule.py --sync) · 후보 · 대기열 한 줄 + 엔진 호출. 임시 파일 뒤 교체 · 주소·정규식·가족·계약 문구는 안 고친다.
 비밀번호를 다루지 않고 계약 없는 출처를 돌리는 길이 없다(받기·승인은 엔진의 계약·스위치 관문을 그대로 지난다).
 """
 import argparse
@@ -38,15 +40,16 @@ VAULT = os.path.abspath(os.path.join(HERE, '..', '..', '..', '..'))
 SYS = os.path.join(VAULT, '3_시스템')
 sys.path.insert(0, SYS)
 import roles  # noqa: E402 — 사용자 호칭(프로필) · 대본에 사람 이름을 박지 않는다
+import collectlib as cl  # noqa: E402 — 수집 엔진 공통(스위치·잠금 · 11-16 S1)
 ME = roles.me()
 PLAN = os.path.join(VAULT, '2_지식', '일정')
-ALARM_NOTE = '2_지식/일/외부뇌/알림-설정.md'
+ALARM_NOTE = '2_지식/modules/mobility/알림-설정.md'     # mobility 선언 자리(module.json) · 실제 자리는 alarm_note() 가 엔진에 묻는다(옮긴 자리도 따라감)
 EVENTS = 8
 ITEMS = 40
 LATE_MIN_H = 24            # 하루 안 늦음은 PC 가 잠든 것일 수 있어 늦음으로 안 친다
-LMS_LATE_H = 48            # 전 과목 20시간(신호 안 되면 12시간)의 두 배 넘게
-LMS_SID = 'lms-post'       # notice-filter 의 LMS 글 출처 이름
-LMS_QUEUE = re.compile(r'(\d{8}-\d{4}|lms-run-.+|courses|signals|extension|orphan|tasks)')   # lms-auto 가 대기열에 쓰는 이름만 mylms 칸에 «실패»로 붙인다 — 막을 이름을 적던 옛 방식은 새 대본이 대기열에 쓸 때마다(11-11 filter-learn · 11-13 자격카드) mylms 를 빨갛게 했다
+BROWSER_LATE_H = 48        # 로그인 출처 — 전 단위 20시간(신호 안 되면 12시간)의 두 배 넘게
+BROWSER_QUEUE = r'\d{8}-\d{4}|courses|signals|extension|orphan|tasks'   # 로그인 가족이 대기열에 쓰는 이름(+ 조리법 run_prefix) 만 그 출처 칸에 «실패»로 붙인다 — 막을 이름을 적던 옛 방식은 새 대본이 대기열에 쓸 때마다(11-11 filter-learn · 11-13 자격카드) 그 칸을 빨갛게 했다
+WAKE_LEVEL = 'collect.wake'   # 기능 단계 «로그인 출처 아침 받기»(options.registry.json)
 BUSY_STALE = 30 * 60       # 받기·판정이 죽어 남은 표시를 이 뒤로는 안 믿는다(초)
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 # 거절 창의 낱말 단추 — 제목 낱말 중 고르면 공지 거의 다를 막는 말·날짜는 안 띄운다(고른 낱말은 전 출처 제외어가 된다 · filter-learn)
@@ -136,6 +139,15 @@ def alarm_reader():
         return s, problems
     except Exception:
         return None, 0
+
+
+def alarm_note():
+    """알림 설정 노트의 볼트 상대 자리 — 폰 알림 엔진이 찾은 자리(선언 자리 · 없으면 이름으로) · 엔진을 못 부르면 선언 자리"""
+    try:
+        import alarms
+        return alarms.note_rel('alarm-settings')
+    except Exception:
+        return ALARM_NOTE
 
 
 def settings_of(alarms):
@@ -271,16 +283,17 @@ def web_source(path, events, queue, cfg, now):
         s.update(group=rc.get('group') or ('공지' if flt else '구독'), cnt=cnt, skip=words(flt.get('title_skip') if flt else w.get('skip')),
                  keep=words(w.get('keep')) if not flt or w.get('keep') else None, output=flt.get('schedule'), items=rows)
     s['alarm'] = alarm_of(cfg, s.get('output'))
+    s['_src'] = os.path.join(SYS, '_index', 'collect', sid + '.json')     # 판정 대기의 원천(엔진 상태) — sort 요약이 이보다 새것일 때만 sort 셈(view)
     return s
 
 
 REC_TWICE = 0.5            # Claude 추천(11-12 사용자 «주기 시각 설정 가능 · 클로드의 추천을 받을 수 있도록») — 하루 글이 이만큼 넘으면 하루 두 번
 REC_ONCE, REC_BOTH = ['18:00'], ['12:00', '18:00']
-MYLMS_MORNING, MYLMS_EVENING = '06:55', '18:00'   # mylms 추천 — 아침 수업 전 · 낮 글이 반 넘으면 그날 저녁도(11-12 사용자 «바꿔»)
+BROWSER_MORNING, BROWSER_EVENING = '06:55', '18:00'   # 로그인 출처 추천 — 아침 수업 전 · 낮 글이 반 넘으면 그날 저녁도(11-12 사용자 «바꿔»)
 
 
-def mylms_rec(its):
-    """mylms 추천 시각 — 크롬이 켜져 있으면 확장이 15분마다 지켜보니, 시각은 «크롬이 꺼져 있을 때 언제 열까»만 정한다.
+def browser_rec(its):
+    """로그인 출처 추천 시각 — 크롬이 켜져 있으면 확장이 15분마다 지켜보니, 시각은 «크롬이 꺼져 있을 때 언제 열까»만 정한다.
     받은 글(노트 머리 posted_at · 한국 시각) 가운데 낮(7~18시) 글이 반 이상이면 06:55·18:00(그날 글을 그날 저녁에) · 아니면 06:55 · 글이 없으면 06:55.
     11-12 잰 값: 48편 · 0~7시 1 · 7~12시 15 · 12~18시 19 · 18~24시 13 → 06:55·18:00."""
     day = total = 0
@@ -295,7 +308,7 @@ def mylms_rec(its):
             continue
         total += 1
         day += 7 <= h < 18
-    return [MYLMS_MORNING, MYLMS_EVENING] if total and day * 2 >= total else [MYLMS_MORNING]
+    return [BROWSER_MORNING, BROWSER_EVENING] if total and day * 2 >= total else [BROWSER_MORNING]
 
 
 def daily_posts(items, today):
@@ -340,9 +353,9 @@ def at_list(v):
         return []
 
 
-def mylms_at(desk):
-    """mylms 가 크롬을 띄울 시각 — desk.json at · 칸이 없으면 06:55(lms-auto.py mylms_at 과 같은 규칙)."""
-    return at_list(desk.get('at')) if 'at' in desk else ['06:55']
+def browser_at(rc, desk):
+    """로그인 출처가 크롬을 띄울 시각 — settings at · 칸이 없으면 조리법 at_default(collect-browser.Source.at 와 같은 규칙)."""
+    return at_list(desk.get('at')) if 'at' in desk else at_list(rc.get('at_default'))
 
 
 def next_at(at, now):
@@ -400,11 +413,11 @@ def _ledger():
 
 
 def _trigger(sid, t, led):
-    """그 받기를 무엇이 돌렸나 — 장부에서 ±3분 안: 시각 예약(collect.lms --at <sid>) · 지금 받기(collect_desk.fetch) · 없으면 15분 확인."""
+    """그 받기를 무엇이 돌렸나 — 장부에서 ±3분 안: 시각 예약(collect.tick·collect.at --at <sid> · 옛 장부 이름 포함) · 지금 받기(collect_desk.fetch) · 없으면 15분 확인."""
     for when, e in led:
         if abs((when - t).total_seconds()) > 180:
             continue
-        if e.get('action') == 'collect.lms' and (e.get('rest') or [None, None])[-1] == sid:
+        if str(e.get('action') or '').startswith('collect.') and (e.get('rest') or [None, None])[-1] == sid:
             return 'at', e.get('seconds')
         if e.get('action') == 'collect_desk.fetch' and (e.get('args') or {}).get('source') == sid:
             return 'fetch', e.get('seconds')
@@ -475,9 +488,10 @@ def web_history(sid, n=HIST_N):
     return out[:n]
 
 
-def lms_history(n=HIST_N):
-    """mylms 기록 — auto.log 의 «수집 <run> (<왜>)»부터 그 run 의 lms-file·요청 줄 + manifest 의 그 run 글·파일 · 로그인 끊김·되살아남 · 크롬 띄우기."""
-    man = load(SYS, '_index', 'lms', 'manifest.json', default={}) or {}
+def browser_history(rc, n=HIST_N):
+    """로그인 출처 기록 — 그 상태 폴더 auto.log 의 «수집 <run> (<왜>)»부터 그 run 의 파일화(조리법 filer)·요청 줄 + manifest 의 그 run 글·파일 · 로그인 끊김·되살아남 · 크롬 띄우기."""
+    man = load(bpath(rc, 'manifest'), default={}) or {}
+    filer = os.path.splitext(rc.get('filer') or '')[0] or '파일화'
     names = {}
     for kind, d in (('글', man.get('items') or {}), ('파일', man.get('files') or {})):
         for v in d.values():
@@ -485,7 +499,7 @@ def lms_history(n=HIST_N):
                 p = re.split(r'[\\/]', v.get('path') or '')
                 names.setdefault(v['run'], []).append({'title': os.path.splitext(p[-1])[0] if p else '', 'where': kind, 'why': course_of(v), 'note': (v.get('path') or '').replace('\\', '/') if str(v.get('path') or '').endswith('.md') else ''})
     out, cur = [], None
-    for line in _once(SYS, '_index', 'lms', 'auto.log').splitlines():
+    for line in _once(bstate(rc), 'auto.log').splitlines():
         m = re.match(r'^(\d{4}-\d\d-\d\d) (\d\d:\d\d):\d\d (.+)$', line)
         if not m:
             continue
@@ -497,7 +511,7 @@ def lms_history(n=HIST_N):
             cur = {'t': t, 'kind': 'run', 'who': 'ext', 'ok': err == 'None', 'lines': [msg], 'why': {'daily': '전 과목', 'signal': '바뀐 과목', 'now': '지금 받기'}.get(why, why),
                    'nums': {}, 'items': names.get(run, [])}
             out.append(cur)
-        elif cur and msg.startswith(('lms-file', '요청 GET', 'ingest', 'schedule')):
+        elif cur and msg.startswith((filer, '요청 GET', 'ingest', 'schedule')):
             cur['lines'].append(msg)
             w = re.search(r'새 글 (\S+) · 바뀐 글 (\S+) · 파일 들임 (\S+)', msg)
             if w:
@@ -511,35 +525,133 @@ def lms_history(n=HIST_N):
         elif msg.startswith('깨우기:'):
             out.append({'t': t, 'kind': 'wake', 'who': 'wake', 'ok': '못' not in msg and '없음' not in msg, 'lines': [msg[5:].strip()], 'nums': {}, 'items': []})
             cur = None
-        elif re.match(r'대기열 (?!web|tasks|courses)\S+: ', msg) and 'web-collect' not in msg:      # LMS 쪽 대기열 줄만(웹·예약 줄은 그 출처 몫)
+        elif re.match(r'대기열 (?!web|tasks|courses)\S+: ', msg) and 'web-collect' not in msg:      # 그 로그인 출처 대기열 줄만(웹·예약 줄은 그 출처 몫)
             out.append({'t': t, 'kind': 'fail', 'who': 'ext', 'ok': False, 'lines': [msg], 'nums': {}, 'items': []})
     out.reverse()
     return out[:n]
 
 
+def sort_alert_rows(sid):
+    """분류 알림(범용 도구 셋 S9 11-18) → «일어난 일» 줄(kind alert · who sort). 알림 도구는 mobility 몫(사용자 11-18 «알림도구를 mobility 주관으로») —
+    mobility 가 켜져 있으면 알림 도구의 장부(_index/sort/알림.jsonl · mobility 가 씀 · 때 · 묶음 · 폰에 냈나 · 중복은 안 냄)를 그대로 그린다(옛 꼴 그대로).
+    꺼졌거나 없으면 본체 넘김 장부(_index/sort/넘김.jsonl)의 알림 줄(분류가 정한 알림 · 자리·제목 칸)을 직접 읽는다 — 데스크톱에는 그래도 보인다.
+    줄이 없으면 [] (그때 기록 칸은 옛것과 바이트 같음)."""
+    _, ix = sort_dirs()
+    out = _tool_alert_rows(ix, sid)
+    have = {(r.pop('_k')) for r in out}
+    if mobility_alerts():
+        return out
+    for ln in _once(ix, '넘김.jsonl').splitlines():
+        try:
+            e = json.loads(ln)
+            if not isinstance(e, dict) or e.get('자리') != sid or not isinstance((e.get('동작') or {}).get('알림'), dict):
+                continue
+            t = dt.datetime.fromisoformat(str(e.get('시각'))[:19])
+        except (ValueError, TypeError):
+            continue
+        if (e.get('체계'), e.get('대상'), e.get('갈래')) in have:
+            continue
+        al = e['동작']['알림']
+        say = f'{e.get("체계") or ""} · {e.get("갈래") or ""}'
+        out.append({'t': fmt(t), '_at': t, 'kind': 'alert', 'who': 'sort', 'ok': True, 'say': say[:60],
+                    'lines': [x for x in (f'{say} · {e.get("제목") or e.get("대상") or ""}', f'때 {al.get("때") or "바로"}{" · 급함" if e.get("급함") else ""}',
+                                         '폰 안 냄(알림 도구 = mobility · 꺼짐)') if x], 'nums': {}, 'items': []})
+    return sorted(out, key=lambda r: r['_at'])
+
+
+ALERT_TOOL = os.path.join(VAULT, '.claude', 'skills', 'mobility', 'scripts', 'alert.py')     # 알림 도구 = mobility 모듈(11-18)
+
+
+def mobility_alerts():
+    """알림 도구가 도는가 — mobility 대본이 있고 모듈이 켜짐(roles.module_on). 모르면 False(넘김 장부를 읽음)."""
+    try:
+        if SYS not in sys.path:
+            sys.path.insert(0, SYS)
+        import roles
+        return os.path.isfile(ALERT_TOOL) and bool(roles.module_on('mobility'))
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _tool_alert_rows(ix, sid):
+    """알림 도구(mobility)가 낸 알림 줄 — 알림 장부 _index/sort/알림.jsonl 중 이 자리(출처) 줄 · 펼치면 글 · 때 · 폰에 냈나."""
+    out = []
+    for ln in _once(ix, '알림.jsonl').splitlines():
+        try:
+            e = json.loads(ln)
+            if not isinstance(e, dict) or e.get('자리') != sid:
+                continue
+            t = dt.datetime.fromisoformat(str(e.get('시각'))[:19])
+        except (ValueError, TypeError):
+            continue
+        k, m = (list(e.get('묶음') or []) + [1, 1])[:2]
+        phone = '폰에 냄' if e.get('폰') is True else ('폰 못 냄 · ' + str(e.get('폰 못 냄') or e.get('폰'))) if e.get('폰 못 냄') else '폰 안 냄(mobility 꺼짐)'
+        when = f'때 {e.get("때") or "바로"} · 울릴 때 {str(e.get("울릴 때") or "")[5:16].replace("T", " ")}'
+        out.append({'t': fmt(t), '_at': t, 'kind': 'alert', 'who': 'sort', 'ok': True, 'say': str(e.get('제목') or '')[:60],
+                    'lines': [x for x in (f'{e.get("제목") or ""} · {e.get("글") or ""}', f'{e.get("체계") or ""} · {e.get("갈래") or ""}{" · 급함" if e.get("급함") else ""}'
+                                         + (f' · {k}/{m}' if m and m > 1 else ''), f'{when} · {phone}', e.get('링크') or '') if x],
+                    'nums': {}, 'items': [], '_k': (e.get('체계'), e.get('대상'), e.get('갈래'))})
+    return out
+
+
 def history(sid, n=HIST_N):
-    return lms_history(n) if sid == 'mylms' else web_history(sid, n)
+    rc = browser(sid)
+    rows = browser_history(rc, n) if rc else web_history(sid, n)
+    al = sort_alert_rows(sid)
+    if not al:
+        return rows
+    for r in rows:                                   # 기록 줄은 «MM-DD HH:MM» — 해를 붙여 알림 줄과 견줌(새것이 위)
+        r['_at'] = dt.datetime.strptime(f"{dt.date.today().year}-{r['t']}", '%Y-%m-%d %H:%M')
+    rows = sorted(rows + al, key=lambda r: r['_at'], reverse=True)[:n]
+    for r in rows:
+        r.pop('_at', None)
+    return rows
 
 
-# ── mylms ──
+# ── 로그인 출처(조리법 collect/browser/<id>.json · 개인 층) — 이름·자리는 조리법이 말한다(S6) ──
+def browsers():
+    """로그인 출처 조리법 — 단위 지도(units)가 있는 것만(단위 표가 있어야 줄이 생긴다 · 옛 규칙 그대로)."""
+    return [rc for rc in cl.browser_recipes(SYS) if rc.get('units')]
+
+
+def browser(sid):
+    return next((rc for rc in browsers() if rc['id'] == sid), None)
+
+
+def bpath(rc, key):
+    """조리법 자리 칸 → 절대 경로(manifest 가 없으면 상태 폴더 안)."""
+    if key == 'manifest' and not rc.get('manifest'):
+        return os.path.join(bstate(rc), 'manifest.json')
+    return cl.rpath(rc.get(key), SYS)
+
+
+def bstate(rc):
+    return cl.browser_state(rc, SYS)
+
+
+def bsettings(rc):
+    d = load(bpath(rc, 'settings'), default={}) if rc.get('settings') else {}
+    return d if isinstance(d, dict) else {}
+
+
 def course_of(v):
     p = re.split(r'[\\/]', v.get('path') or '')
     return p[2] if len(p) > 2 else '?'
 
 
-def mylms_url():
-    """mylms 주소 — 확장 manifest(lms/manifest.json) host_permissions 첫 줄의 «https://호스트/»(수집 본체 통합 11-07). 없거나 못 읽거나 와일드카드면 빈칸."""
-    man = load(SYS, 'lms', 'manifest.json', default={})
-    hp = man.get('host_permissions') if isinstance(man, dict) else None
-    m = re.match(r'^(https?://[^/*]+)/', hp[0]) if isinstance(hp, list) and hp and isinstance(hp[0], str) else None
+def browser_url(rc):
+    """로그인 출처 주소 — 조리법 ext.host 의 «https://호스트/»(S5 · 확장 manifest 엔 호스트가 없다 — 출처마다 허용). 없거나 와일드카드면 빈칸."""
+    h = (rc.get('ext') or {}).get('host') if isinstance(rc, dict) and isinstance(rc.get('ext'), dict) else None
+    m = re.match(r'^(https?://[^/*]+)/?$', h) if isinstance(h, str) else None
     return m.group(1) + '/' if m else ''
 
 
-def lms_source(queue, cfg, desk, now):
-    courses = load(SYS, 'lms', 'courses.json')
+def browser_source(rc, queue, cfg, now):
+    courses = load(bpath(rc, 'units'))
     if not isinstance(courses, dict):
         return None
-    man = load(SYS, '_index', 'lms', 'manifest.json', default={}) or {}
+    sid, desk = rc['id'], bsettings(rc)
+    man = load(bpath(rc, 'manifest'), default={}) or {}
     its, fls, board = man.get('items') or {}, man.get('files') or {}, man.get('board') or {}
     posts, files = {}, {}
     for v in its.values():
@@ -553,7 +665,7 @@ def lms_source(queue, cfg, desk, now):
 
     last_full = last_status = None
     have = ''
-    for p in sorted(glob.glob(os.path.join(SYS, '_index', 'lms', 'runs', '*.json')), key=os.path.getmtime, reverse=True):
+    for p in sorted(glob.glob(os.path.join(bstate(rc), 'runs', '*.json')), key=os.path.getmtime, reverse=True):
         d = load(p, default={}) or {}
         have = have or d.get('version') or ''          # 확장이 돌린 판 — 가장 최근 요약
         if d.get('kind') == 'run' and not last_full:
@@ -562,16 +674,17 @@ def lms_source(queue, cfg, desk, now):
             last_status = d
         if last_full and last_status:
             break
-    want = (load(SYS, 'lms', 'manifest.json', default={}) or {}).get('version') or ''
+    want = (load(SYS, 'collect-ext', 'manifest.json', default={}) or {}).get('version') or ''   # 확장 폴더 = 본체 collect-ext(S5)
 
     ev = []
-    for line in read(SYS, '_index', 'lms', 'auto.log').splitlines():
+    filer = os.path.splitext(rc.get('filer') or '')[0] or '파일화'
+    for line in read(bstate(rc), 'auto.log').splitlines():
         m = re.match(r'^(\d{4}-\d\d-\d\d) (\d\d:\d\d):\d\d (.+)$', line)
         if not m:
             continue
         day, hm, msg = m.groups()
         t = f'{day[5:]} {hm}'
-        if msg.startswith('lms-file'):
+        if msg.startswith(filer):
             w = re.search(r'새 글 (\d+).*파일 들임 (\d+)', msg)
             if w:
                 ev.append({'t': t, 's': f'새 글 {w.group(1)} · 파일 {w.group(2)}'})
@@ -584,25 +697,27 @@ def lms_source(queue, cfg, desk, now):
     ev.reverse()
     last = dt.datetime.fromtimestamp(last_full['startedAt'] / 1000) if last_full and last_full.get('startedAt') else None
     web_ids = {os.path.splitext(os.path.basename(p))[0] for p in glob.glob(os.path.join(SYS, 'collect', '*.json'))} | {c.get('id') for c in cand_rows()}
-    pend = load(SYS, '_index', 'lms', '마감-대기.json', default={}) or {}
+    pp = (rc.get('posts') or {}).get('pending') if isinstance(rc.get('posts'), dict) else ''
+    pend = (load(cl.rpath(pp, SYS), default={}) or {}) if pp else {}
     try:
         asked = dt.datetime.fromisoformat(desk.get('fetch_now') or '')
     except ValueError:
         asked = None
-    url = mylms_url()
-    return {'id': 'mylms', 'name': 'mylms', 'host': url.split('/')[2] if url else '', 'url': url, 'busy': busy_of('mylms'), 'pend': len(pend), 'ext': {'have': have, 'want': want},
+    url, at = browser_url(rc), browser_at(rc, desk)
+    qrx = re.compile('(' + BROWSER_QUEUE + '|' + re.escape(rc.get('run_prefix') or sid + '-run-') + '.+)')
+    return {'id': sid, 'name': sid, 'host': url.split('/')[2] if url else '', 'url': url, 'busy': busy_of(sid), 'pend': len(pend), 'ext': {'have': have, 'want': want},
             'fetchWait': bool(asked and (not last or asked > last)),     # 지금 받기를 눌렀고 그 뒤 받기가 아직 없음
-            'family': 'lms', 'group': '강의', 'purpose': desk.get('purpose') or '',
-            'on': desk.get('enabled', True) is not False, 'wakeOn': wake_chosen() == 'high', 'wake': ' '.join(mylms_at(desk)),
-            'method': 'chrome', 'at': mylms_at(desk), 'mode': 'at', 'rec': at_list(desk.get('rec_at')) or mylms_rec(its), 'nextAt': fmt(next_at(mylms_at(desk), now)) if mylms_at(desk) else '',
+            'family': 'browser', 'group': rc.get('group') or '강의', 'purpose': desk.get('purpose') or '',
+            'on': desk.get('enabled', True) is not False, 'wakeOn': wake_chosen() == 'high', 'wake': ' '.join(at),
+            'method': 'chrome', 'at': at, 'mode': 'at', 'rec': at_list(desk.get('rec_at')) or browser_rec(its), 'nextAt': fmt(next_at(at, now)) if at else '',
             'hours': 0.25, 'hourWord': '15분', 'next': '15분마다', 'last': fmt(last) if last else '',
-            'late': bool(last and (now - last).total_seconds() / 3600 > LMS_LATE_H),
+            'late': bool(last and (now - last).total_seconds() / 3600 > BROWSER_LATE_H),
             'login': (last_status or {}).get('login'),
             'loginAt': fmt(dt.datetime.fromtimestamp(last_status['at'] / 1000)) if last_status and last_status.get('at') else '',
             'courses': clist, 'events': ev[:EVENTS], 'items': [], 'cnt': None,
-            'problems': [q for q in queue if q['id'] not in web_ids and LMS_QUEUE.fullmatch(q['id'] or '')],
+            'problems': [q for q in queue if q['id'] not in web_ids and qrx.fullmatch(q['id'] or '')],
             'tot': {'posts': len(its), 'files': len(fls), 'board': sum(len(v) for v in board.values())},
-            'alarm': alarm_of(cfg, 'LMS-마감.md')}
+            'alarm': alarm_of(cfg, rc.get('schedule') or ''), '_src': cl.rpath(pp, SYS) if pp else ''}
 
 
 # ── 공휴일 ──
@@ -618,7 +733,7 @@ def holiday_source():
 
 
 # ── 후보 ──
-CAND = os.path.join(SYS, 'lms', 'candidates.json')
+CAND = os.path.join(SYS, 'collect', 'candidates', 'candidates.json')     # 후보(Claude 가 조사해 적은 새 출처 · 개인 층 · 하위 폴더 = 웹 엔진의 collect/*.json 에 안 걸림 · S6)
 
 
 def cand_rows():
@@ -634,20 +749,13 @@ def candidates():
 
 # ── 고치기 ──
 REGEX_CH = re.compile(r'[\\()^$.*+?\[\]{}]')
-DESK = os.path.join(SYS, 'lms', 'desk.json')                  # mylms 칸(enabled·wake·purpose·fetch_now)
 SWITCH = os.path.join(SYS, 'collect.local.json')               # 전체 스위치(all_off·auto_judge) — 이 PC 의 결정 · git 밖
-COURSES = os.path.join(SYS, 'lms', 'courses.json')
 QUEUE = os.path.join(SYS, '_index', '수집-대기열.md')
 
 
 def switches():
-    """전체 스위치 — collect.local.json · 그 칸이 없으면 옛 자리 lms/desk.json 의 칸을 한 판 동안 읽는다(엔진과 같은 규칙 · 없음·깨짐 = 켜짐·자동 판정 끔)."""
-    out = {}
-    for p in (DESK, SWITCH):            # 뒤(새 자리)가 이긴다
-        d = load(p)
-        if isinstance(d, dict):
-            out.update((k, d[k]) for k in ('all_off', 'auto_judge', 'wake_pc') if k in d)
-    return out
+    """전체 스위치 — collect.local.json(엔진과 같은 규칙 · 없음·깨짐 = 켜짐·자동 판정 끔)."""
+    return cl.switches(SYS)
 
 
 class Refuse(Exception):
@@ -713,9 +821,12 @@ def edit_words(holder, key, op, word, need_one=False):
         holder.pop(key, None)           # 빈 글자는 모든 제목에 맞으니 칸을 없앤다
 
 
-def reflect_known():
-    """mylms 스위치·과목을 확장이 읽는 known.json 에 바로 반영(다음 15분 확인 때 읽힌다)."""
-    r = subprocess.run([sys.executable, os.path.join(SYS, 'lms-auto.py'), '--known'], cwd=VAULT, capture_output=True, encoding='utf-8', errors='replace', creationflags=NO_WINDOW)
+def reflect_known(sid=None):
+    """로그인 출처 스위치·단위를 확장이 읽는 파일에 바로 반영(다음 15분 확인 때 읽힌다 · 로그인 가족 collect-browser.py --known)."""
+    p = os.path.join(SYS, 'collect-browser.py')
+    if not os.path.exists(p):
+        return
+    r = subprocess.run([sys.executable, p, '--known', *(['--source', sid] if sid else [])], cwd=VAULT, capture_output=True, encoding='utf-8', errors='replace', creationflags=NO_WINDOW)
     if r.returncode:
         raise Refuse('known.json 반영 실패: ' + (r.stderr or r.stdout)[-200:])
 
@@ -726,77 +837,78 @@ def set_desk(sid, field, value, sync=True):
         sw = sw if isinstance(sw, dict) else {}
         sw[field] = as_bool(value)
         save_json(SWITCH, sw)
-        old = load(DESK, default={})
-        if isinstance(old, dict) and field in old:             # 옛 자리의 같은 칸은 걷는다 — 새 파일을 지워도 옛 값이 되살아나지 않게
-            old.pop(field)
-            save_json(DESK, old)
-    elif sid == 'mylms' and field == 'wake':                   # 깨우기 = 기능 단계 «아침 받기» 값 하나(11-07 사용자 «두 스위치 통일») — 켬 high · 끔 low
-        set_wake_level(as_bool(value))
+    elif field == 'wake' and (sid == '*' or browser(sid)):    # 깨우기 = 기능 단계 «로그인 출처 아침 받기» 값 하나(11-07 사용자 «두 스위치 통일») — 켬 high · 끔 low
+        set_wake_level(as_bool(value), browser(sid))
     else:
-        d = load(DESK, default={}) or {}
-        if sid == 'mylms' and field == 'enabled':
+        rc = browser(sid)
+        if not rc or not rc.get('settings'):
+            raise Refuse(f'못 고치는 칸: {sid} {field}')
+        d = bsettings(rc)
+        if field == 'enabled':
             d[field] = as_bool(value)
-        elif sid == 'mylms' and field == 'purpose':
+        elif field == 'purpose':
             d['purpose'] = value.strip()[:200]
-        elif sid == 'mylms' and field == 'at':                 # 크롬을 뒤에서 띄울 시각(빈 값 = 안 띄움 · 확장은 크롬이 떠 있는 동안 15분마다 그대로)
+        elif field == 'at':                                     # 크롬을 뒤에서 띄울 시각(빈 값 = 안 띄움 · 확장은 크롬이 떠 있는 동안 15분마다 그대로)
             set_at(d, value, keep_empty=True)
         else:
             raise Refuse(f'못 고치는 칸: {sid} {field}')
-        save_json(DESK, d)
+        save_json(bpath(rc, 'settings'), d)
     if field in ('enabled', 'all_off'):
-        reflect_known()
-    if sync and field in ('enabled', 'all_off', 'wake', 'at', 'wake_pc'):  # 시각 예약도 같은 길로 — 전체 끔·mylms 끔이면 크롬을 안 띄우고 PC 를 안 깨운다(헛깨우기 막음)
+        reflect_known(None if sid == '*' else sid)
+    if sync and field in ('enabled', 'all_off', 'wake', 'at', 'wake_pc'):  # 시각 예약도 같은 길로 — 전체 끔·그 출처 끔이면 크롬을 안 띄우고 PC 를 안 깨운다(헛깨우기 막음)
         sync_wake()
 
 
-def set_wake_level(on):
-    """기능 단계 lms.wake 를 바꾼다(단계 탭과 같은 값 · 장부는 options 가) · desk.json 의 옛 wake 칸은 걷는다(이제 안 읽음)."""
+def set_wake_level(on, rc=None):
+    """기능 단계 «로그인 출처 아침 받기»를 바꾼다(단계 탭과 같은 값 · 장부는 options 가) · settings 의 옛 wake 칸은 걷는다(이제 안 읽음)."""
     sys.path.insert(0, SYS)
     try:
         import options
-        options.set_level('lms.wake', 'high' if on else 'low', via='collect_desk')
+        options.set_level(WAKE_LEVEL, 'high' if on else 'low', via='collect_desk')
     except ImportError:
         raise Refuse('기능 단계 대본(options.py)이 없음')
     except Exception as e:      # options.OptErr — 선언 없음·고른 값 파일 깨짐
         raise Refuse(f'기능 단계를 못 바꿈: {e}')
-    old = load(DESK, default={})
-    if isinstance(old, dict) and 'wake' in old:
-        old.pop('wake')
-        save_json(DESK, old)
+    for r in ([rc] if rc else browsers()):
+        old = bsettings(r)
+        if 'wake' in old and r.get('settings'):
+            old.pop('wake')
+            save_json(bpath(r, 'settings'), old)
 
 
 def wake_chosen():
-    """깨우기 값 = 기능 단계 lms.wake 의 고른 값(배터리 규칙 전 · lms-auto.py wake_chosen 과 같은 규칙) — 못 읽으면 'high'."""
+    """깨우기 값 = 기능 단계 «로그인 출처 아침 받기»의 고른 값(배터리 규칙 전 · collect-browser.Source.wake_level 과 같은 규칙) — 못 읽으면 'high'."""
     try:
         sys.path.insert(0, SYS)
         import options
         local, st = options._load(options.local_path(None))
-        return options.chosen(local, st, options.declarations(None, only='lms.wake')).get('lms.wake', 'high')
+        return options.chosen(local, st, options.declarations(None, only=WAKE_LEVEL)).get(WAKE_LEVEL, 'high')
     except Exception:
         return 'high'
 
 
 def sync_wake():
-    """시각 예약(«외부뇌-수집 …» · mylms 깨우기 포함)을 지금 값대로 맞춘다(lms-auto.py --sync-tasks) — 대본이 없으면(배포판) 건너뜀."""
-    p = os.path.join(SYS, 'lms-auto.py')
+    """시각 예약(«외부뇌-수집 …» · 제공자가 있으면 로그인 출처 깨우기 포함)을 지금 값대로 맞춘다(본체 엔진 collect-schedule.py --sync)."""
+    p = os.path.join(SYS, 'collect-schedule.py')
     if not os.path.exists(p):
         return
-    r = subprocess.run([sys.executable, p, '--sync-tasks'], cwd=VAULT, capture_output=True, encoding='utf-8', errors='replace', creationflags=NO_WINDOW)
+    r = subprocess.run([sys.executable, p, '--sync'], cwd=VAULT, capture_output=True, encoding='utf-8', errors='replace', creationflags=NO_WINDOW)
     if r.returncode:
         raise Refuse('시각 예약 맞추기 실패(값은 바뀜): ' + (r.stderr or r.stdout)[-200:])
 
 
-def set_course(value):
-    c = load(COURSES)
+def set_course(sid, value):
+    rc = browser(sid)
+    c = load(bpath(rc, 'units')) if rc else None
     if not isinstance(c, dict):
-        raise Refuse('courses.json 을 못 읽음')
+        raise Refuse('단위 지도를 못 읽음')
     edit_courses(c, value)
-    save_json(COURSES, c)
-    reflect_known()
+    save_json(bpath(rc, 'units'), c)
+    reflect_known(sid)
 
 
 def edit_courses(c, value):
-    """과목 넣고 빼기 — courses.json 내용(dict)만 고친다(연습 흉내도 같은 규칙 · E2)."""
+    """과목(단위) 넣고 빼기 — 단위 지도 내용(dict)만 고친다(연습 흉내도 같은 규칙 · E2)."""
     m = re.match(r'^(\d+)=(on|off)$', value)
     if not m:
         raise Refuse(f'과목 값 꼴: {value}')
@@ -870,7 +982,7 @@ AT_MAX = 4
 
 
 def as_at(value):
-    """«시각» 값 — 'HH:MM,HH:MM' (빈 글자 = 시각 없음 → 웹은 주기로 · mylms 는 크롬을 안 띄움) · 하루 4개까지 · 정렬."""
+    """«시각» 값 — 'HH:MM,HH:MM' (빈 글자 = 시각 없음 → 웹은 주기로 · 로그인 출처는 크롬을 안 띄움) · 하루 4개까지 · 정렬."""
     out = []
     for t in [x.strip() for x in str(value).replace(' ', ',').split(',') if x.strip()]:
         m = re.fullmatch(r'(\d{1,2}):(\d{2})', t)
@@ -886,7 +998,7 @@ def as_at(value):
 
 def set_at(holder, value, keep_empty=False):
     """시각 칸을 dict 에 쓴다 — at_since = 정한 때(정하기 전 시각을 따라잡지 않게 · web-collect last_slot).
-    빈 값: 조리법은 칸을 없앤다(= 주기로) · mylms(keep_empty)는 빈 목록을 남긴다(칸이 없으면 06:55 로 읽힌다)."""
+    빈 값: 조리법은 칸을 없앤다(= 주기로) · 로그인 출처(keep_empty)는 빈 목록을 남긴다(칸이 없으면 조리법 at_default 로 읽힌다)."""
     at = as_at(value)
     holder.pop('at_since', None)
     if at:
@@ -898,7 +1010,7 @@ def set_at(holder, value, keep_empty=False):
 
 
 def sync_tasks():
-    """시각 예약(«외부뇌-수집 …»)을 지금 설정대로 맞춘다 — lms-auto.py --sync-tasks · 대본이 없으면(배포판) 건너뜀."""
+    """시각 예약(«외부뇌-수집 …»)을 지금 설정대로 맞춘다 — 본체 엔진 collect-schedule.py --sync."""
     sync_wake()
 
 
@@ -911,29 +1023,28 @@ def group_ids(name):
             g = '일정' if rc.get('family') in ('calendar', 'listing') else rc.get('group') or ('공지' if rc.get('filter') else '구독')
             if g == name:
                 ids.append(rc['id'])
-    if name == '강의' and isinstance(load(SYS, 'lms', 'courses.json'), dict):
-        ids.append('mylms')
+    ids += [rc['id'] for rc in browsers() if (rc.get('group') or '강의') == name and isinstance(load(bpath(rc, 'units')), dict)]
     return ids
 
 
 def set_value(sid, field, value):
     if field == 'course':
-        if sid != 'mylms':
-            raise Refuse('과목은 mylms 칸')
-        return set_course(value)
+        if not browser(sid):
+            raise Refuse('과목은 로그인 출처 칸')
+        return set_course(sid, value)
     if sid.startswith('@'):                                     # 묶음 하나에 같은 값(시각·주기) — 출처마다 그대로 쓴다(묶음 값을 따로 두지 않음)
         if field not in ('at', 'hours'):
             raise Refuse(f'묶음에는 시각·주기만: {field}')
-        ids = [i for i in group_ids(sid[1:]) if not (field == 'hours' and i == 'mylms')]
+        ids = [i for i in group_ids(sid[1:]) if not (field == 'hours' and browser(i))]
         if not ids:
             raise Refuse(f'없는 묶음: {sid[1:]}')
         for i in ids:
-            if i == 'mylms':
+            if browser(i):
                 set_desk(i, field, value, sync=False)
             else:
                 set_recipe(i, field, value, sync=False)
         return sync_tasks()
-    if sid in ('*', 'mylms'):
+    if sid == '*' or browser(sid):
         return set_desk(sid, field, value)
     return set_recipe(sid, field, value)
 
@@ -944,21 +1055,16 @@ def busy_path(sid):
 
 
 class Busy:
-    """lms-auto 와 같은 잠금으로 15분 예약과 같은 상태 파일을 동시에 안 쓴다 · 도는 동안 화면에 그 낱말이 보인다."""
+    """15분 반영과 같은 잠금(엔진 자리)으로 15분 예약과 같은 상태 파일을 동시에 안 쓴다 · 도는 동안 화면에 그 낱말이 보인다."""
 
     def __init__(self, sid, word):
         self.path, self.word, self.sid = busy_path(sid), word, sid
 
     def __enter__(self):
-        import msvcrt
-        state = os.environ.get('LMS_AUTO_STATE') or os.path.join(SYS, '_index', 'lms')
-        os.makedirs(state, exist_ok=True)
+        t = os.environ.get('COLLECT_TEST_STATE')                  # 시험 상태 폴더 — collect-schedule.lock_path 와 같은 규칙(S6)
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        self.f = open(os.path.join(state, 'auto.lock'), 'a+')
-        try:
-            msvcrt.locking(self.f.fileno(), msvcrt.LK_NBLCK, 1)
-        except OSError:
-            self.f.close()
+        self.f = cl.try_lock(os.path.join(t, 'auto.lock') if t else os.path.join(SYS, '_index', 'collect', 'tick.lock'))
+        if self.f is None:
             raise Refuse('다른 수집이 도는 중')
         with open(self.path, 'w', encoding='utf-8') as f:
             f.write(self.word)
@@ -988,16 +1094,17 @@ def recipe_of(sid):
 
 
 def fetch(sid):
-    """웹 = 그 자리에서 받는다(엔진의 계약·스위치 관문 그대로) · mylms = PC → 확장 길이 known.json 뿐이라 다음 15분 확인 때 돈다."""
+    """웹 = 그 자리에서 받는다(엔진의 계약·스위치 관문 그대로) · 로그인 출처 = PC → 확장 길이 known 파일뿐이라 다음 15분 확인 때 돈다."""
     if switches().get('all_off') is True:
         raise Refuse('전체가 꺼져 있음')
-    d = load(DESK, default={}) or {}
-    if sid == 'mylms':
+    rc = browser(sid)
+    if rc:
+        d = bsettings(rc)
         if d.get('enabled') is False:
-            raise Refuse('mylms 가 꺼져 있음')
+            raise Refuse(f'{sid} 가 꺼져 있음')
         d['fetch_now'] = dt.datetime.now().isoformat(timespec='seconds')
-        save_json(DESK, d)
-        return reflect_known()
+        save_json(bpath(rc, 'settings'), d)
+        return reflect_known(sid)
     if recipe_of(sid).get('enabled') is False:
         raise Refuse('꺼진 출처')
     with Busy(sid, '받는 중'):
@@ -1006,11 +1113,40 @@ def fetch(sid):
 
 def judge_source(sid):
     """구독 사용량이 든다 — 누를 때만 · 그 출처만. 끈 출처는 판정 반영(settle)도 멈추므로 받지 않는다."""
-    d = load(DESK, default={}) or {}
-    if switches().get('all_off') is True or (sid == 'mylms' and d.get('enabled') is False) or (sid != 'mylms' and recipe_of(sid).get('enabled') is False):
+    rc = browser(sid)
+    if switches().get('all_off') is True or (rc and bsettings(rc).get('enabled') is False) or (not rc and recipe_of(sid).get('enabled') is False):
         raise Refuse('꺼진 출처')
+    post = ((rc.get('posts') or {}).get('sid') if isinstance(rc.get('posts'), dict) else '') if rc else sid    # 로그인 출처 = 그 «마감 불명» 글 칸(조리법 posts.sid)
+    if not post:
+        raise Refuse('판정할 글 칸이 없는 출처')
     with Busy(sid, '판정 중'):
-        engine('notice-filter.py', 'extract', '--source', LMS_SID if sid == 'mylms' else sid)
+        if sort_on() and os.path.exists(os.path.join(SYS, 'sort.py')):    # S4 — 그 자리에 걸린 체계 전부(한 대상 한 호출 · 꽁돈만 대기도) · 엔진 오류(3)면 옛 길
+            r = subprocess.run([sys.executable, os.path.join(SYS, 'sort.py'), 'judge', '--place', sid, '--yes'], cwd=VAULT, capture_output=True,
+                               encoding='utf-8', errors='replace', creationflags=NO_WINDOW, env=dict(os.environ, PYTHONIOENCODING='utf-8'))
+            if r.returncode == 0:
+                return
+            if r.returncode != 3:
+                raise Refuse((r.stderr or r.stdout or f'sort.py rc={r.returncode}').strip()[-200:])
+        engine('notice-filter.py', 'extract', '--source', post)
+
+
+def sort_act(op, ident):
+    """분류 칸 단추(S4 · 초안 B) — ack <사건>(알림 «확인» · 그 체계가 걸린 출처 모두에서 닫힘) · revert <사건>(알림 «되돌리기») ·
+    rule <체계>/<규칙>(규칙 줄 «되돌리기» · 자동 규칙만). 되돌린 뒤 공지 판정을 다시 그려(사용량 0) 판정표·일정이 따라온다."""
+    if op not in ('ack', 'revert', 'rule'):
+        raise Refuse(f'모르는 동작: {op}')
+    with Busy('sort', '고치는 중'):
+        if op == 'ack':
+            engine('sort.py', 'ack', ident)
+            return
+        if op == 'revert':
+            engine('sort.py', 'revert', ident)
+        else:
+            sid, _, rule = ident.partition('/')
+            if not sid or not rule:
+                raise Refuse('rule <체계>/<규칙>')
+            engine('sort.py', 'revert', '--system', sid, '--rule', rule)
+        engine('notice-filter.py', 'judge')
 
 
 def item(sid, aid, op):
@@ -1051,9 +1187,10 @@ def reject(sid, aid, picked, memo):
 
 
 def open_site(sid):
-    """사이트를 연다 — 열기만 한다(비밀번호를 다루지 않는다). mylms 는 확장이 있는 크롬으로."""
-    if sid == 'mylms':
-        url = mylms_url()
+    """사이트를 연다 — 열기만 한다(비밀번호를 다루지 않는다). 로그인 출처는 확장이 있는 크롬으로."""
+    rc = browser(sid)
+    if rc:
+        url = browser_url(rc)
     elif os.path.exists(os.path.join(SYS, 'collect', sid + '.json')):
         url = recipe_of(sid).get('page') or ''
     else:
@@ -1062,7 +1199,7 @@ def open_site(sid):
         raise Refuse(f'주소 없음: {sid}')
     if os.environ.get('DESK_NO_OPEN'):              # 시험 — 창을 안 띄운다
         return print(url)
-    if sid == 'mylms':
+    if rc:
         try:
             import winreg
             subprocess.Popen([winreg.QueryValue(winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe'), url], close_fds=True)
@@ -1088,8 +1225,61 @@ def contract(cid, answer):
         new = not os.path.exists(QUEUE)
         with open(QUEUE, 'a', encoding='utf-8', newline='\n') as f:
             if new:
-                f.write('# 수집 대기열\n> lms-auto.py·web-collect.py 가 쌓는다. 고치면 줄 앞을 `- [x]` 로.\n\n')
+                f.write(cl.QUEUE_HEAD)
             f.write(f'- [ ] {time.strftime("%Y-%m-%d %H:%M:%S")} `{cid}` (Claude) 수집 계약 승인(수집 창) — {row.get("name")} {row.get("url")} · 조리법을 탐색해 쓴다 · 근거 {row.get("note")}\n')
+
+
+# ── 개인 파일 처음 만들기(S6 · 배포판에 안 실리는 개인 파일마다 «만드는 길») — 빈 틀 = 3_시스템/collect-examples · 이미 있으면 안 덮음 ──
+EXAMPLES = os.path.join(SYS, 'collect-examples')
+NEXT_BROWSER = """다음(사람 손 · 로그인은 사람):
+  1. 크롬 chrome://extensions → 개발자 모드 → «압축해제된 확장 프로그램을 로드합니다» → 3_시스템/collect-ext
+  2. 크롬 퍼즐 아이콘 → «외부뇌 로그인 수집기» → «{id} · {host} 허용» → 크롬이 묻는 창에서 «허용»
+  3. 그 사이트에 늘 하던 대로 로그인 — 확장이 15분마다 받는다(크롬이 떠 있는 동안)
+  4. 첫 받기 뒤 대기열 «단위 지도에 없는 수강 강좌 N개: [번호…]» → {units} 에 «번호: 폴더 이름»으로 더한다(꼴 = collect-examples/units.json)
+  5. 시각 받기·아침 깨우기 = 수집 창 그 출처 칸(시각 예약은 수집 창이 맞춘다)"""
+
+
+def new_personal(kind, rest):
+    """kind = browser <id> <https://호스트> | card | candidates → 만든 파일(볼트 상대 경로) 목록. 이미 있으면 거부(덮어쓰지 않는다)."""
+    made = []
+
+    def put(path, data):
+        if os.path.exists(path):
+            raise Refuse(f'이미 있음(안 덮음): {os.path.relpath(path, VAULT)}')
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        if isinstance(data, str):
+            with open(path, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(data)
+        else:
+            save_json(path, data)
+        made.append(os.path.relpath(path, VAULT).replace('\\', '/'))
+
+    if kind == 'browser':
+        if len(rest) != 2 or not ID_RX.fullmatch(rest[0]) or not re.fullmatch(r'https://[a-z0-9.-]+(?::\d+)?', rest[1]):
+            raise Refuse('new browser <id(영문 소문자·숫자·-)> <https://호스트>')
+        sid, host = rest
+        if any(rc['id'] == sid for rc in cl.browser_recipes(SYS)) or os.path.exists(os.path.join(SYS, 'collect', sid + '.json')):
+            raise Refuse(f'이미 있는 출처: {sid}')
+        rc = json.loads(open(os.path.join(EXAMPLES, 'browser.json'), encoding='utf-8').read().replace('{id}', sid).replace('{host}', host))
+        rc['_'] = f'로그인 출처 조리법(개인 층) — {dt.date.today().isoformat()} collect_desk.py new browser 가 빈 틀(3_시스템/collect-examples/browser.json)에서 만듦 · 칸 뜻 = collect-browser.py 머리글'
+        put(cl.rpath(rc['units'], SYS), {})
+        put(cl.rpath(rc['settings'], SYS), {})
+        put(os.path.join(SYS, *cl.BROWSER, sid + '.json'), rc)
+        reflect_known(sid)
+        print(NEXT_BROWSER.format(id=sid, host=host, units='3_시스템/' + rc['units']))
+    elif kind == 'card':
+        rel = roles.find_note('자격-카드') or roles.path('notes', '자격-카드.md')
+        t = open(os.path.join(EXAMPLES, 'card-template.md'), encoding='utf-8').read()
+        if t.startswith('---\n') and not re.search(r'^sensitive:\s*true\s*$', t.split('\n---', 1)[0], re.M):
+            t = t.replace('---\n', '---\nsensitive: true\n', 1)    # 만든 카드만 민감(push 제외) — 빈 틀에 이 줄이 있으면 커밋 거름망이 틀을 git 밖으로 빼 배포판에 안 실린다(S7 11-17 잼)
+        put(os.path.join(VAULT, *rel.split('/')), t)
+        print('다음: 그 노트의 JSON 칸을 채운다(모르는 칸은 null) — 공지 필터가 다음 판정부터 읽는다')
+    elif kind == 'candidates':
+        put(CAND, {'candidates': []})
+        print('다음: Claude 가 조사한 새 출처를 이 꼴(3_시스템/collect-examples/candidates.json)로 더한다 — 수집 창 «후보» 줄')
+    else:
+        raise Refuse('new browser <id> <https://호스트> | new card | new candidates')
+    return made
 
 
 # ── 수집 추가·고침(11-06 · 대화창 스킬 collect_desk:add · fix 가 부른다) ──
@@ -1266,7 +1456,7 @@ def event_word(field, value):
         return 'PC 깨우기 켬' if value == 'true' else 'PC 깨우기 끔'
     if field == 'course':
         return ('과목 뺌 ' if value.endswith('=off') else '과목 넣음 ') + value.split('=')[0]
-    if field == 'at':                                           # 시각(11-11) — 비우면 웹은 주기로 · mylms 는 크롬 안 띄움
+    if field == 'at':                                           # 시각(11-11) — 비우면 웹은 주기로 · 로그인 출처는 크롬 안 띄움
         return '시각 ' + (' '.join(x.strip() for x in value.split(',') if x.strip()) or '없음')
     if field == 'hours':
         return f'주기 {value}시간'
@@ -1342,16 +1532,111 @@ def moa_links():
     return out
 
 
+# ── 분류 체계 칸(범용 도구 셋 S4 · 초안 B «규칙 칸 + 알림 줄» · 사용자 11-18) ──
+# sort 가 쓴 것만 읽는다(엔진·어댑터를 안 부름): 자리 요약 _index/sort/자리.json · 사건 _index/sort/사건.jsonl · 체계 파일 3_시스템/sort/*.json.
+# «판정 N» = 그 출처(자리)에 걸린 모든 체계의 판정 대기(한 대상 한 번) · 규칙 칸 = 걸린 체계의 켠 규칙 · 알림 줄 = 열린 사건(자동 채택·가격선 바뀜 …).
+# 옛 길 = collect.local.json "sort": false — 그때·요약이 없을 때·요약이 엔진 상태보다 옛것일 때 «판정 N» 은 엔진 상태의 판정 대기(옛 셈).
+SORT_SYS = SORT_IX = None          # 시험이 바꿔 끼움(없으면 SYS/sort · SYS/_index/sort — 연습 때는 임시 폴더라 체계 0)
+
+
+def sort_dirs():
+    return SORT_SYS or os.path.join(SYS, 'sort'), SORT_IX or os.path.join(SYS, '_index', 'sort')
+
+
+def sort_on():
+    return cl.switches(SYS, keys=('sort',)).get('sort') is not False
+
+
+def sort_events(ix):
+    rows, shut = {}, set()
+    for ln in read(ix, '사건.jsonl').splitlines():
+        try:
+            e = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(e, dict) and e.get('id'):
+            (shut.add(e['id']) if '닫힘' in e else rows.__setitem__(e['id'], e))
+    return [e for k, e in rows.items() if k not in shut]
+
+
+def sort_desk():
+    """{자리: {judge: n, at: 요약 시각(초), rules: [{id, name, rules: [{id, say, full, to, n, auto}]}], alerts: [{id, sys, text, kind, t, undo}]}} · 끔·요약 없음 = {}."""
+    sdir, ix = sort_dirs()
+    if not sort_on():
+        return {}
+    summ = load(ix, '자리.json')
+    if not isinstance(summ, dict):
+        return {}
+    try:
+        at = os.path.getmtime(os.path.join(ix, '자리.json'))
+    except OSError:
+        at = 0
+    S = {}
+    for p in sorted(glob.glob(os.path.join(sdir, '*.json'))):
+        s = load(p)
+        if isinstance(s, dict) and s.get('id') and s.get('켬', True) is not False:
+            S[s['id']] = s
+    per = {k: v for k, v in (summ.get('체계') or {}).items() if k in S}
+    out = {}
+
+    def slot(pl):
+        return out.setdefault(pl, {'judge': 0, 'at': at, 'rules': [], 'alerts': []})
+    for sid, pls in per.items():
+        s = S[sid]
+        for pl, c in pls.items():
+            rs = []
+            for r in s.get('규칙') or []:
+                if r.get('켬') is False or not r.get('id'):
+                    continue
+                seen = (c.get('갈래') or {}).get(r['id']) or {}
+                to = r.get('갈래') or ('·'.join(sorted(seen, key=lambda g: -seen[g])) if seen else '표' if '표' in r else '—')
+                rs.append({'id': r['id'], 'say': r.get('짧게') or r.get('말') or r['id'], 'full': r.get('말') or '', 'to': to,
+                           'n': (c.get('맞은') or {}).get(r['id'], 0), 'auto': str(r.get('만든이', '')).startswith('자동')})
+            if rs:
+                slot(pl)['rules'].append({'id': sid, 'name': s.get('이름') or sid, 'rules': rs})
+    for pl, n in (summ.get('판정') or {}).items():
+        slot(pl)['judge'] = n
+    for e in sort_events(ix):
+        sid = e.get('체계')
+        if sid not in S:
+            continue
+        for pl in e.get('자리') or list((per.get(sid) or {}).keys()):
+            slot(pl)['alerts'].append({'id': e['id'], 'sys': S[sid].get('이름') or sid, 'text': e.get('글') or '', 'kind': e.get('종류') or '',
+                                       't': str(e.get('시각') or '')[5:16].replace('T', ' '), 'undo': bool(e.get('되돌리기'))})
+    return out
+
+
+def attach_sort(sources):
+    """출처마다 sort 칸을 붙인다 — judge(«판정 N») · sort(규칙·알림). 원천(엔진 상태)이 요약보다 새것이면 «판정 N» 은 옛 셈."""
+    try:
+        sd = sort_desk()
+    except Exception:            # 분류 칸이 못 떠도 창은 뜬다(옛 «판정 N»)
+        sd = {}
+    for x in sources:
+        src = x.pop('_src', '')
+        d = sd.get(x['id'])
+        if not sd:
+            continue
+        try:
+            fresh = not src or not os.path.exists(src) or os.path.getmtime(src) <= (d or {}).get('at', max((v['at'] for v in sd.values()), default=0)) + 1
+        except OSError:
+            fresh = False
+        if fresh and (x.get('cnt') is not None or x.get('family') == 'browser'):
+            x['judge'] = (d or {}).get('judge', 0)
+        if d and (d['rules'] or d['alerts']):
+            x['sort'] = {'rules': d['rules'], 'alerts': d['alerts']}
+
+
 def view(_reason='open'):
     now = dt.datetime.now()
-    desk = load(SYS, 'lms', 'desk.json', default={}) or {}
     queue = open_queue()
     cfg, alarm_bad = alarm_reader()
     events = web_events()
     sources = []
-    lms = lms_source(queue, cfg, desk, now)
-    if lms:
-        sources.append(lms)
+    for rc in browsers():
+        b = browser_source(rc, queue, cfg, now)
+        if b:
+            sources.append(b)
     for p in sorted(glob.glob(os.path.join(SYS, 'collect', '*.json'))):
         s = web_source(p, events, queue, cfg, now)
         if s:
@@ -1378,7 +1663,8 @@ def view(_reason='open'):
     for x in sources:
         if links.get(x['id']):
             x['moa'] = links[x['id']]
-    return {'now': fmt(now), 'me': ME, 'hist': hist, 'allOff': sw.get('all_off') is True, 'autoJudge': sw.get('auto_judge') is True, 'wakePc': sw.get('wake_pc') is not False, 'alarmNote': ALARM_NOTE, 'alarmBad': alarm_bad, 'sources': sources, 'candidates': candidates()}
+    attach_sort(sources)
+    return {'now': fmt(now), 'me': ME, 'hist': hist, 'allOff': sw.get('all_off') is True, 'autoJudge': sw.get('auto_judge') is True, 'wakePc': sw.get('wake_pc') is not False, 'alarmNote': alarm_note() if cfg is not False else ALARM_NOTE, 'alarmBad': alarm_bad, 'sources': sources, 'candidates': candidates()}
 
 
 # ── 연습(튜토리얼 E2 · 11-08) — «연습: 모듈» 장 동안 수집 창이 그리는 자료 · 쓰기 흉내 ──
@@ -1386,7 +1672,7 @@ PRACTICE_ID = '연습-'      # 연습 자료 id 머리 — 진짜 id(ID_RX = 영
 
 
 def practice_inputs(now):
-    """연습 입력 — 진짜 view() 가 읽는 파일 꼴 그대로 {볼트 상대 경로: 값}. 정상(공지)·실패(구독)·로그인 끊김(LMS) 출처 셋 + 후보 하나 + 걸러진 글 몇."""
+    """연습 입력 — 진짜 view() 가 읽는 파일 꼴 그대로 {볼트 상대 경로: 값}. 정상(공지)·실패(구독)·로그인 끊김(로그인 출처) 셋 + 후보 하나 + 걸러진 글 몇."""
     ago = lambda h: now - dt.timedelta(hours=h)
     stamp = lambda h: f'{ago(h):%Y-%m-%d %H:%M:%S}'
     day = lambda h: f'{ago(h):%Y-%m-%d}'
@@ -1408,15 +1694,17 @@ def practice_inputs(now):
         '3_시스템/_index/collect/연습-구독.json': {'last_run': ago(26).timestamp(), 'items': {'f1': {'title': '새 판 출시 소식', 'date': day(30), 'path': '2_지식/연습/블로그.md'}}},
         '3_시스템/_index/collect/web.log': f'{stamp(2)} 연습-공지: 목록 20줄\n{stamp(2)} 연습-공지: 받음 대기 칸 2 · 제목 장부 1\n{stamp(26)} 연습-구독: 목록 0줄\n',
         '3_시스템/_index/수집-대기열.md': f'# 수집 대기열\n\n- [ ] {stamp(26)[:16]} `연습-구독` (Claude) 피드를 못 읽음 — 주소가 바뀐 것 같음\n',
-        '3_시스템/lms/courses.json': {'101': '자료구조', '102': '열역학', '_제외': {'103': '2026 체육 — 수집 창에서 뺌'}},
-        '3_시스템/lms/desk.json': {'purpose': '강의 공지·과제 마감'},
-        '3_시스템/lms/manifest.json': {'version': '1.0.0', 'host_permissions': ['https://lms.example.org/*']},
-        '3_시스템/_index/lms/manifest.json': {'items': {'p1': {'path': '연습/lms/자료구조/1주차.md'}, 'p2': {'path': '연습/lms/열역학/과제1.md'}},
-                                              'files': {'q1': {'path': '연습/lms/자료구조/강의자료.pdf'}}, 'board': {}},
-        '3_시스템/_index/lms/runs/run.json': {'kind': 'run', 'startedAt': int(ago(20).timestamp() * 1000), 'version': '1.0.0'},
-        '3_시스템/_index/lms/runs/status.json': {'kind': 'status', 'at': int(ago(1).timestamp() * 1000), 'login': 'out', 'version': '1.0.0'},
-        '3_시스템/_index/lms/auto.log': f'{stamp(20)} lms-file 새 글 2 · 파일 들임 1\n{stamp(1)} 로그인 out\n',
-        '3_시스템/lms/candidates.json': {'candidates': [{'id': '연습-후보', 'name': '취업 박람회 소식', 'host': 'example.org', 'url': 'https://example.org/fair',
+        '3_시스템/collect/browser/연습-강의/units.json': {'101': '자료구조', '102': '열역학', '_제외': {'103': '2026 체육 — 수집 창에서 뺌'}},
+        '3_시스템/collect/browser/연습-강의/settings.json': {'purpose': '강의 공지·과제 마감'},
+        '3_시스템/collect-ext/manifest.json': {'version': '1.0.0'},
+        '3_시스템/collect/browser/연습-강의.json': {'id': '연습-강의', 'family': 'browser', 'ext': {'host': 'https://school.example.org'}, 'filer': 'canvas-file.py', 'at_default': ['06:55'],
+                                                 'units': 'collect/browser/연습-강의/units.json', 'settings': 'collect/browser/연습-강의/settings.json', 'state': '_index/연습-강의'},
+        '3_시스템/_index/연습-강의/manifest.json': {'items': {'p1': {'path': '연습/강의/자료구조/1주차.md'}, 'p2': {'path': '연습/강의/열역학/과제1.md'}},
+                                               'files': {'q1': {'path': '연습/강의/자료구조/강의자료.pdf'}}, 'board': {}},
+        '3_시스템/_index/연습-강의/runs/run.json': {'kind': 'run', 'startedAt': int(ago(20).timestamp() * 1000), 'version': '1.0.0'},
+        '3_시스템/_index/연습-강의/runs/status.json': {'kind': 'status', 'at': int(ago(1).timestamp() * 1000), 'login': 'out', 'version': '1.0.0'},
+        '3_시스템/_index/연습-강의/auto.log': f'{stamp(20)} canvas-file 새 글 2 · 파일 들임 1\n{stamp(1)} 로그인 out\n',
+        '3_시스템/collect/candidates/candidates.json': {'candidates': [{'id': '연습-후보', 'name': '취업 박람회 소식', 'host': 'example.org', 'url': 'https://example.org/fair',
                                                        'measured': '목록 20줄 · 글마다 날짜 · 주 1~2번 새 글', 'note': '', 'answer': ''}]},
     }
 
@@ -1428,17 +1716,17 @@ def practice_act(F, act, now):
     if not isinstance(g, dict) or not all(isinstance(v, str) for v in g.values()):
         raise Refuse('인자 꼴')
     src = g.get('source', '')
-    lms = src == PRACTICE_ID + 'mylms'
+    lms = src == '연습-강의'                                    # 연습 로그인 출처(조리법 3_시스템/collect/browser/연습-강의.json)
     rc = F.get(f'3_시스템/collect/{src}.json')
     st = F.get(f'3_시스템/_index/collect/{src}.json') or {}
     sw = F.setdefault('3_시스템/collect.local.json', {})
-    desk = F['3_시스템/lms/desk.json']
+    desk = F.setdefault('3_시스템/collect/browser/연습-강의/settings.json', {})
     if aid == 'collect_desk.set':
         field, value = g.get('field', ''), g.get('value', '')
         if field == 'course':
             if not lms:
-                raise Refuse('과목은 mylms 칸')
-            edit_courses(F['3_시스템/lms/courses.json'], value)
+                raise Refuse('과목은 로그인 출처 칸')
+            edit_courses(F['3_시스템/collect/browser/연습-강의/units.json'], value)
         elif src == '*' and field in ('all_off', 'auto_judge', 'wake_pc'):
             sw[field] = as_bool(value)
         elif lms and field in ('enabled', 'wake'):
@@ -1492,7 +1780,7 @@ def practice_act(F, act, now):
                     n += 1
             F['3_시스템/_index/collect/web.log'] += f'{now:%Y-%m-%d %H:%M:%S} {src}: ' + ('목록 20줄\n' if aid == 'collect_desk.fetch' else f'판정 반영 · 볼트에 들임 {n}\n')
     elif aid == 'collect_desk.contract':
-        row = next((c for c in F['3_시스템/lms/candidates.json']['candidates'] if c.get('id') == g.get('id')), None)
+        row = next((c for c in F['3_시스템/collect/candidates/candidates.json']['candidates'] if c.get('id') == g.get('id')), None)
         if g.get('answer') not in ('계약', '안 함') or not row:
             raise Refuse(f'계약 또는 안 함 · 있는 후보: {g.get("id")}')
         row.update(answer=g['answer'], at=now.date().isoformat())
@@ -1502,7 +1790,7 @@ def practice_act(F, act, now):
         return              # 연습은 사이트를 열지 않는다
     else:
         raise Refuse(f'연습에 없는 행위: {aid}')
-    rec = dict(g, source='mylms') if lms else g      # 장부 줄 = brain.py 가 적는 꼴(my_events 가 «일어난 일»로 그림)
+    rec = g                                         # 장부 줄 = brain.py 가 적는 꼴(my_events 가 «일어난 일»로 그림)
     F['3_시스템/ledger/actions.jsonl'] = F.get('3_시스템/ledger/actions.jsonl', '') + json.dumps({'ts': now.isoformat(timespec='seconds'), 'action': aid, 'args': rec, 'code': 0}, ensure_ascii=False) + '\n'
 
 
@@ -1526,7 +1814,7 @@ def practice_view(acts_text):
     def nothing(*_a, **_k):
         raise Refuse('연습 — 바깥 프로그램을 부르지 않음')
     subprocess.run = subprocess.Popen = webbrowser.open = nothing
-    desk = F['3_시스템/lms/desk.json']
+    desk = F['3_시스템/collect/browser/연습-강의/settings.json']
     with tempfile.TemporaryDirectory(prefix='외부뇌-연습-') as root:
         for rel, v in F.items():
             p = os.path.join(root, *rel.split('/'))
@@ -1534,14 +1822,11 @@ def practice_view(acts_text):
             with open(p, 'w', encoding='utf-8', newline='\n') as f:
                 f.write(v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
         sysd = os.path.join(root, '3_시스템')
-        globals().update(VAULT=root, SYS=sysd, PLAN=os.path.join(root, '2_지식', '일정'), CAND=os.path.join(sysd, 'lms', 'candidates.json'),
-                         DESK=os.path.join(sysd, 'lms', 'desk.json'), SWITCH=os.path.join(sysd, 'collect.local.json'), COURSES=os.path.join(sysd, 'lms', 'courses.json'),
+        globals().update(VAULT=root, SYS=sysd, PLAN=os.path.join(root, '2_지식', '일정'), CAND=os.path.join(sysd, 'collect', 'candidates', 'candidates.json'),
+                         SWITCH=os.path.join(sysd, 'collect.local.json'),
                          QUEUE=os.path.join(sysd, '_index', '수집-대기열.md'), DRAFT=os.path.join(sysd, '_index', 'collect', 'draft'),
                          wake_chosen=lambda: 'low' if desk.get('wake') is False else 'high')
         out = view('practice')
-    for s in out['sources']:
-        if s.get('family') == 'lms':
-            s['id'] = PRACTICE_ID + 'mylms'      # 진짜 mylms 와 겹치지 않게(화면은 family 로 가른다)
     out['practice'] = {'acts': len(acts), 'refused': refused}
     out.pop('hist', None)               # 연습은 일어난 일 옛 8줄 그대로(기록 칸은 진짜 기록에만 · 11-12)
     return out
@@ -1565,6 +1850,9 @@ def main():
     w.add_argument('value')
     for name in ('fetch', 'judge', 'open'):
         sub.add_parser(name).add_argument('source')
+    so = sub.add_parser('sort')                          # 분류 칸 단추(S4) — ack|revert <사건 id> · rule <체계>/<규칙>
+    so.add_argument('op')
+    so.add_argument('id')
     it = sub.add_parser('item')
     it.add_argument('source')
     it.add_argument('id')
@@ -1585,6 +1873,9 @@ def main():
     t.add_argument('--view', action='store_true')
     for name in ('add', 'fix'):
         sub.add_parser(name).add_argument('id')
+    nw = sub.add_parser('new')                           # 개인 파일 처음 만들기(S6)
+    nw.add_argument('kind', choices=['browser', 'card', 'candidates'])
+    nw.add_argument('rest', nargs='*')
     a = ap.parse_args()
     if a.cmd == 'history':
         return print(json.dumps(history(a.source, a.n), ensure_ascii=False))
@@ -1600,6 +1891,8 @@ def main():
             fetch(a.source)
         elif a.cmd == 'judge':
             judge_source(a.source)
+        elif a.cmd == 'sort':
+            sort_act(a.op, a.id)
         elif a.cmd == 'item':
             item(a.source, a.id, a.op)
         elif a.cmd == 'reject':
@@ -1616,6 +1909,8 @@ def main():
             add_source(a.id)
         elif a.cmd == 'fix':
             fix_source(a.id)
+        elif a.cmd == 'new':
+            print('만듦: ' + ' · '.join(new_personal(a.kind, a.rest)))
     except Refuse as e:
         print(str(e), file=sys.stderr)
         sys.exit(2)

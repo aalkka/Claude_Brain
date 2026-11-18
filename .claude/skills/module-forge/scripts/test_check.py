@@ -173,6 +173,44 @@ def build():
     # 코어 글이 모듈 장으로 링크 — 진짜 글을 고치지 않고 검사 함수만 바꿔 끼운다
     orig = C.core_doc_links
     C.core_doc_links = lambda: (lambda d: (d["links"].setdefault("설명서-mf-t-doc-link", []).append("시험 코어 글"), d)[1])(orig())
+    # ⑬ 코어 계약 uses_core(11-17) — 진짜 코어 파일을 ast 로 읽는다(roles.py 의 path·abs·_TOPICS 는 있는 이름)
+    core = lambda m, uc: mk(m, mod([f"3_시스템/_index/{m}/"], extra={"uses_core": uc}))  # noqa: E731
+    core("mf-t-core-ok", {"3_시스템/roles.py": ["path", "abs"], "3_시스템/roles.json": []})
+    core("mf-t-core-miss", {"3_시스템/roles.py": ["path", "no_such_name_xyz"]})
+    core("mf-t-core-under", {"3_시스템/roles.py": ["_TOPICS"]})
+    core("mf-t-core-nofile", {"3_시스템/없는-코어-xyz.py": ["x"]})
+    core("mf-t-core-type", ["3_시스템/roles.py"])
+    # update_check · outside · setup · notes(11-17 contributes 새 칸)
+    con("mf-t-upd-ok", {"update_check": [["{py}", "-u", ".claude/skills/mf-t-upd-ok/scripts/a.py"]]})
+    con("mf-t-upd-bad", {"update_check": "py a.py"})
+
+    def out(m, items, report=None, rel=None):
+        d = {"이름": "시험", "항목": items}
+        if report is not None:
+            d["report"] = report
+        mk(m, mod([f"3_시스템/_index/{m}/"], extra={"contributes": {"outside": rel or f".claude/skills/{m}/outside.json"}}),
+           scripts={"a.py": 'print("{}")\n'})
+        w(os.path.join(SKILLS, m, "outside.json"), json.dumps(d, ensure_ascii=False))
+
+    it = lambda m, **k: {"id": f"{m}.x", "이름": "시험", "기기": "pc", "재기": {"명령": "exit 0"}, "안내": ["하나", "둘"], **k}  # noqa: E731
+    out("mf-t-out-ok", [it("mf-t-out-ok"), it("mf-t-out-ok", id="mf-t-out-ok.y", 기기="폰", 재기={"앱": "y"})],
+        report=["{py}", ".claude/skills/mf-t-out-ok/scripts/a.py"])
+    out("mf-t-out-prefix", [it("mf-t-out-prefix", id="x")])
+    out("mf-t-out-kind", [it("mf-t-out-kind", 재기={"느낌": "x"})])
+    out("mf-t-out-guide", [it("mf-t-out-guide", 안내=["하나"])])
+    out("mf-t-out-app", [it("mf-t-out-app", 재기={"앱": "y"})])
+    out("mf-t-out-file", [it("mf-t-out-file")], rel="3_시스템/external.json")
+    setup = {"항목": [{"id": "port", "물음": "문 번호", "기본값": 1, "쓰는 곳": {"config": "port"}, "묻기": "못 잴 때만"}]}
+    mk("mf-t-setup-ok", mod(["3_시스템/_index/mf-t-setup-ok/"], extra={"contributes": {"setup": ".claude/skills/mf-t-setup-ok/setup.json"}}))
+    w(os.path.join(SKILLS, "mf-t-setup-ok", "setup.json"), json.dumps(setup, ensure_ascii=False))
+    bad = {"항목": [{"id": "token", "물음": "열쇠", "쓰는 곳": {"config": "token"}, "묻기": "늘"}]}
+    mk("mf-t-setup-secret", mod(["3_시스템/_index/mf-t-setup-secret/"], extra={"contributes": {"setup": ".claude/skills/mf-t-setup-secret/setup.json"}}))
+    w(os.path.join(SKILLS, "mf-t-setup-secret", "setup.json"), json.dumps(bad, ensure_ascii=False))
+    note_ok = [{"id": "a", "name": "설정", "path": "2_지식/modules/mf-t-snote-ok/설정.md", "template": ".claude/skills/mf-t-snote-ok/templates/설정.md"}]
+    mk("mf-t-snote-ok", mod(["2_지식/modules/mf-t-snote-ok/"], extra={"contributes": {"notes": note_ok}}))
+    w(os.path.join(SKILLS, "mf-t-snote-ok", "templates", "설정.md"), "---\ntitle: 설정\n---\n")
+    note_out = [{"id": "a", "name": "설정", "path": "2_지식/일/설정.md", "template": ".claude/skills/mf-t-snote-out/templates/설정.md"}]
+    mk("mf-t-snote-out", mod(["2_지식/modules/mf-t-snote-out/"], extra={"contributes": {"notes": note_out}}))
     # 노트 basename 중복(Stop훅 스코프 = 3_시스템/_ref/** 사용 — MOC 요구 대상 아님)
     for sub in ("mf-t-dupA", "mf-t-dupB"):
         p = os.path.join(REF, sub)
@@ -241,6 +279,25 @@ CASES = [
     ("mf-t-doc-nofm",     False, "프론트매터 없음",     "blocks"),
     ("mf-t-doc-dup",      False, "설명서 이름 겹침",    "blocks"),
     ("mf-t-doc-link",     False, "모듈을 끄면 깨진다",  "blocks"),
+    ("mf-t-core-ok",      True,  "코어 계약 2파일",     "infos"),
+    ("mf-t-core-ok",      True,  "밑줄 이름",           "!warns"),
+    ("mf-t-core-miss",    False, "no_such_name_xyz",    "blocks"),
+    ("mf-t-core-under",   True,  "밑줄 이름 _TOPICS",   "warns"),
+    ("mf-t-core-nofile",  False, "코어 파일 없음",      "blocks"),
+    ("mf-t-core-type",    False, "uses_core 는",        "blocks"),
+    ("mf-t-upd-ok",       True,  "아직 읽는 곳 없음",   "!infos"),
+    ("mf-t-upd-bad",      False, "contributes.update_check", "blocks"),
+    ("mf-t-out-ok",       True,  "바깥 설정",           "!blocks"),
+    ("mf-t-out-prefix",   False, "로 시작해야 한다",    "blocks"),
+    ("mf-t-out-kind",     False, "재기 —",              "blocks"),
+    ("mf-t-out-guide",    False, "사람 단계",           "blocks"),
+    ("mf-t-out-app",      False, "report",              "blocks"),
+    ("mf-t-out-file",     False, "모듈 안의 파일이 아님", "blocks"),
+    ("mf-t-setup-ok",     True,  "조리법",              "!blocks"),
+    ("mf-t-setup-secret", False, "비밀은 조리법에",     "blocks"),
+    ("mf-t-snote-ok",     True,  "설정 노트",           "!blocks"),
+    ("mf-t-snote-out",    False, "모듈 홈",             "blocks"),
+    ("mf-t-snote-out",    False, "틀이 모듈 안의 파일이 아님", "blocks"),
 ]
 
 
@@ -271,7 +328,7 @@ def run():
         rows.append((f"exit:{name}", "PASS" if passed else "FAIL", p.returncode, want_code, "exit code", ""))
 
     # 실모듈 회귀(정상 통과 유지) — collect_desk 는 수집 본체 통합 4단계(11-08)에 모듈이 아니게 됨(검사 = 3_시스템/_eval/collect_core_check.py)
-    for name in ("module-forge", "study-helper", "dist-sync", "interactive_roadmap"):
+    for name in ("module-forge", "study-helper", "dist-sync", "interactive_roadmap", "mobility"):
         if name in mods:
             r = C.check(name, mods, core)
             passed = r["ok"]

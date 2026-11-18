@@ -32,12 +32,12 @@
       }
     },
     {
-      "id": "lms.wake",
-      "name": "LMS 아침 받기",
+      "id": "collect.wake",
+      "name": "로그인 출처 아침 받기",
       "levels": ["high", "low"],
       "applies": "reregister",
-      "owner": ["3_시스템/lms-auto.py", "3_시스템/lms-tasks.ps1"],
-      "recommend": "lms",
+      "owner": ["3_시스템/collect/browser"],
+      "recommend": "browser_wake",
       "cells": {
         "high": {"값": "06:55 PC 를 깨워 크롬을 띄우고 25분 붙듦 · 15분마다 반영"},
         "low": {"늦어짐": "아침 반영이 크롬을 열 때까지 · 15분 반영은 그대로", "아낌": "아침 깨움 + 크롬 25분"}

@@ -28,8 +28,8 @@ const cp = (rel) => {
   if (fs.existsSync(a)) fs.cpSync(a, path.join(TV, rel), { recursive: true });
 };
 fs.rmSync(TV, { recursive: true, force: true });
-for (const r of [MOD, "3_시스템/views.json", "3_시스템/collect", "3_시스템/tutorial", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/lms/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/auto.log", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/일/외부뇌/알림-설정.md", "2_지식/일정"]) cp(r);
-for (const f of ["brain.py", "roles.py", "roles.json", "fileops.py", "claude_bin.py", "schedule.py", "web-collect.py", "lms-auto.py", "notice-filter.py"]) cp("3_시스템/" + f);
+for (const r of [MOD, "3_시스템/views.json", "3_시스템/collect", "3_시스템/tutorial", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/lms/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/auto.log", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/modules/mobility/알림-설정.md", "2_지식/일정"]) cp(r);
+for (const f of ["brain.py", "roles.py", "roles.json", "collectlib.py", "collect-schedule.py", "fileops.py", "claude_bin.py", "schedule.py", "lms-schedule.py", "web-collect.py", "notice-filter.py"]) cp("3_시스템/" + f);
 cp(".claude/skills/mobility/scripts/alarms.py");   // 폰 알림 엔진 = mobility(11-16 · 없으면 수집 창이 «알림» 칸을 안 그림)
 for (const f of fs.readdirSync(path.join(REAL, "3_시스템/_index/collect"))) if (f.endsWith(".json")) cp("3_시스템/_index/collect/" + f);
 fs.rmSync(path.join(TV, MOD, "scripts/__pycache__"), { recursive: true, force: true });
@@ -66,7 +66,7 @@ fs.writeFileSync(path.join(TV, `3_시스템/collect/${BAD}.json`), JSON.stringif
   list: { page_url: U + "/board?page={page}", pages: 1, row: "<tr>(.*?)</tr>", fields: { id: '<td class="no">(\\d+)</td>', title: '<td class="t"><a[^>]*>(.*?)</a>', date: '<td class="d">(.*?)</td>' } },
   view: { url: U + "/view?id={id}", title: '<h3 class="tit">(.*?)</h3>', body: '<div class="con">(.*?)</div>' },
 }));
-const ENV = { ...process.env, PYTHONIOENCODING: "utf-8", FILEOPS_NO_OBSIDIAN: "1", LMS_AUTO_STATE: path.join(cwd, "lms-state") };
+const ENV = { ...process.env, PYTHONIOENCODING: "utf-8", FILEOPS_NO_OBSIDIAN: "1", COLLECT_TEST_STATE: path.join(cwd, "lms-state") };
 // 비동기로 — 동기로 부르면 이 프로세스의 시험 서버가 멈춰 엔진이 시간 초과로 끝난다(11-06 첫 돌림에서 잼)
 const engine = () =>
   new Promise((res) => execFile("py", ["-3", path.join(TV, "3_시스템/web-collect.py"), "--source", BAD, "--force"], { cwd: TV, env: ENV, encoding: "utf8", windowsHide: true }, (e, out, err) => res(`${out ?? ""}${err ?? ""}`)));

@@ -338,6 +338,76 @@ def save_index(idx):
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(idx, f, ensure_ascii=False)
     os.replace(tmp, INDEX_PATH)
+    save_sidecar(idx)
+
+
+# 찾기 곁 파일(11-16 볼트속도) — 질의 한 번이 62MB JSON 읽기 2.9초 + 파이썬 곱 0.8초(청크 15,524 · 1_수집/_색인 이 56%)를 썼다.
+# 원본은 그대로 embeddings.json · 곁 파일은 벡터만 float32 행렬(.npy)과 벡터를 뺀 항목(meta) · 원본의 크기·시각 도장이 맞을 때만 쓴다.
+# 곁 파일이 없거나 낡거나 깨지면 질의는 지금처럼 원본을 읽는다(실패 = 옛 길 · 결과 같음).
+VEC_PATH = os.path.join(INDEX_DIR, "embeddings.vecs.npy")
+META_PATH = os.path.join(INDEX_DIR, "embeddings.meta.json")
+
+
+def _stamp():
+    st = os.stat(INDEX_PATH)
+    return [st.st_size, st.st_mtime_ns]
+
+
+def save_sidecar(idx):
+    try:
+        import numpy as np
+        meta, rows = {}, []
+        for k, v in idx.items():
+            if k == "_model" or not isinstance(v, dict):
+                meta[k] = v
+                continue
+            vs = v.get("vecs") or []
+            meta[k] = dict({kk: vv for kk, vv in v.items() if kk != "vecs"}, _n=len(vs))
+            rows.extend(vs)
+        meta["_stamp"] = _stamp()
+        tv, tm = VEC_PATH[:-4] + ".tmp.npy", META_PATH + ".tmp"
+        np.save(tv, np.asarray(rows, dtype=np.float32))
+        with open(tm, "w", encoding="utf-8") as f:
+            json.dump(meta, f, ensure_ascii=False)
+        os.replace(tv, VEC_PATH)     # 행렬 먼저 · meta 나중 — 새 meta 를 읽은 쪽은 늘 새 행렬을 본다(행 수도 맞춰 봄)
+        os.replace(tm, META_PATH)
+    except Exception:  # noqa: BLE001 — 곁 파일은 없어도 된다
+        for p in (META_PATH, VEC_PATH):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+
+def _sidecar_fresh():
+    try:
+        with open(META_PATH, encoding="utf-8") as f:
+            return json.load(f).get("_stamp") == _stamp() and os.path.exists(VEC_PATH)
+    except (OSError, ValueError):
+        return False
+
+
+def load_query_index():
+    """질의 전용 — 곁 파일이 지금 원본과 같은 판이면 그것(노트마다 vecs = 행렬 조각), 아니면 load_index()."""
+    try:
+        import numpy as np
+        with open(META_PATH, encoding="utf-8") as f:
+            meta = json.load(f)
+        if meta.pop("_stamp", None) != _stamp():
+            raise ValueError("낡은 곁 파일")
+        M = np.load(VEC_PATH)
+        n = 0
+        for k, v in meta.items():
+            if k == "_model" or not isinstance(v, dict):
+                continue
+            c = v.pop("_n", 0)
+            v["vecs"] = M[n:n + c]
+            n += c
+        if n != M.shape[0]:
+            raise ValueError("행 수 다름")
+        return meta
+    except Exception:  # noqa: BLE001
+        return load_index()
 
 
 def _lock():
@@ -470,6 +540,8 @@ def _reindex(full=False):
         if rp not in cur: del idx[rp]; dirty = True
     if not to_embed and not dirty:
         print(f"indexed {len(notes(idx))} notes, 0 chunks — 바뀐 것 없음(저장 안 함)", file=sys.stderr)
+        if idx and not _sidecar_fresh():
+            save_sidecar(idx)            # 곁 파일이 처음 생기거나 낡았을 때(원본은 그대로 · 11-16)
         return idx
     if to_embed:
         model = _encoder(model_name, len(to_embed))   # 지연로드: 임베딩할 변경분 있을 때만 · 증분은 torch 없이
@@ -557,8 +629,16 @@ def lexical_scores(query, idx, disk=False):
 
 def vector_scores(qv, idx, now):
     rows = []
+    q = None
     for rp, e in notes(idx).items():
-        s = max_chunk_cos(qv, e["vecs"])
+        vs = e["vecs"]
+        if hasattr(vs, "shape"):        # 곁 파일 판(행렬 조각) — 한 번에 곱함(같은 순위 · 11-16)
+            if q is None:
+                import numpy as np
+                q = np.asarray(qv, dtype=np.float32)
+            s = float((vs @ q).max()) if len(vs) else 0.0
+        else:
+            s = max_chunk_cos(qv, vs)
         if RECENCY_W: s = (1 - RECENCY_W) * s + RECENCY_W * recency(e["mtime"], now)
         if e.get("status") == "archived": s *= 0.5
         rows.append((s, rp))
@@ -810,7 +890,7 @@ def main():
         model, model_name = (None, None)
         if mode != "lexical":
             model, model_name = load_query_model()
-        idx = load_index()
+        idx = load_query_index()        # 곁 파일(11-16) — 낱말만이어도 노트 목록·gist 는 meta 로 충분
         for sc, rp in ranked(args.q, idx, mode, model, model_name, disk=lvl != "high")[:(args.k or 8)]:
             e = idx.get(rp)
             g = e.get("gist", "") if e else gist(read_text(os.path.join(VAULT, rp)))   # 색인에 아직 없는 새 노트

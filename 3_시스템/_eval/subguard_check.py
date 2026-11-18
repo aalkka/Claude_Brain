@@ -58,7 +58,10 @@ def main():
     # 시험 볼트 — 3_시스템 맨 위 대본·설정 전부(코드뿐) + 그림 하나 + LMS 마감 대기 글 하나
     tv = os.path.join(root, "vault")
     ts = os.path.join(tv, "3_시스템")
-    os.makedirs(os.path.join(ts, "_index", "lms"))
+    os.makedirs(os.path.join(ts, "_index", "school-lms"))
+    os.makedirs(os.path.join(ts, "collect", "browser"))     # 로그인 출처 = 조리법 하나(S6 · «마감 불명» 글 칸 = posts)
+    json.dump({"id": "school-lms", "family": "browser", "posts": {"sid": "school-post", "pending": "_index/school-lms/마감-대기.json"}},
+              open(os.path.join(ts, "collect", "browser", "school-lms.json"), "w", encoding="utf-8"))
     os.makedirs(os.path.join(ts, "_index", "collect"))
     for f in os.listdir(SYS):
         if f.endswith((".py", ".json")) and os.path.isfile(os.path.join(SYS, f)) and not f.endswith(".local.json"):
@@ -76,7 +79,7 @@ def main():
     im.save(os.path.join(tv, "1_수집", "시험", "그림.png"))
     os.makedirs(os.path.join(tv, "0_작업", "시험"))
     open(os.path.join(tv, "0_작업", "시험", "공지.md"), "w", encoding="utf-8").write("---\ntitle: 과제 공지\n---\n# 과제 1 제출\n\n11월 20일까지 제출.\n")
-    json.dump({"p1": {"path": "0_작업/시험/공지.md", "title": "과제 1 제출", "date": "2026-11-11"}}, open(os.path.join(ts, "_index", "lms", "마감-대기.json"), "w", encoding="utf-8"))
+    json.dump({"p1": {"path": "0_작업/시험/공지.md", "title": "과제 1 제출", "date": "2026-11-11"}}, open(os.path.join(ts, "_index", "school-lms", "마감-대기.json"), "w", encoding="utf-8"))
     state = os.path.join(ts, "_index", "subscription.json")
     slog = os.path.join(ts, "_index", "subscription.log")
     queue = os.path.join(ts, "_index", "수집-대기열.md")
@@ -112,18 +115,18 @@ def main():
         import importlib.util, json
         json.dump({'auto_judge': True}, open('3_시스템/collect.local.json', 'w'))
         s = importlib.util.spec_from_file_location('nf', '3_시스템/notice-filter.py'); nf = importlib.util.module_from_spec(s); s.loader.exec_module(nf)
-        tot = nf.extract(10, sid='lms-post', settle=False, stop_on_warning=True)
+        tot = nf.extract(10, sid='school-post', settle=False, stop_on_warning=True)
         print('자동 결과', tot)
         w = importlib.util.spec_from_file_location('wc', '3_시스템/web-collect.py'); wc = importlib.util.module_from_spec(w); w.loader.exec_module(wc)
         wc.filt = lambda: nf
-        wc.auto_extract({'id': 'lms-post', 'filter': {'auto_max': 10}}, {})
+        wc.auto_extract({'id': 'school-post', 'filter': {'auto_max': 10}}, {})
         print('web-collect 자동 끝')
     """
     manual = """
         import importlib.util
         s = importlib.util.spec_from_file_location('nf', '3_시스템/notice-filter.py'); nf = importlib.util.module_from_spec(s); s.loader.exec_module(nf)
         try:
-            nf.extract(10, sid='lms-post', settle=False)
+            nf.extract(10, sid='school-post', settle=False)
             print('수동 결과 끝남(멈추지 않음)')
         except SystemExit as e:
             print('수동 멈춤', e)

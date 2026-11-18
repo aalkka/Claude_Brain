@@ -7,7 +7,7 @@
   py -3 3_시스템/brain.py list [--json]                    # 할 수 있는 일
   py -3 3_시스템/brain.py run <행위> [이름=값 …] [--json]   # 예: run search q=전자기 · run files.move src=… dst=… why=…
   py -3 3_시스템/brain.py doctor [--json]                  # 건강 한 줄씩(claude 판 · 옵시디언 CLI · git 잠금 · 일정 · 색인 · 휴지통 · 받은함 · 따라가기 · 행위 선언 · 모듈마다)
-  py -3 3_시스템/brain.py run collect.lms -- --dry         # `--` 뒤는 대본에 그대로(rest 를 선언한 행위만)
+  py -3 3_시스템/brain.py run collect.tick -- --dry         # `--` 뒤는 대본에 그대로(rest 를 선언한 행위만)
   py -3 3_시스템/brain.py home                             # 홈 화면 JSON(받은함·마감·수집 마지막·휴지통·장부 최근·주제) — 읽기만 · 장부에 안 남김
   py -3 3_시스템/brain.py modules [--json] [--no-claude] [--sync]   # 모듈 목록(판·스킬·행위·디스크·마지막 실행 · 켜짐·상시 토큰) — 켜기·끄기는 옵시디언 홈에서 사람이 · --sync = 설명서 사본 맞춤
   --by <누가>  장부의 «누가»(기본 = Claude 셸이면 claude, 아니면 user · 옵시디언은 obsidian · 예약은 schedule)
@@ -55,7 +55,7 @@ def load_actions():
                 problems.append("%s: 행위 id 겹침 %s" % (owner, a["id"]))
                 continue
             missing = [tok for tok in a.get("run") or [] if tok.endswith((".py", ".ps1")) and not os.path.isfile(os.path.join(VAULT, tok))]
-            if missing and a.get("optional"):   # 배포판에 없는 수집 대본(LMS·웹 공지) — 행위가 안 보일 뿐 고장이 아니다
+            if missing and a.get("optional"):   # 배포판에 없는 수집 대본(개인 층 넘김 대본 등) — 행위가 안 보일 뿐 고장이 아니다
                 continue
             for tok in missing:
                 problems.append("%s: %s 의 대본 없음 %s" % (owner, a["id"], tok))
@@ -186,6 +186,59 @@ def save_health(res):
         pass
 
 
+# 볼트 무게(11-16 볼트속도) — 쌓이면 느려지는 것과 그 한계. 넘으면 △/✗ 한 줄 · 고치는 길까지. 훑기는 싼 것만(목록·stat · 전체 훑기 없음).
+#   git 정리: 묵은 objects/maintenance.lock 이 09-11 부터 자동 정리를 조용히 막아 느슨한 개체 23,145 → git grep 0.64→0.23초 · rev-list 8~12→1.0초(사본 잼)
+#   찾기 색인: 62MB · 청크 15,524 에서 질의 8~25초 · 작업 파일: work.status 가 작업마다 모든 파일 시각을 본다 · 로그·자국 파일은 지울 때가 없다
+WEIGHT = {"loose": 6700, "lock_h": 1, "emb_mb": 80, "work_files": 800, "stubs": 1000, "log_mb": 50, "disk_warn": 0.15, "disk_bad": 0.05}
+
+
+def weight_rows():
+    bad, warn = [], []
+    g = os.path.join(VAULT, ".git", "objects")
+    lk = os.path.join(g, "maintenance.lock")
+    if os.path.exists(lk) and time.time() - os.path.getmtime(lk) > WEIGHT["lock_h"] * 3600:
+        bad.append("git 정리 멈춤(묵은 maintenance.lock %s~) — 도는 git 이 없을 때 지우고 `git maintenance run --task=gc`" %
+                   time.strftime("%m-%d", time.localtime(os.path.getmtime(lk))))
+    try:
+        loose = len([f for f in os.listdir(os.path.join(g, "17")) if len(f) == 38]) * 256   # git gc --auto 와 같은 어림
+        if loose > WEIGHT["loose"]:
+            warn.append("git 느슨한 개체 약 %d — `git maintenance run --task=gc`(한가할 때 · 1분 안팎)" % loose)
+    except OSError:
+        pass
+    emb = os.path.join(HERE, "_index", "embeddings.json")
+    if os.path.exists(emb) and os.path.getsize(emb) > WEIGHT["emb_mb"] * 1e6:
+        warn.append("찾기 색인 %.0fMB — 질의가 느려짐(색인 범위·곁 파일 확인)" % (os.path.getsize(emb) / 1e6))
+    n = 0
+    for dp, dns, fns in os.walk(os.path.join(VAULT, "0_작업")):
+        n += len(fns)
+    if n > WEIGHT["work_files"]:
+        warn.append("작업 폴더 파일 %d — 초안·그림이 쌓이면 홈·폰 홈이 느려짐(work.plan)" % n)
+    try:
+        st = len(os.listdir(os.path.join(HERE, "_index", "stubs")))
+        if st > WEIGHT["stubs"]:
+            warn.append("세션 자국 %d개(_index/stubs) — 보존 일정표에 없음" % st)
+    except OSError:
+        pass
+    big = []
+    for dp, dns, fns in os.walk(os.path.join(HERE, "_index")):
+        for f in fns:
+            if f.endswith(".log"):
+                p = os.path.join(dp, f)
+                try:
+                    if os.path.getsize(p) > WEIGHT["log_mb"] * 1e6:
+                        big.append("%s %.0fMB" % (os.path.relpath(p, HERE).replace("\\", "/"), os.path.getsize(p) / 1e6))
+                except OSError:
+                    pass
+    if big:
+        warn.append("큰 로그 " + " · ".join(big))
+    du = shutil.disk_usage(VAULT)
+    free = du.free / du.total
+    (bad if free < WEIGHT["disk_bad"] else warn if free < WEIGHT["disk_warn"] else []).append("디스크 남은 %.0f%%(%.0fGB)" % (free * 100, du.free / 1e9))
+    if bad or warn:
+        return chk("볼트 무게", "bad" if bad else "warn", " · ".join(bad + warn)[:300])
+    return chk("볼트 무게", "ok", "한계 안")
+
+
 def doctor_checks():
     res = []
     try:
@@ -248,6 +301,16 @@ def doctor_checks():
     m = re.search(r"가장 오래된 것 (\d+)일", inbox.split("\n")[0])
     late = m and int(m.group(1)) > i_days
     res.append(chk("받은함", "warn" if late else "ok", inbox.split("\n")[0] + (" — %d일 넘김: inbox.py" % i_days if late else "")))
+    try:
+        res.append(weight_rows())
+    except Exception as e:  # noqa: BLE001
+        res.append(chk("볼트 무게", "warn", "확인 실패(%s)" % type(e).__name__))
+    # PC 메모리(11-18) — 메모리 넘침(커밋 > 램 1.5배)·켜진 지 7일·NVIDIA 오버레이·남은 시험 프로세스(끄기는 «고치기»로 · drift.py --kill-test) · 못 재면 빠짐
+    try:
+        import drift
+        res += [chk(n, s, line) for n, s, line in drift.mem_rows()]
+    except Exception:  # noqa: BLE001
+        pass
     # 작업 폴더 원칙(진행 중인 것만 · 끝나면 승격·삭제 — 사용자 10-31) — 끝난 과제가 남아 있으면 △
     try:
         import work
@@ -257,7 +320,7 @@ def doctor_checks():
             w["끝남"], w["결과물없음"], w["멈춤"])) if bad else "")))
     except Exception as e:  # noqa: BLE001
         res.append(chk("작업 폴더", "warn", "확인 실패(%s)" % type(e).__name__))
-    # 따라가기(설계안 §19.3) — 바깥에서 옮기거나 지운 것 · 답 기다리는 것(사라진 LMS 원본·행방 모름·한꺼번에 사라짐)
+    # 따라가기(설계안 §19.3) — 바깥에서 옮기거나 지운 것 · 답 기다리는 것(사라진 수집 원본·행방 모름·한꺼번에 사라짐)
     try:
         import follow
         f = follow.status()
@@ -403,7 +466,7 @@ def home_data():
         wk = work.summary(work.status())
     except Exception as e:  # noqa: BLE001 — 홈은 멈추지 않는다
         wk = {"error": type(e).__name__}
-    try:  # 따라가기 — 사라진 LMS 원본·행방 모름 · 한꺼번에 사라짐(있을 때만 홈에 묶음)
+    try:  # 따라가기 — 사라진 수집 원본·행방 모름 · 한꺼번에 사라짐(있을 때만 홈에 묶음)
         import follow
         fl = follow.status()
     except Exception:  # noqa: BLE001 — 홈은 멈추지 않는다
@@ -434,10 +497,18 @@ def collect_alerts():
     except OSError:
         return []
     when = lambda ln: ln[6:25].replace(" ", "T")
-    login = [ln for ln in lines if "mylms 로그인 만료" in ln]
-    rest = [ln for ln in lines if "mylms 로그인 만료" not in ln]
-    return ([{"name": "mylms 로그인 필요", "ts": when(login[-1]), "code": 1}] if login else []) + \
-           ([{"name": "수집 대기열 %d건" % len(rest), "ts": when(rest[-1]), "code": 1}] if rest else [])
+    try:                                  # 로그인 출처의 끊김 줄 = 조리법 login.line(출처 이름을 코드에 두지 않는다 · S6)
+        import collectlib
+        marks = [(rc["id"], (rc.get("login") or {}).get("line") or "%s 로그인 만료" % rc["id"]) for rc in collectlib.browser_recipes(HERE)]
+    except Exception:
+        marks = []
+    out, rest = [], lines
+    for sid, mark in marks:
+        hit = [ln for ln in rest if mark in ln]
+        if hit:
+            out.append({"name": "%s 로그인 필요" % sid, "ts": when(hit[-1]), "code": 1})
+            rest = [ln for ln in rest if mark not in ln]
+    return out + ([{"name": "수집 대기열 %d건" % len(rest), "ts": when(rest[-1]), "code": 1}] if rest else [])
 
 
 def modules_data(ask_claude=True):
@@ -569,6 +640,9 @@ def cmd_modules(a):
 
 
 def main(argv=None):
+    sys.path.insert(0, HERE)
+    import nowin
+    nowin.install()     # 예약(pyw)으로 돌면 콘솔이 없다 — 자식 git·py·powershell 이 보이는 창을 띄우지 않게(11-17 · nowin.py 머리말)
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")

@@ -2,10 +2,10 @@
 """**work** — 작업 폴더(0_작업)의 작업마다 «끝났나 · 결과물이 보관됐나»를 판정하고, 끝난 것의 정리 계획을 낸다 (2026-10-31 · 11-02 보편화).
 
 왜: 작업 폴더 원칙 = 진행 중인 것만 두고, 끝나면 승격(결과물 → 원본 층 `보냄/` · 앎 → 2_지식)하거나 지운다.
-끝남을 사람 기억이 아니라 기록으로 판정한다. 10-31 판은 학교 과제만 상정했다(LMS 제출 · 제출 자리 · 실험 재료) —
+끝남을 사람 기억이 아니라 기록으로 판정한다. 10-31 판은 학교 과제만 상정했다(로그인 출처 제출 · 제출 자리 · 실험 재료) —
 11-02 사용자 «보편화» → 작업 하나 = «결과물이 어디로 나가 끝나는가»(설계안 §19.8). 끝남 근거는 `3_시스템/work.json` 의 표(데이터)를
-위에서부터 본다 — 표시(작업.md 속성) · lms(내 제출) · git(가지 병합) · 일정(마감 지남) · 멈춤(묻기).
-끝남 근거가 있어도 아직 하는 중인 증거(같은 낱말의 앞으로 일정 «남음» · LMS 제출 뒤에 고친 파일)가 있으면 «진행»으로 둔다 —
+위에서부터 본다 — 표시(작업.md 속성) · 제출(수집 가족의 제출 기록) · git(가지 병합) · 일정(마감 지남) · 멈춤(묻기).
+끝남 근거가 있어도 아직 하는 중인 증거(같은 낱말의 앞으로 일정 «남음» · 출처 제출 뒤에 고친 파일)가 있으면 «진행»으로 둔다 —
 제출 하나는 그 결과물이 끝났다는 것이지 작업이 끝났다는 것이 아니다(사용자 11-15 «최종프로젝트» 사고 · 표시는 사람 판정이라 그대로).
 보낸 결과물이 원본 층 `<영역>/<주제>/보냄/`(학교 과목은 `제출/`)에도, 작업 안에도, 볼트 밖에도 없으면 «결과물 없음» —
 지우는 계획을 내지 않는다(결과물을 보관하기 전엔 작업 파일을 지우지 않는다).
@@ -31,6 +31,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 import unicodedata
 from urllib.parse import unquote_plus
@@ -40,14 +41,15 @@ sys.path.insert(0, HERE)
 import roles  # noqa: E402
 
 VAULT = os.path.dirname(HERE)
-SUBMITTED = ("submitted", "graded", "pending_review")
+NOWIN = 0x08000000 if os.name == "nt" else 0  # CREATE_NO_WINDOW
+SUBMITTED =("submitted", "graded", "pending_review")
 OUTSIDE = [os.path.join(os.path.expanduser("~"), d) for d in ("Downloads", "Desktop")]  # 볼트 밖 후보(설계안 §11 11 · 10-31 허용)
 MARK = "작업.md"  # 작업 폴더의 사람 표시(속성) — 탐색기 우클릭 «끝냄»이 적는다
 DONE = ("보냄", "마감 지남", "끝냄")  # 끝남(멈춤은 «묻기»라 따로)
 SURE = ("보냄", "끝냄")  # 근거가 확실한 끝남 = 저절로 비운다(sweep) · 마감 지남·멈춤은 아직 하는 중일 수 있어 후보로 남는다
 # work.json 이 없거나 칸이 빠졌을 때(11-02 값)
 RULES = {
-    "근거": [{"id": "표시"}, {"id": "lms", "영역": ["배움"]}, {"id": "git"}, {"id": "일정"}, {"id": "멈춤"}],
+    "근거": [{"id": "표시"}, {"id": "제출", "영역": ["배움"]}, {"id": "git"}, {"id": "일정"}, {"id": "멈춤"}],
     "보냄_자리": {"기본": "보냄", "종류": {"학교": "제출"}},
     "결과물_확장자": [".pdf", ".docx", ".doc", ".pptx", ".ppt", ".hwp", ".hwpx", ".xlsx", ".zip"],
     "재료_확장자": [".png", ".jpg", ".jpeg", ".heic", ".gif", ".bmp", ".webp", ".csv", ".xlsx", ".xls", ".tsv", ".dat", ".v", ".sv", ".vhd", ".vhdl"],
@@ -80,7 +82,7 @@ def norm(s):
 
 
 def same_name(a, b):
-    """같은 파일로 볼 이름 — 확장자가 같고 정규화한 이름이 같거나 앞머리가 길게 같다(LMS 가 겹친 이름에 «-1»을 붙임 · 학번 오타)."""
+    """같은 파일로 볼 이름 — 확장자가 같고 정규화한 이름이 같거나 앞머리가 길게 같다(수집 출처가 겹친 이름에 «-1»을 붙임 · 학번 오타)."""
     if os.path.splitext(a)[1].lower() != os.path.splitext(b)[1].lower():
         return False
     x, y = norm(a), norm(b)
@@ -97,7 +99,7 @@ def common(a, b):
 
 
 def related(name, deliver):
-    """보낸 파일의 판(초안·다른 꼴)으로 볼 이름 — 확장자는 보지 않고, 정규화한 이름이 같거나 앞머리가 길게 같다(LMS 근거와 같은 문턱).
+    """보낸 파일의 판(초안·다른 꼴)으로 볼 이름 — 확장자는 보지 않고, 정규화한 이름이 같거나 앞머리가 길게 같다(제출 근거와 같은 문턱).
     «최종프로젝트_제안서_수정.docx» ↔ 보낸 «최종프로젝트_제안서.pdf» = 판 · «파트A_역할분담.docx» = 다른 것(11-15 · 역할분담 문서가 초안으로 지워짐)."""
     x = norm(name)
     for d in deliver or []:
@@ -149,31 +151,21 @@ def is_report(topic):
 
 # ── 근거(work.json «근거» 표의 id 마다 하나) ───────────────────────────
 
-def lms_submissions():
-    """수집 원시 JSON(1_수집/_lms/lms-canvas-*.json)의 «내 제출» → {주제: [{과제, 파일[], 때}]} — 과제마다 가장 새 수집."""
-    try:
-        courses = json.load(open(os.path.join(HERE, "lms", "courses.json"), encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    raw = sorted(glob.glob(os.path.join(roles.abs("sources"), "_lms", "lms-canvas-*.json")), key=os.path.getmtime)
+SUBMIT = os.path.join(HERE, "_index", "collect", "제출")   # 제출 기록 — 수집 가족마다 파일 하나(<출처>.json · 11-16 S3)
+
+
+def submissions():
+    """제출 기록 → {주제: [{과제, 파일[], 때, 출처}]}. 파일 꼴 = {"name": 출처 이름, "by": {주제: [{과제, 파일[], 때}]}} · 수집 가족이 쓴다(로그인 가족 = collect-browser.py)."""
     by = {}
-    for f in raw:
+    for f in sorted(glob.glob(os.path.join(SUBMIT, "*.json"))):
         try:
             d = json.load(open(f, encoding="utf-8"))
         except (OSError, ValueError):
             continue
-        for c in d.get("courses") or []:
-            name = courses.get(str(c.get("id")))
-            if not name:
-                continue
-            topic = roles.canon(name) or name
-            for a in c.get("assignments") or []:
-                s = a.get("submission") or {}
-                if s.get("workflow_state") not in SUBMITTED:
-                    continue
-                files = [x.get("display_name") or unquote_plus(x.get("filename") or "") for x in s.get("attachments") or []]
-                by.setdefault(topic, {})[a.get("id")] = {"과제": a.get("name") or "", "파일": [x for x in files if x], "때": s.get("submitted_at") or ""}
-    return {t: list(v.values()) for t, v in by.items()}
+        name = d.get("name") or os.path.basename(f)[:-5]
+        for topic, rows in (d.get("by") or {}).items():
+            by.setdefault(topic, []).extend(dict(r, 출처=name) for r in rows)
+    return by
 
 
 def by_mark(t, ctx):
@@ -197,23 +189,25 @@ def by_mark(t, ctx):
     return {"state": "끝냄", "why": "표시 «단계: 끝»"}
 
 
-def by_lms(t, ctx):
-    """LMS 내 제출 — 제출한 파일 이름과 작업 안 파일 이름이 길게 같다."""
+def by_submit(t, ctx):
+    """제출 기록(수집 가족이 씀) — 제출한 파일 이름과 작업 안 파일 이름이 길게 같다."""
     stems = [norm(os.path.basename(f)) for f in t["_files"]] + [norm(t["name"])]
-    if "lms" not in ctx:
-        ctx["lms"] = lms_submissions()
-    for s in ctx["lms"].get(t["topic"], []):
+    if "제출" not in ctx:
+        ctx["제출"] = submissions()
+    for s in ctx["제출"].get(t["topic"], []):
         for n in s["파일"]:
             w = norm(n)
             if w and any(x and common(x, w) >= max(8, min(len(w), len(x)) - 6) for x in stems):
-                return {"state": "보냄", "why": "LMS 내 제출 «%s» %s" % (s["과제"], (s["때"] or "")[:10]), "deliver": s["파일"], "sent_at": s["때"]}
+                return {"state": "보냄", "why": "%s 내 제출 «%s» %s" % (s["출처"], s["과제"], (s["때"] or "")[:10]), "deliver": s["파일"], "sent_at": s["때"]}
     return None
 
 
 def git_merged(repo, branch):
-    """가지가 원격 기본 가지에 들어갔나(병합) — 로컬 가지가 지워졌으면 원격 가지로 · 모르면 None."""
+    """가지가 원격 기본 가지에 들어갔나(병합) — 로컬 가지가 지워졌으면 원격 가지로 · 모르면 None.
+    창 없이(NOWIN): 폰 서버(pythonw · 콘솔 없음)가 홈마다 부른다 — 플래그가 없으면 git 한 번마다 새 콘솔이 생기고
+    기본 터미널(Windows Terminal)이 그것을 보이는 창으로 띄워 전경을 가져갔다(11-17 · 홈 한 번에 창 3~9개)."""
     def g(*a):
-        r = subprocess.run(["git", "-C", repo, *a], capture_output=True, text=True, encoding="utf-8", timeout=15)
+        r = subprocess.run(["git", "-C", repo, *a], capture_output=True, text=True, encoding="utf-8", timeout=15, creationflags=NOWIN)
         return r.returncode, r.stdout.strip()
     try:
         code, head = g("symbolic-ref", "--short", "refs/remotes/origin/HEAD")
@@ -240,13 +234,25 @@ def by_git(t, ctx):
     return None
 
 
+# status() 한 번 동안 주제별 일정 줄을 기억한다 — 작업 33개가 같은 주제(6개)의 일정을 36번 다시 읽어
+# 홈(brain.py home · 폰 /v1/home)의 70%를 썼다(11-16 볼트속도 · status 1.29 → 0.77초 · 판정 같음).
+# 스레드마다 따로(폰 서버는 요청마다 스레드) · status() 밖에서 부르면 기억 없이 지금처럼.
+_MEMO = threading.local()
+
+
 def schedule_lines(topic, limit=None):
     """이 주제의 일정 줄(지난 60일부터) — topic.py 와 같은 문법 · limit = 줄 수(기본 = topic.py 의 현황 줄 수)."""
+    memo = getattr(_MEMO, "lines", None)
+    if memo is not None and (topic, limit) in memo:
+        return memo[(topic, limit)]
     try:
         import topic as T
-        return T.status(meta(topic), dt.datetime.now(T.KST).date(), back=60, limit=limit)
+        r = T.status(meta(topic), dt.datetime.now(T.KST).date(), back=60, limit=limit)
     except Exception:  # noqa: BLE001 — 일정이 없거나 깨져도 판정은 이어 간다
-        return []
+        r = []
+    if memo is not None:
+        memo[(topic, limit)] = r
+    return r
 
 
 def tokens(name):
@@ -272,11 +278,11 @@ def by_idle(t, ctx):
     return None
 
 
-EVIDENCE = {"표시": by_mark, "lms": by_lms, "git": by_git, "일정": by_schedule, "멈춤": by_idle}
+EVIDENCE = {"표시": by_mark, "제출": by_submit, "lms": by_submit, "git": by_git, "일정": by_schedule, "멈춤": by_idle}
 
 
 def sent_time(s):
-    """LMS «때»(ISO · Z) → 초 · 모르면 None."""
+    """제출 «때»(ISO · Z) → 초 · 모르면 None."""
     try:
         return dt.datetime.fromisoformat(str(s).replace("Z", "+00:00")).timestamp() if s else None
     except ValueError:
@@ -285,7 +291,7 @@ def sent_time(s):
 
 def still_going(t, hit, fs):
     """끝남 근거가 있어도 아직 하는 중인 증거 → 까닭 목록(없으면 []) · 사용자 11-15 «최종프로젝트» 사고(제안서 제출 = 폴더 끝으로 봄).
-    ① 작업 이름 낱말이 모두 든 앞으로 일정이 «남음» ② LMS 제출 시각 뒤에 고친 파일(보낸 파일의 판·작업.md 빼고 · 시계 차 60초)."""
+    ① 작업 이름 낱말이 모두 든 앞으로 일정이 «남음» ② 출처 제출 시각 뒤에 고친 파일(보낸 파일의 판·작업.md 빼고 · 시계 차 60초)."""
     why = []
     tk = [x.replace(" ", "") for x in tokens(t["name"])]
     for ln in schedule_lines(t["topic"], limit=10 ** 6) if tk else []:
@@ -412,7 +418,11 @@ def judge(t, ctx, now=None):
 
 def status():
     ctx = {"stop": roles.retention("작업멈춤")}
-    return [judge(t, ctx) for t in tasks()]
+    _MEMO.lines = {}
+    try:
+        return [judge(t, ctx) for t in tasks()]
+    finally:
+        _MEMO.lines = None
 
 
 # ── 정리 계획 ──────────────────────────────────────────────────────────
@@ -500,8 +510,8 @@ def plan_of(t):
             elif out:
                 ops.append({"op": "cp", "src": out, "dst": sd + "/", "why": "결과물 보관 — %s(볼트 밖에서 들임)" % t["why"]})
             else:
-                return [], "결과물 없음 — LMS 수집이 «내 제출»을 받게 하거나(확장 다시 읽기 뒤 수집) 받은함·작업 폴더에 두기 · 그때까지 지우지 않음"
-        elif report and kept.lower().endswith(".docx"):  # 제출 자리에 docx 로 보관된 것(LMS 내 제출 등)
+                return [], "결과물 없음 — 로그인 수집이 «내 제출»을 받게 하거나(확장 다시 읽기 뒤 수집) 받은함·작업 폴더에 두기 · 그때까지 지우지 않음"
+        elif report and kept.lower().endswith(".docx"):  # 제출 자리에 docx 로 보관된 것(출처 «내 제출» 등)
             base_name = os.path.basename(kept)
             ops += docx_to_pdf_ops(kept, kept.rsplit("/", 1)[0] + "/" + pdf_name(base_name), t["why"], twin(base_name))
         docs = set(rules()["결과물_확장자"])

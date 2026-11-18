@@ -191,7 +191,7 @@ def clean_line(text):
 
 
 def status(t, today, back=30, now=None, limit=None):
-    """마감·제출 현황(설계안 §19.4) — 이 주제 일정 줄을 지난 back 일부터 · 체크 = 냄(LMS 마감은 «내 제출»으로 [x]) ·
+    """마감·제출 현황(설계안 §19.4) — 이 주제 일정 줄을 지난 back 일부터 · 체크 = 냄(로그인 출처 마감은 «내 제출»으로 [x]) ·
     지났는데(날짜 · 오늘이면 시각까지) 체크 없으면 «놓침» · 아직이면 «남음».
     limit = 돌려줄 줄 수(기본 N["status"] · work.py 의 «아직 하는 중» 검사는 앞으로 줄을 모두 본다)."""
     d = roles.abs("schedule")

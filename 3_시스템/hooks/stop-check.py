@@ -203,6 +203,25 @@ def _autocommit(vault, hlog, tag):
     return "add 실패" if rc != 0 else ("커밋" if made else "없음")
 
 
+def commit_behind(vault, hlog):
+    """턴 끝을 자동 커밋에 붙들지 않는다(11-16 볼트속도 — 커밋 턴 비율 43~57% → 89~94% · 커밋 턴 중앙 4.2~5.2초 · p90 13초).
+    바뀐 것이 없으면 지금처럼 바로 끝(status 0.3초). 있으면 같은 대본의 --commit-only 를 뒤에서 띄운다 —
+    자동 커밋 잠금(one_at_a_time)·pre-commit·장부 줄·막힘 기록은 그대로다. 못 띄우거나 BRAIN_SYNC_COMMIT=1 이면 지금처럼 기다려 커밋.
+    std 핸들은 넘기지 않는다(넘기면 훅을 부른 쪽이 파이프가 닫힐 때까지 기다린다) · 창 없음(git 자식도 창 없음)."""
+    rc, out = git(vault, "--no-optional-locks", "status", "--porcelain", "--untracked-files=normal", timeout=300)
+    if rc == 0 and not out.strip():
+        return "없음"
+    if os.environ.get("BRAIN_SYNC_COMMIT") != "1":
+        try:
+            subprocess.Popen([sys.executable, os.path.abspath(__file__), "--commit-only", "--vault", vault, "--tag", "Stop"],
+                             cwd=vault, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                             close_fds=True, creationflags=NOWIN | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+            return "뒤에서"
+        except OSError as e:
+            log(hlog, "Stop 뒤 커밋을 못 띄움({}) — 기다려 커밋".format(type(e).__name__))
+    return autocommit(vault, hlog)
+
+
 def log(path, msg):
     try:
         with open(path, "a", encoding="utf-8", newline="") as f:
@@ -343,7 +362,7 @@ def main():
                         pass
         # 기능 단계 «자동 커밋» 하옵 = 마지막 커밋 뒤 몇 분 안이면 이번 턴은 status·커밋을 건너뜀(세션 끝 훅이 몰아서 남김)
         if not commit_later(vault):
-            autocommit(vault, hlog)                # 커밋 순서·장부 줄은 함수로 옮기기 전과 같다(서버도 같은 함수 · 11-12)
+            commit_behind(vault, hlog)             # 커밋 순서·장부 줄은 같다 — 뒤에서 도는 --commit-only 가 autocommit 을 부른다(11-16)
         # 받은함 되먹임 — 이 세션 도구 호출이 건드린 받은함 항목이 남았으면 항목당 세션 한 번
         ib_role = (rj.get("roles") or {}).get("inbox")
         try:
