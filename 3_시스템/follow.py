@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """**따라가기** — 옵시디언 밖(윈도 탐색기·다른 앱)에서 옮기거나 지운 파일을 알아채고 뒤처리한다 (설계안 §19.3 · ADR-021 개정).
 
-왜: 옵시디언 안 이동·삭제는 장부에 남지만(R5.5) 바깥에서 한 것은 장부·링크·색인·짝 메모·LMS 목록이 못 따라간다(옵시디언도 «지움 + 생김»으로 본다).
+왜: 옵시디언 안 이동·삭제는 장부에 남지만(R5.5) 바깥에서 한 것은 장부·링크·색인·짝 메모·수집 목록이 못 따라간다(옵시디언도 «지움 + 생김»으로 본다).
 내용 칸 파일마다 사진(경로·크기·시각·파일번호·sha256)을 두고 지금과 견준다 — 사라진 경로의 파일번호·해시가 새 경로에 있으면 옮김,
 어디에도 없으면 바깥에서 지움. 장부에 이미 적힌 일(fileops·옵시디언·수집 대본)은 사진에 먼저 반영해 «바깥»으로 치지 않는다.
 
   py -3 3_시스템/follow.py [--dry] [--json] [--accept]   비교 → 적용 → 사진 갱신 (처음 = 사진만 · --accept = 한꺼번에 사라진 것도 지움으로)
   py -3 3_시스템/follow.py --hook                        세션 시작용 — 알릴 것이 있을 때만 한 줄 · 해시는 한 번에 300MB 까지
-  py -3 3_시스템/follow.py pending [--json]              답을 기다리는 것(사라진 LMS 원본 · 행방 모름)
-  py -3 3_시스템/follow.py refetch <경로…>|--all         LMS 목록에서 빼서 다음 수집 때 다시 받는다
+  py -3 3_시스템/follow.py pending [--json]              답을 기다리는 것(사라진 수집 원본 · 행방 모름)
+  py -3 3_시스템/follow.py refetch <경로…>|--all         로그인 출처 목록에서 빼서 다음 수집 때 다시 받는다
   py -3 3_시스템/follow.py keep <경로…>|--all            그대로 둔다(의도한 삭제 · 행방 모름 확인) — 목록에서 뺌
 
 사진 = 3_시스템/_index/follow/snapshot.json(git 밖) · 장부 줄 = ops.jsonl 의 `outside: true` + `via: follow`(되돌리기 = fileops undo <묶음>).
@@ -36,7 +36,8 @@ OUT = os.path.join(HERE, "_index", "follow")
 SNAP = os.path.join(OUT, "snapshot.json")
 PENDING = os.path.join(OUT, "pending.json")
 LOCK = os.path.join(OUT, ".lock")
-MANIFEST = os.path.join(HERE, "_index", "lms", "manifest.json")
+REFETCH = "refetch"                                 # 되받을지 묻는 항목 종류 — brain-base 0.49.2 홈이 읽는다(옛 값 lms 로 쌓인 항목도 받음 · S7)
+REFETCH_OLD = "lms"
 COLLECT = os.path.join(HERE, "_index", "collect")   # 웹 수집 상태(*.json)
 ARCH = os.path.join(COLLECT, "archive")             # 웹 수집 보관 칸 — 볼트와 같은 상대 경로의 거울(web-collect 가 옮김 · 장부 밖)
 SCHEMA = 1
@@ -51,6 +52,16 @@ IGNORE_NAME = ("desktop.ini", "thumbs.db")
 def mass(n):
     """한꺼번에 이만큼 넘게 사라지면 지움으로 치지 않고 묻는다 — 폴더 잠김·복원·디스크 문제일 수 있다(색인을 지우기 전에 사람이 본다)."""
     return max(100, n // 5)
+
+
+def browser_sources():
+    """로그인 출처(조리법 collect/browser/*.json · 개인 층) — [(id, 파일화 장부 절대 경로, 원본 층 아래 원시 칸)]. 출처 이름·자리를 코드에 두지 않는다(S6)."""
+    try:
+        import collectlib
+    except ImportError:
+        return []
+    return [(rc["id"], collectlib.rpath(rc["manifest"], HERE), rc.get("raw_dir") or "")
+            for rc in collectlib.browser_recipes(HERE) if isinstance(rc.get("manifest"), str)]
 
 
 def under(p, roots):
@@ -70,7 +81,18 @@ def machine_dirs():
     """내용 칸 안의 기계 파생물 — ingest·수집 대본이 스스로 옮기고 지운다.
     튜토리얼 연습 폴더(<작업>/튜토리얼)는 brain-base 엔진이 만들고 장부(.obsidian/plugins/brain-base/tutorial-practice.json)로 바로 지운다(E1 · 0.41.0) —
     사진에 들면 엔진의 지움이 «바깥에서 지움» 장부 줄이 된다. brain-base followscope.ts 와 같은 거름."""
-    return {roles.path("source_index"), roles.path("sources") + "/_lms", roles.path("work") + "/튜토리얼"}
+    return {roles.path("source_index"), roles.path("work") + "/튜토리얼"} | {roles.path("sources") + "/" + raw for _, _, raw in browser_sources() if raw}
+
+
+_PRACTICE = None
+
+
+def practice():
+    """튜토리얼이 맡은 자리(연습 장부 · 받은함에 넣는 연습 파일 포함 · brain-base 0.46.4) — 한 번 돌 때 한 번 읽는다."""
+    global _PRACTICE
+    if _PRACTICE is None:
+        _PRACTICE = fileops.practice_paths(VAULT)[0]
+    return _PRACTICE
 
 
 _PRACTICE = None
@@ -359,12 +381,12 @@ def partners(ctx, moved):
 
 
 def fix_data_paths(moved):
-    """경로를 글자로 든 수집 기록(LMS 목록·웹 수집 상태) — 링크가 아니라 fileops 가 못 고친다 → 고친 수."""
+    """경로를 글자로 든 수집 기록(로그인 출처 목록·웹 수집 상태) — 링크가 아니라 fileops 가 못 고친다 → 고친 수."""
     mp = {o.lower(): n for o, n in moved if under(o, [roles.path("sources")])}
     if not mp:
         return 0
     total = 0
-    for f in [MANIFEST] + sorted(glob.glob(os.path.join(COLLECT, "*.json"))):
+    for f in [m for _, m, _ in browser_sources()] + sorted(glob.glob(os.path.join(COLLECT, "*.json"))):
         d = load_json(f)
         if d is None:
             continue
@@ -451,8 +473,8 @@ def apply_moved(ctx, moved, cur, rep, later):
     ctx.events += sub.events
 
 
-def lms_keys(man, path, sha):
-    """사라진 파일의 LMS 목록 항목 — [칸, 키](게시판은 [«board», 강좌, 글 키])."""
+def manifest_keys(man, path, sha):
+    """사라진 파일의 로그인 출처 목록 항목 — [칸, 키](게시판은 [«board», 단위, 글 키])."""
     low = path.lower()
     norm = lambda v: (v or "").replace("\\", "/").lower()  # noqa: E731
     out = [["files", k] for k, v in man.get("files", {}).items() if norm(v.get("path")) == low or (sha and v.get("sha") == sha)]
@@ -463,8 +485,8 @@ def lms_keys(man, path, sha):
 
 
 def apply_gone(ctx, gone, unknown, cur, rep, later, pending):
-    """지움 뒤처리 — 장부 · LMS 원본은 다시 받을지 묻기 · 색인 고아 정리(나중에). 파일을 만지지 않는다."""
-    man = load_json(MANIFEST) or {}
+    """지움 뒤처리 — 장부 · 로그인 출처 원본은 다시 받을지 묻기 · 색인 고아 정리(나중에). 파일을 만지지 않는다."""
+    mans = [(sid, load_json(m) or {}) for sid, m, _ in browser_sources()]
     alive = {e[3]: p for p, e in cur.items() if e[3]}
     now = fileops.now().isoformat(timespec="seconds")
     for x in unknown:
@@ -489,10 +511,12 @@ def apply_gone(ctx, gone, unknown, cur, rep, later, pending):
             later["prune"] = True
         if ctx.dry or not under(p, [roles.path("sources")]) or (gone[p][3] and gone[p][3] in alive):
             continue
-        keys = lms_keys(man, p, gone[p][3])
-        if keys:                            # 목록엔 «이미 받음»이라 다시 안 받는다 — 의도한 삭제면 그대로 · 실수면 되받음
-            pending.append({"kind": "lms", "path": p, "keys": keys, "ts": now})
-            rep["lines"].append("LMS 원본 사라짐 %s — 되받을지 답 기다림" % p)
+        for sid, man in mans:
+            keys = manifest_keys(man, p, gone[p][3])
+            if keys:                        # 목록엔 «이미 받음»이라 다시 안 받는다 — 의도한 삭제면 그대로 · 실수면 되받음
+                pending.append({"kind": REFETCH, "source": sid, "path": p, "keys": keys, "ts": now})
+                rep["lines"].append("%s 원본 사라짐 %s — 되받을지 답 기다림" % (sid, p))
+                break
 
 
 def ingest_later(later):
@@ -536,12 +560,17 @@ def pick(items, paths, everything, kinds=None):
 
 def cmd_refetch(paths, everything):
     p = load_pending()
-    todo = pick(p["items"], paths, everything, ("lms",))
+    todo = pick(p["items"], paths, everything, (REFETCH, REFETCH_OLD))
     if not todo:
         print("다시 받을 것 없음")
         return 1
-    man = load_json(MANIFEST) or {}
+    srcs = browser_sources()
+    mans = {sid: (m, load_json(m) or {}) for sid, m, _ in srcs}
     for x in todo:
+        sid = x.get("source") or (srcs[0][0] if srcs else "")      # 옛 항목(출처 칸 없음) = 첫 로그인 출처
+        if sid not in mans:
+            continue
+        man = mans[sid][1]
         for k in x["keys"]:
             if k[0] == "board":
                 man.get("board", {}).get(k[1], {}).pop(k[2], None)
@@ -552,13 +581,15 @@ def cmd_refetch(paths, everything):
                 b = man.get("board", {}).get(cid, {})
                 for key in [key for key, v in b.items() if v.get("path") == post]:
                     del b[key]
-    save_json(MANIFEST, man, indent=1)
-    auto = os.path.join(HERE, "lms-auto.py")
-    if os.path.isfile(auto):                # 확장이 읽는 «이미 받은 것» — 목록에서 다시 만든다
-        subprocess.run([sys.executable, auto, "--known"], cwd=VAULT, capture_output=True, timeout=60)
+    fam = os.path.join(HERE, "collect-browser.py")
+    for sid, (m, man) in mans.items():
+        if any((x.get("source") or srcs[0][0]) == sid for x in todo):
+            save_json(m, man, indent=1)
+            if os.path.isfile(fam):          # 확장이 읽는 «이미 받은 것» — 목록에서 다시 만든다
+                subprocess.run([sys.executable, fam, "--known", "--source", sid], cwd=VAULT, capture_output=True, timeout=60)
     p["items"] = [x for x in p["items"] if x not in todo]
     save_json(PENDING, p, indent=1)
-    print("다음 LMS 수집 때 다시 받음 %d: %s" % (len(todo), " · ".join(x["path"] for x in todo)))
+    print("다음 수집 때 다시 받음 %d: %s" % (len(todo), " · ".join(x["path"] for x in todo)))
     return 0
 
 

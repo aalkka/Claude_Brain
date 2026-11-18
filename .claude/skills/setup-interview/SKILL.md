@@ -36,6 +36,7 @@ description: 신규 설치 개인최적화. 첫 실행 시 또는 "/재보정" �
    **주의(정직히 안내)**: 클라우드 에이전트는 개인 repo를 clone해 돌리므로 **커밋된 내용만** 봄(로컬 전용 `_index`·미커밋 세션은 없음). 골든셋 재측정은 클라우드서 `sentence-transformers` 설치 필요(느림) → 무거우면 그 스텝은 스킵하고 통찰합성·open-loops 정리만 시켜도 됨. 산출은 push로 다음 세션에 반영됨.
    **해제/변경**: `/재보정` 또는 `schedule` 스킬로 cron 갱신·삭제.
 
+10b. 모듈 처음 설정: 켜진 모듈 중 `module.json` `contributes.setup`(조리법)이 있는 것을 차례로 그 모듈의 setup 스킬로 돈다(예: `mobility:setup` — 조리법 `plan` → 묻기 → `apply`). 모듈마다 끝나면 한 줄만 남기고 다음으로. 그 스킬이 첫 재기에서 «이미 설정됨»이라 하면 건너뛴다.
 11. 볼트 밖 설정 점검(마지막): `dist-sync:outside` 절차 — `py -3 .claude/skills/dist-sync/scripts/external.py check` 로 파이썬 꾸러미·Git for Windows·git 이름·훅·Claude 로그인·옵시디언 제한 모드 등을 재고, Claude 가 할 수 있는 것은 묻고 대신 하고(설치는 내려받기라 꼭 승인), 사람이 할 것은 한 번에 한 단계씩 안내한 뒤 다시 잰다. 선택 항목은 쓸지 먼저 묻는다. 남은 것은 산출 보고에 적는다.
 
 산출: settings.local.json 옵션R(autoMemoryDirectory) + CLAUDE.md §0 슬롯 치환 + `2_지식/profile.md` 채움 + `2_지식/open-loops.md` 초기화 + search.py 모델 config 기입 + 기능 단계(`3_시스템/options.local.json`) + 개인 repo origin 설정 + (선택)weekly-review 클라우드 cron 등록 + 볼트 밖 설정 점검 결과.

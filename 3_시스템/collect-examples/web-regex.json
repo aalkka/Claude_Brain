@@ -1,0 +1,17 @@
+{
+ "_": "예시 — 웹 게시판 조리법(가족 regex)의 빈 틀. 진짜 조리법은 3_시스템/collect/<id>.json(개인 층 · 배포판에 안 실림)이고, 수집 창 «수집 추가»(대화창 /collect_desk:add)가 사이트를 탐색해 이 꼴로 쓴다. 손으로 쓰지 않는다 — 칸 뜻은 3_시스템/web-collect.py 머리말.",
+ "id": "example-board",
+ "name": "예시 게시판",
+ "family": "regex",
+ "page": "https://example.org/board",
+ "list": {"page_url": "https://example.org/board?page={page}", "pages": 2, "row": "<tr>(.*?)</tr>",
+          "fields": {"id": "no=(\\d+)", "title": "<a [^>]*>(.*?)</a>", "date": "(\\d{4}-\\d\\d-\\d\\d)"}},
+ "view": {"url": "https://example.org/board/view?no={id}", "title": "<h2>(.*?)</h2>", "body": "<div class=\"content\">(.*?)</div>",
+          "attachments": {"block": "<ul class=\"files\">(.*?)</ul>", "item": "href=\"([^\"]+)\""}},
+ "date_field": "date",
+ "attachments": {"download": true, "images": false, "max_mb": 20},
+ "words": {"skip": "광고|설문"},
+ "first_since": "2026-01-01",
+ "folder": "@sources/게시판",
+ "explored": "예시 — 탐색 기록 한 줄(요청 수 · robots · 쪽당 글 수)"
+}

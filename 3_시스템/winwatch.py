@@ -30,7 +30,7 @@ GWL_STYLE, WS_CHILD = -16, 0x40000000
 USER_INPUT_MS = 1000        # 이보다 짧으면 사용자 입력으로 바뀐 것
 MIN_W, MIN_H = 120, 40      # 말풍선·그림자 같은 작은 창은 뺀다
 # 볼트 일이 띄운 것으로 보는 표지(명령줄 또는 부모 사슬)
-OURS = re.compile(r"obsidian-profile|chrome_pipe|lms_(?:cookie|ext)_check|remote-debugging-p|brain\.py|server\.py|lms-auto|web-collect|winwatch-spike|Claude_Brain\\3_", re.I)
+OURS = re.compile(r"obsidian-profile|chrome_pipe|cookie_check|ext_check|remote-debugging-p|brain\.py|server\.py|collect-(?:tick|browser|schedule)|web-collect|winwatch-spike|Claude_Brain\\3_", re.I)
 
 WinEventProc = ctypes.WINFUNCTYPE(None, w.HANDLE, w.DWORD, w.HWND, w.LONG, w.LONG, w.DWORD, w.DWORD)
 u32.SetWinEventHook.restype = w.HANDLE

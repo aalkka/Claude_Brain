@@ -2,11 +2,17 @@
 
   py -3 .claude/skills/dist-sync/scripts/external.py check [--json] [--all]   # 이 PC 에서 됐나 · 안 된 것의 할 일(Claude 명령 또는 사람 단계)
   py -3 .claude/skills/dist-sync/scripts/external.py scan [--root 경로]…      # 추적: 코어가 볼트 밖을 건드리는데 목록에 없는 곳
+  py -3 .claude/skills/dist-sync/scripts/external.py scan --module <id>       # 추적: 그 모듈 대본이 볼트 밖을 건드리는데 모듈 목록에 없는 곳
 
 목록 = 같은 폴더의 ../external.json (항목마다 종류·쓰는 곳·필수·확인·하기(Claude)·안내(사람 단계)).
 check 는 이 볼트에 «쓰는 곳» 파일이 있는 항목만 본다(끈 모듈·없는 기능은 묻지 않는다). 확인 명령은 읽기만 한다.
+  켜진 모듈의 `contributes.outside`(모듈 안 JSON)도 합친다(11-17 · M6) — 쓰는 곳 없이 켜져 있으면 잰다 · 끄면 사라진다.
+  모듈 항목은 «기기»(pc·폰)와 «재기» 하나를 단다: 명령(종료 0 됨 · 1 안 됨 · 2 모름) · 파일(볼트 상대 · 있으면 됨) ·
+  레지스트리({키, 값, 기대} 읽기만) · 앱(모듈 report 명령이 낸 JSON 한 벌에서 그 id · 모듈마다 한 번) · 화면(못 잼 · 사람 확인 말).
+  줄 차례 = 필수 PC → 필수 폰 → 선택 · 모듈 줄 앞에 «묶음 이름(모듈)».
 scan 은 코어 파일에서 볼트 밖을 건드리는 낱말(종류마다 정규식)을 찾아, 그 파일·종류를 덮는 항목이 없으면 «안내 없음»으로 낸다.
   새 기능이 볼트 밖 설정을 더하면 여기 잡힌다 → 항목을 더하고(확인·하기 또는 안내) 다시 잰다.
+  --module 은 그 모듈 폴더의 대본만 보고, 모듈 항목의 «종류»가 덮으면 된 것으로 친다(모듈 항목은 쓰는 곳이 없다 · 모듈 전체를 덮음).
 """
 import argparse
 import fnmatch
@@ -33,7 +39,10 @@ KINDS = {
     "전원": r"\bpowercfg\b|WakeToRun",
     "방화벽": r"New-NetFirewallRule|netsh (advfirewall|http)",
     "Claude 사용자 설정": r"autoMemoryDirectory|~[/\\]\.claude[/\\]|USERPROFILE[^\n]{0,20}\.claude",
+    "망(Tailscale)": r"\btailscale(?:\.exe)?\b['\"]?(?:,\s*['\"]|\s+)(?:serve|up|status|cert|ip)\b|Tailscale[\\/]+tailscale\.exe",
 }
+MEASURES = ("명령", "파일", "레지스트리", "앱", "화면")     # 모듈 항목 «재기» — module-forge ⑪ 과 같은 목록
+DEVICE_ORDER = {"pc": 0, "폰": 1}
 CODE = (".py", ".ps1", ".psm1", ".mjs", ".cjs", ".ts", ".sh", ".bat", ".cmd")
 # 볼 곳: 코어 대본 + Claude 가 따라 하는 스킬 글 · 안 볼 곳: 진단 기록·시험(가짜 등록을 일부러 부른다)·번들
 SKIP = ["3_시스템/_ref/*", "3_시스템/_eval/*", ".obsidian/*", "*/node_modules/*", "*/test_*.py", "*/tests/*",
@@ -49,14 +58,118 @@ def hit(path, globs):
     return any(fnmatch.fnmatch(path, g) for g in globs)
 
 
-def run(cmd, timeout=15, cwd=VAULT):
-    """확인 명령 — PowerShell 한 줄(종료 0 = 됨). 창 없이."""
+def run(cmd, timeout=15, cwd=VAULT, three=False):
+    """확인 명령 — PowerShell 한 줄(종료 0 = 됨). 창 없이. three = 모듈 «재기 명령»(1 = 안 됨 · 2 = 모름 → None)."""
     try:
         r = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", cmd], cwd=cwd,
                            capture_output=True, timeout=timeout, creationflags=NOWIN)
+        if three and r.returncode == 2:
+            return None
         return r.returncode == 0
     except (OSError, subprocess.TimeoutExpired):
         return None
+
+
+def module_items(root):
+    """켜진 모듈의 contributes.outside → [항목 + {모듈, 묶음, _report}] · 못 읽는 모듈은 빠짐(module-forge ⑪ 이 막는다)."""
+    sys.path.insert(0, os.path.join(VAULT, "3_시스템"))
+    try:
+        import roles  # noqa: E402 — 켬·끔은 코어 한 곳
+        mods = roles.modules(on_only=True, vault=root)
+    except (ImportError, OSError, KeyError, ValueError):
+        return []
+    out = []
+    for m in mods:
+        rel = ((m.get("json") or {}).get("contributes") or {}).get("outside") if isinstance(m.get("json"), dict) else None
+        if not isinstance(rel, str):
+            continue
+        try:
+            with open(os.path.join(root, *rel.replace("\\", "/").split("/")), encoding="utf-8") as f:
+                d = json.load(f)
+        except (OSError, ValueError):
+            continue
+        group = "%s(%s)" % (d.get("이름") or m["id"], m["id"])
+        for it in d.get("항목") or []:
+            if isinstance(it, dict) and it.get("id"):
+                out.append(dict(it, 모듈=m["id"], 묶음=group, _report=d.get("report")))
+    return out
+
+
+def report_of(argv, root, timeout=30):
+    """모듈 report 명령(기기 보고 · JSON 한 벌 {id: 참|거짓|null}) — 못 읽으면 {}(모든 앱 항목 = 모름)."""
+    if not (isinstance(argv, list) and argv):
+        return {}
+    cmd = [sys.executable if t == "{py}" else t.replace("{vault}", root) for t in argv]
+    try:
+        r = subprocess.run(cmd, cwd=root, capture_output=True, timeout=timeout, creationflags=NOWIN)
+        d = json.loads(r.stdout.decode("utf-8", "replace").strip().splitlines()[-1]) if r.returncode == 0 and r.stdout.strip() else {}
+    except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+        return {}
+    return d if isinstance(d, dict) else {}
+
+
+def registry(v):
+    """{키: 'HKCU\\…', 값: 이름, 기대: 값?} — 읽기만. 기대가 없으면 있기만 하면 됨."""
+    try:
+        import winreg
+    except ImportError:
+        return None
+    hive, _, sub = str(v.get("키", "")).partition("\\")
+    root = {"HKCU": winreg.HKEY_CURRENT_USER, "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
+            "HKLM": winreg.HKEY_LOCAL_MACHINE, "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE}.get(hive.upper())
+    if root is None:
+        return None
+    try:
+        with winreg.OpenKey(root, sub) as k:
+            got, _ = winreg.QueryValueEx(k, v.get("값") or "")
+    except OSError:
+        return False
+    return True if "기대" not in v else got == v["기대"]
+
+
+def measure(it, root, reports):
+    """모듈 항목 하나 → 참(됨) · 거짓(안 됨) · None(모름·화면으로 볼 것)."""
+    m = it.get("재기") if isinstance(it.get("재기"), dict) else {}
+    kind = next(iter(m), None)
+    v = m.get(kind)
+    if kind == "명령":
+        return run(v, cwd=root, three=True)
+    if kind == "파일":
+        return os.path.exists(os.path.join(root, *str(v).replace("\\", "/").split("/")))
+    if kind == "레지스트리":
+        return registry(v) if isinstance(v, dict) else None
+    if kind == "앱":
+        got = reports.get(it["모듈"], {}).get(v)
+        return got if isinstance(got, bool) else None
+    return None
+
+
+def row(it, ok):
+    m = it.get("재기") if isinstance(it.get("재기"), dict) else {}
+    eye = it.get("화면 확인") or m.get("화면")
+    if ok is None and m.get("앱"):
+        eye = eye or "기기 보고가 없음 — 먼저 그 기기를 짝짓고 앱을 한 번 연다"
+    return {"id": it["id"], "이름": it["이름"], "필수": it.get("필수", False), "됨": ok,
+            "누가": "Claude" if it.get("하기") else "사람", "하기": it.get("하기"), "안내": it.get("안내", []),
+            "까닭": it.get("까닭", ""), "화면 확인": eye, "기기": it.get("기기", "pc"), "묶음": it.get("묶음"), "모듈": it.get("모듈")}
+
+
+def check(root=VAULT, everything=False):
+    """이 볼트에 쓰는 곳이 있는 코어 항목 + 켜진 모듈 항목마다 확인을 함께 돌린다(창 없이 · 하나 15초 안).
+    «앱» 재기는 모듈마다 report 를 한 번만 부른다. 줄 차례 = 필수 PC → 필수 폰 → 선택(같은 칸 안은 목록 차례)."""
+    from concurrent.futures import ThreadPoolExecutor
+    items = [it for it in load() if everything or present(it, root)]
+    mods = module_items(root)
+    need = {}
+    for it in mods:
+        if isinstance(it.get("재기"), dict) and "앱" in it["재기"]:
+            need.setdefault(it["모듈"], it.get("_report"))
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        reps = dict(zip(need, ex.map(lambda a: report_of(a, root), need.values())))
+        oks = list(ex.map(lambda it: run(it["확인"], cwd=root) if it.get("확인") else None, items))
+        moks = list(ex.map(lambda it: measure(it, root, reps), mods))
+    rows = [row(it, ok) for it, ok in zip(items, oks)] + [row(it, ok) for it, ok in zip(mods, moks)]
+    return sorted(rows, key=lambda r: (not r["필수"], DEVICE_ORDER.get(r["기기"], 2) if r["필수"] else 0))
 
 
 def present(item, root):
@@ -73,17 +186,6 @@ def present(item, root):
     return False
 
 
-def check(root=VAULT, everything=False):
-    """이 볼트에 쓰는 곳이 있는 항목마다 확인 명령을 함께 돌린다(창 없이 · 하나 15초 안)."""
-    from concurrent.futures import ThreadPoolExecutor
-    items = [it for it in load() if everything or present(it, root)]
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        oks = list(ex.map(lambda it: run(it["확인"], cwd=root) if it.get("확인") else None, items))
-    return [{"id": it["id"], "이름": it["이름"], "필수": it.get("필수", False), "됨": ok,
-             "누가": "Claude" if it.get("하기") else "사람", "하기": it.get("하기"), "안내": it.get("안내", []),
-             "까닭": it.get("까닭", ""), "화면 확인": it.get("화면 확인")} for it, ok in zip(items, oks)]
-
-
 def check_text(rows):
     L = []
     todo = [r for r in rows if r["됨"] is False]
@@ -91,7 +193,8 @@ def check_text(rows):
     L.append("볼트 밖 설정 %d개 — 됨 %d · 안 됨 %d · 화면으로 볼 것 %d" % (len(rows), len(rows) - len(todo) - len(eye), len(todo), len(eye)))
     for r in rows:
         mark = {True: "✓", False: "✗", None: "?"}[r["됨"]]
-        L.append("%s %s%s" % (mark, r["이름"], "" if r["필수"] else " (선택)"))
+        where = ("[%s%s] " % (r["묶음"], " · 폰" if r.get("기기") == "폰" else "")) if r.get("묶음") else ""
+        L.append("%s %s%s%s" % (mark, where, r["이름"], "" if r["필수"] else " (선택)"))
         if r["됨"] is True:
             continue
         if r["화면 확인"]:
@@ -149,6 +252,40 @@ def scan(roots, items=None, layer=None):
     return gaps, bad
 
 
+def scan_module(mid, root=VAULT):
+    """--module — 그 모듈 폴더 대본이 볼트 밖을 건드리는데 모듈 항목 «종류»가 안 덮는 곳 [(파일, 종류, 줄)] · 항목 결함 [(id, 말)].
+    모듈 항목에는 쓰는 곳이 없다 — 켜진 동안 모듈 전체를 덮는다. 시험(*_check.py · test_*)은 가짜 등록을 일부러 부르니 뺀다."""
+    d = os.path.join(root, ".claude", "skills", mid)
+    items = [it for it in module_items(root) if it.get("모듈") == mid]
+    kinds = {k for it in items for k in it.get("종류", [])}
+    pats = {k: re.compile(v) for k, v in KINDS.items()}
+    gaps = []
+    for dp, dns, fns in os.walk(d):
+        dns[:] = [x for x in dns if x not in ("__pycache__", "node_modules")]
+        for fn in fns:
+            if not (fn.endswith(CODE) or fn == "SKILL.md") or fn.endswith("_check.py") or fn.startswith("test_"):
+                continue
+            p = os.path.join(dp, fn)
+            rel = os.path.relpath(p, root).replace("\\", "/")
+            try:
+                with open(p, encoding="utf-8", errors="replace") as f:
+                    lines = f.read().splitlines()
+            except OSError:
+                continue
+            for kind, rx in pats.items():
+                n = next((i for i, ln in enumerate(lines, 1) if rx.search(ln)), None)
+                if n is not None and kind not in kinds:
+                    gaps.append((rel, kind, n))
+    bad = []
+    for it in items:
+        m = it.get("재기")
+        if not (isinstance(m, dict) and len(m) == 1 and next(iter(m)) in MEASURES):
+            bad.append((it["id"], "재기가 %s 중 하나가 아님" % "·".join(MEASURES)))
+        if not it.get("하기") and len(it.get("안내", [])) < 2 and not it.get("할 일 없음"):
+            bad.append((it["id"], "Claude 명령도 사람 단계(2단계 이상)도 없음"))
+    return gaps, bad
+
+
 def core_layer():
     """층 규칙은 dist-diff 한 곳 — 개인 층(빅보스·학교 수집 등)은 배포판에 안 가니 재지 않는다."""
     import importlib.util
@@ -197,6 +334,7 @@ def main():
     c.add_argument("--save", help="결과를 이 JSON 에 담는다(건강 줄이 하루 한 번 따로 부른다)")
     s = sp.add_parser("scan")
     s.add_argument("--root", action="append", help="잴 저장소(여럿 가능 · 기본 = 이 볼트)")
+    s.add_argument("--module", help="그 모듈 폴더 대본만(모듈 항목 «종류»가 덮나)")
     a = ap.parse_args()
     if a.cmd == "check":
         rows = check(os.path.abspath(a.vault), a.all)
@@ -207,7 +345,10 @@ def main():
             return 0
         print(json.dumps(rows, ensure_ascii=False, indent=1) if a.json else check_text(rows))
         return 1 if any(r["됨"] is False and r["필수"] for r in rows) else 0
-    gaps, bad = scan([os.path.abspath(r) for r in (a.root or [VAULT])], layer=core_layer())
+    if a.module:
+        gaps, bad = scan_module(a.module)
+    else:
+        gaps, bad = scan([os.path.abspath(r) for r in (a.root or [VAULT])], layer=core_layer())
     for rel, kind, n in gaps:
         print("안내 없음: %s:%d — %s" % (rel, n, kind))
     for i, msg in bad:

@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""받은 파일 검사 — 볼트 밖에서 들어오는 파일(웹 수집 첨부 · 학교 LMS 받기 등)을 들이기 전에 잰다(LLM 0 · 망 0).
+"""받은 파일 검사 — 볼트 밖에서 들어오는 파일(웹 수집 첨부 · 로그인 출처 받기 등)을 들이기 전에 잰다(LLM 0 · 망 0).
 
     import filecheck   # 3_시스템 이 sys.path 에 있을 때 · 또는 importlib 로 이 파일을 연다
 
 잰다: 확장자 ↔ 실제 형식(앞 바이트 MAGIC) · 실행 파일(EXEC_EXT) · PDF 위험 이름(pdf_risks — 원문과 /ObjStm 만 풂) ·
 압축 안 실행 파일·경로 조작·Office 매크로(zip_risks) · Windows Defender(defender) · sha256 · 1_수집 안 같은 파일(vault_hashes).
-11-16 lms-intake.py(학교 LMS · 개인 층)에서 떼어 냄 — 본체 수집 엔진(web-collect)의 첨부 검사가 개인 대본을 불러 배포판에서
-«첨부»를 켜면 FileNotFoundError 로 깨졌다. lms-intake 는 이 이름들을 그대로 다시 내준다.
+11-16 학교 전용 들임 대본(개인 층)에서 떼어 냄 — 본체 수집 엔진(web-collect)의 첨부 검사가 개인 대본을 불러 배포판에서
+«첨부»를 켜면 FileNotFoundError 로 깨졌다. 그 개인 대본은 이 이름들을 그대로 다시 내준다.
 """
 from __future__ import annotations
 

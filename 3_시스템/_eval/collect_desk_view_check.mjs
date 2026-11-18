@@ -18,8 +18,8 @@ const cp = (rel) => {
   if (fs.existsSync(a)) fs.cpSync(a, path.join(TV, rel), { recursive: true });
 };
 fs.rmSync(TV, { recursive: true, force: true });
-for (const r of [MOD, "3_시스템/views.json", "3_시스템/collect", "3_시스템/tutorial", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/lms/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/auto.log", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/일/외부뇌/알림-설정.md", "2_지식/일/외부뇌/자격-카드.md", "2_지식/일정"]) cp(r);
-for (const f of ["brain.py", "roles.py", "roles.json", "fileops.py", "claude_bin.py", "schedule.py", "web-collect.py", "lms-auto.py", "notice-filter.py"]) cp("3_시스템/" + f);
+for (const r of [MOD, "3_시스템/views.json", "3_시스템/collect", "3_시스템/tutorial", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/collect-ext/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/auto.log", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/modules/mobility/알림-설정.md", "2_지식/일/외부뇌/자격-카드.md", "2_지식/일정"]) cp(r);
+for (const f of ["brain.py", "roles.py", "roles.json", "collectlib.py", "collect-schedule.py", "fileops.py", "claude_bin.py", "schedule.py", "lms-schedule.py", "web-collect.py", "notice-filter.py"]) cp("3_시스템/" + f);
 cp(".claude/skills/mobility/scripts/alarms.py");   // 폰 알림 엔진 = mobility(11-16 · 없으면 수집 창이 «알림» 칸을 안 그림)
 for (const f of fs.readdirSync(path.join(REAL, "3_시스템/_index/collect"))) if (f.endsWith(".json")) cp("3_시스템/_index/collect/" + f);
 fs.writeFileSync(path.join(TV, "3_시스템/ingest_vision.py"), "def subscription():\n    return '시험 멈춤'\n"); // 판정은 구독 관문에서 멈춘다 — claude 를 안 부른다
@@ -44,7 +44,7 @@ if (!SCI) throw new Error("시험 출처 없음 — 거를 말이 있고 볼트�
   fs.writeFileSync(sp, JSON.stringify(st));
 }
 const runsDir = path.join(TV, "3_시스템/_index/lms/runs");
-const extNew = JSON.parse(fs.readFileSync(path.join(TV, "3_시스템/lms/manifest.json"), "utf8")).version;
+const extNew = JSON.parse(fs.readFileSync(path.join(TV, "3_시스템/collect-ext/manifest.json"), "utf8")).version;
 fs.writeFileSync(path.join(runsDir, "lms-run-시험판.json"), JSON.stringify({ kind: "status", login: "ok", at: Date.now(), version: extNew })); // 새 판 확장이 돈 뒤의 모습
 const PLUG = path.join(TV, ".obsidian/plugins/brain-base");
 fs.mkdirSync(PLUG, { recursive: true });
@@ -209,8 +209,8 @@ try {
   await select(sch.id);
   await sleep(1500); // 앞 글이 다 열리기 전에 또 누르면 옵시디언이 그 열기를 삼킨다(화면 문 쪽 일)
   await click(".link[data-note]");
-  ok("알림 칸을 누르면 설정 노트", await until(() => ev(`let ok=false; app.workspace.iterateAllLeaves(l=>{ if(l.view?.file?.path==="2_지식/일/외부뇌/알림-설정.md") ok=true }); return ok`)));
-  const AL = path.join(TV, "2_지식/일/외부뇌/알림-설정.md");
+  ok("알림 칸을 누르면 설정 노트", await until(() => ev(`let ok=false; app.workspace.iterateAllLeaves(l=>{ if(l.view?.file?.path==="2_지식/modules/mobility/알림-설정.md") ok=true }); return ok`)));
+  const AL = path.join(TV, "2_지식/modules/mobility/알림-설정.md");
   fs.writeFileSync(AL, fs.readFileSync(AL, "utf8").replace('"며칠_전": [3, 1]', '"며칠_전": [7, 2]'));
   ok("설정을 고치면 화면이 따라옴", await until(async () => (await text()).includes("7·2일 전")));
 
@@ -327,23 +327,23 @@ try {
   const course = await inFrame(`return document.querySelector('[data-f="course"][data-v$="=off"]').dataset.v.split('=')[0]`);
   await click(`[data-f="course"][data-v="${course}=off"]`);
   ok("과목 빼기 = _제외 로", await until(() => !J("3_시스템/lms/courses.json")[course] && J("3_시스템/lms/courses.json")._제외[course]));
-  ok("과목 빼기 = known 에서 빠짐", await until(() => !J("3_시스템/lms/known.json").courses.includes(Number(course))));
+  ok("과목 빼기 = known 에서 빠짐", await until(() => !J("3_시스템/collect-ext/known-mylms.json").courses.includes(Number(course))));
   await until(() => has(`[data-f="course"][data-v="${course}=on"]`));
   await click(`[data-f="course"][data-v="${course}=on"]`);
-  ok("과목 넣기 = 되돌아옴", await until(() => J("3_시스템/lms/courses.json")[course] && J("3_시스템/lms/known.json").courses.includes(Number(course))));
+  ok("과목 넣기 = 되돌아옴", await until(() => J("3_시스템/lms/courses.json")[course] && J("3_시스템/collect-ext/known-mylms.json").courses.includes(Number(course))));
   await until(() => has('[data-fetch="mylms"]'));
   await click('[data-fetch="mylms"]');
-  ok("mylms 지금 받기 = desk + known fetchNow", await until(() => J("3_시스템/lms/desk.json").fetch_now && J("3_시스템/lms/known.json").fetchNow === J("3_시스템/lms/desk.json").fetch_now));
+  ok("mylms 지금 받기 = desk + known fetchNow", await until(() => J("3_시스템/lms/desk.json").fetch_now && J("3_시스템/collect-ext/known-mylms.json").fetchNow === J("3_시스템/lms/desk.json").fetch_now));
   ok("mylms 받기 대기 표시", await until(async () => (await text()).includes("받기 대기")));
   await until(() => inFrame(`return document.querySelector('[data-src="mylms"][data-f="enabled"]').dataset.v === 'false'`));
   await clickF("mylms", "enabled");
-  ok("mylms 끄기 = desk + known paused", await until(() => J("3_시스템/lms/desk.json").enabled === false && J("3_시스템/lms/known.json").paused === true));
+  ok("mylms 끄기 = desk + known paused", await until(() => J("3_시스템/lms/desk.json").enabled === false && J("3_시스템/collect-ext/known-mylms.json").paused === true));
   await openPop();
   ok("mylms 끔 = 크롬 열기 스위치 잠김", await until(() => inFrame(`return document.querySelector('.pop [data-f="wake"]').disabled`)));
   await inFrame(`document.querySelector('[data-pop]').click(); return 1`);
   await until(() => inFrame(`return document.querySelector('[data-src="mylms"][data-f="enabled"]').dataset.v === 'true'`));
   await clickF("mylms", "enabled");
-  ok("mylms 켜기 = known paused 풀림", await until(() => J("3_시스템/lms/known.json").paused === false));
+  ok("mylms 켜기 = known paused 풀림", await until(() => J("3_시스템/collect-ext/known-mylms.json").paused === false));
 
   // ── 후보 ──
   const c0 = data.candidates[0], c1 = data.candidates[1];
@@ -367,7 +367,7 @@ try {
   await clickF("*", "all_off");
   ok("전체 끄기 = 묻는 창", await until(() => inFrame(`return document.querySelector('.dlg p')?.textContent === '모든 수집을 끄시겠습니까?'`)));
   await click(".dlg [data-y]");
-  ok("전체 끄기 = collect.local.json all_off + known paused", await until(() => J(SWF).all_off === true && J("3_시스템/lms/known.json").paused === true));
+  ok("전체 끄기 = collect.local.json all_off + known paused", await until(() => J(SWF).all_off === true && J("3_시스템/collect-ext/known-mylms.json").paused === true));
   ok("전체 끄기 = 모든 출처 줄 꺼짐", await until(() => inFrame(`return [...document.querySelectorAll('.lr:not([data-sel^="cand:"])')].every(r => r.innerText.includes('꺼짐'))`)));
   await until(() => inFrame(`return document.querySelector('[data-f="all_off"]').dataset.v === 'false'`));
   await clickF("*", "all_off");

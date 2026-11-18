@@ -423,3 +423,64 @@ body.bb-still [class*="bb-"], body.bb-still [class*="bb-"]::before, body.bb-stil
 @media (prefers-reduced-motion: reduce) {
   [class*="bb-"], [class*="bb-"]::before, [class*="bb-"]::after, [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
 }
+
+/* 세션창(진행 중 대화 · 11-14 초안 A) — 옵시디언 메뉴에 이름 + 캐시 남은 분 */
+.bb-live-menu { max-width: min(360px, 90vw); }
+.bb-live-menu .menu-item-title { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.bb-live-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-live-menu .menu-item.is-cur .bb-live-name { font-weight: var(--font-semibold); }
+.bb-live-left { flex: none; font-size: var(--font-ui-smaller); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.bb-live-left.is-near { color: var(--text-warning); }
+
+/* 폰·탭이 고치는 중(phonelock.ts · 11-17 초안 B) — 노트 머리 자물쇠 + 남은 시간 */
+.bb-phonelock { display: flex; align-items: center; gap: 4px; padding: 0 6px; color: var(--text-muted); font-size: var(--font-ui-small); }
+
+/* 공간(spaces.ts · 사용자 11-18) — 탭 줄 맨 오른쪽 회색 둥근 네모 칩 · 올리면 진해짐(밝음 = 어두워짐 · 어둠 = 대비가 커지는 쪽) · 지금 공간 = 더 진한 회색 + 굵게(보라 안 씀) */
+.bb-spaces { display: flex; align-items: center; gap: 2px; margin: 0 4px; flex: none; -webkit-app-region: no-drag; }
+.bb-space-chip { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: var(--radius-s); background: var(--color-base-25); color: var(--text-muted); font-size: var(--font-ui-smaller); font-variant-numeric: tabular-nums; cursor: var(--cursor); }
+.bb-space-chip:hover { background: var(--color-base-35); color: var(--text-normal); }
+.bb-space-chip.is-cur { background: var(--color-base-35); color: var(--text-normal); font-weight: var(--font-semibold); }
+.bb-space-chip.is-cur:hover { background: var(--color-base-40); }
+.theme-dark .bb-space-chip { background: var(--color-base-30); }
+.theme-dark .bb-space-chip:hover, .theme-dark .bb-space-chip.is-cur { background: var(--color-base-40); }
+.theme-dark .bb-space-chip.is-cur:hover { background: var(--color-base-50); }
+.bb-space-chip svg { width: 14px; height: 14px; }
+/* 3차(사용자 11-18): 번호에 마우스를 올리면 오른쪽이 늘며 x — 누르면 그 공간 닫기 */
+/* x: 마우스를 0.35초 머물면 그 번호 오른쪽이 늘며 뜬다(지나가기만 하면 안 펴짐) · 탭 줄 끝에 x 폭(20px)을 비워 두었다가 펼 때 그 자리를 써서 올린 칩은 안 움직인다
+   (11-19 잼: 칩이 넓어지면 탭 줄이 칩을 왼쪽으로 밀어 x 가 커서 밑으로 옴 · 겹쳐 띄우면 1 에 올린 뒤 2 로 가다 1 의 x 를 누름) */
+.bb-spaces { padding-right: 20px; transition: padding-right 0s; }
+.bb-spaces:has(.bb-space-n:hover) { padding-right: 0; transition-delay: 0.35s; }
+.bb-space-n .bb-space-x { display: flex; align-items: center; box-sizing: border-box; max-width: 0; margin-left: 0; padding-left: 0; overflow: hidden; opacity: 0; border-left: 0 solid var(--background-modifier-border-hover); color: var(--text-muted); transition: all 0s; }
+.bb-space-n:hover .bb-space-x { max-width: 16px; margin-left: 4px; padding-left: 3px; border-left-width: 1px; opacity: 1; transition-delay: 0.35s; }
+.bb-space-n .bb-space-x:hover { color: var(--text-normal); }
+.bb-space-n .bb-space-x svg { flex: none; width: 12px; height: 12px; }
+.bb-space-pop-every { margin: 0 2px 4px; }
+/* 창이 있을 때 연 새 탭 = 빈 칸(사용자 11-18 «모든 새 탭은 비운다») — 옵시디언 기본 «새 노트·파일로 이동·최근 파일·닫기»를 숨김 · 가운데가 비면 홈(main.ts emptyToHome) */
+.workspace-leaf-content[data-type="empty"] .empty-state-container { display: none; }
+.bb-space-pop { position: fixed; z-index: var(--layer-menu); width: 280px; max-height: 60vh; overflow-y: auto; padding: 8px 4px 2px; background: var(--background-primary); border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); box-shadow: var(--shadow-s); }
+.bb-space-pop .bb-tp-sec { margin-bottom: 6px; }
+.bb-space-pop .bb-tp-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-space-pop-all, .bb-space-pop-one { flex: none; padding: 2px; }
+.bb-space-pop-all svg, .bb-space-pop-one svg { width: 14px; height: 14px; }
+.bb-space-pop-one { visibility: hidden; }
+.bb-space-pop .bb-tp-row:hover .bb-space-pop-one { visibility: visible; }
+/* 숨은 공간의 칸 — DOM 은 그 자리(다시 보일 때 배치를 다시 안 잼) · 칸 밖 · 그리기 건너뜀 · 맨 끝 칸의 크기 손잡이는 «보이는 것 중 맨 끝»으로 */
+.workspace-split.mod-root > .bb-space-off { position: absolute !important; content-visibility: hidden; opacity: 0; z-index: -1; flex: none !important; } /* 물려받는 속성(visibility·pointer-events)은 안 씀 — 바꾸면 큰 PDF 칸 안 모든 요소를 다시 꾸며 200ms(11-18 잼) */
+.workspace-split.mod-root > .workspace-tabs:nth-last-child(1 of :not(.bb-space-off)) .workspace-leaf-resize-handle,
+.workspace-split.mod-root > .workspace-split:nth-last-child(1 of :not(.bb-space-off)) > .workspace-leaf-resize-handle { display: none; }
+
+/* 책갈피 판(marksview.ts · 초안 2차 A «줄 목록» 확정 · 11-18) — 보이는 문서마다 칸 · 머리(그림·이름·꽂기) · 손 책갈피 · 마지막 본 곳 줄은 맨 아래 */
+.bb-marks { display: flex; flex-direction: column; height: 100%; padding: 0 !important; }
+.bb-marks > .nav-header { flex: none; }
+.bb-marks > .nav-header .nav-buttons-container { justify-content: flex-end; }
+.bb-mk-body { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
+.bb-mk-sec + .bb-mk-sec { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--background-modifier-border); }
+.bb-mk-head { display: flex; align-items: center; gap: 6px; padding: 2px 2px 6px 6px; }
+.bb-mk-ic { display: flex; flex: none; color: var(--text-muted); }
+.bb-mk-ic svg { width: 14px; height: 14px; }
+.bb-mk-name { flex: 1; min-width: 0; font-weight: var(--font-semibold); color: var(--text-normal); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bb-mk-body:has(.bb-mk-sec + .bb-mk-sec) .bb-mk-sec:not(.is-cur) .bb-mk-name { color: var(--text-muted); }
+.bb-mk-sec.is-cur .bb-mk-ic { color: var(--text-accent); }
+.bb-mk-add { flex: none; }
+.bb-mk-gap { height: 8px; }
+.bb-mk-row .bb-tp-start .clickable-icon { padding: 2px; }

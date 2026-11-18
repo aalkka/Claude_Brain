@@ -1,7 +1,7 @@
 {
   "id": "brain-source",
   "name": "Brain Source",
-  "version": "0.36.1",
+  "version": "0.36.25",
   "minAppVersion": "1.5.0",
   "description": "원본 보기·편집 · 메모 칸 · 색인 · PDF 주석.",
   "author": "External Brain",

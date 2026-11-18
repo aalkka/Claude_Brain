@@ -6,10 +6,10 @@
 ① views.json 꼴 — 수집 화면 선언 하나 · html·data 대본이 볼트 안 · 대화 입구 = /collect_desk: · contract(touches·reads·forbids)
 ② 모듈 아님(4단계 뒤) — module.json 없음 · 모듈 목록에 없음 · 명령 이름 그대로 · 장 = 코어 8장(머리 «화면:»·«옛 id:») · 설명서 = 코어 자리 · 모듈 자리 장·설명서·옛 사본 없음
 ③ 행위 — collect_desk.* 11 이 코어 actions.json 에 한 번씩 · brain.py 가 겹침 없이 읽음 · 화면·스킬이 부르는 id 가 다 있음
-   · 예약·홈이 부르는 collect.lms·collect.lms.wake·collect.web 이 코어에 그대로
+   · 예약·홈이 부르는 collect.tick·collect.wake·collect.at·collect.web 이 코어에 그대로
 ④ 1_수집 — collect_desk.py·화면에 1_수집 글자 0 · contract·watch 가 1_수집 에 안 닿고 forbids 에 1_수집/**
-⑤ 전체 스위치(switch_cases) — 엔진 셋(web-collect·lms-auto·filter-learn)과 창 대본이 같은 규칙 · 창 set 이 새 자리에 쓰고 옛 자리 같은 칸을 걷음
-⑥ mylms 주소 — collect_desk.py 에 학교 주소·MYLMS_URL 0 · 확장 manifest host_permissions 에서 · 없음·와일드카드 = 빈칸·열기 거절
+⑤ 전체 스위치(switch_cases) — 엔진 셋(web-collect·collect-browser·filter-learn)과 창 대본이 같은 규칙 · 창 set 이 새 자리에 쓰고 옛 자리 같은 칸을 걷음
+⑥ mylms 주소 — collect_desk.py 에 학교 주소·MYLMS_URL 0 · 로그인 조리법 collect/browser/mylms.json 의 ext.host 에서(S5) · 없음·와일드카드 = 빈칸·열기 거절
 ⑦ git 밖 — collect.local.json 이 .gitignore 로 빠짐
 """
 import importlib.util
@@ -27,8 +27,8 @@ VAULT = os.path.dirname(SYS)
 MOD = os.path.join(VAULT, '.claude', 'skills', 'collect_desk')
 DESK_PY = os.path.join(MOD, 'scripts', 'collect_desk.py')
 OWNER = 'collect_desk'
-IDS = [OWNER + '.' + x for x in ('set', 'fetch', 'judge', 'item', 'open', 'contract', 'probe', 'try', 'add', 'fix', 'reject')]
-KEEP = ('collect.lms', 'collect.lms.wake', 'collect.web')     # 예약(lms-tasks.ps1)·홈 «수집» 칸이 부르는 id — 바뀌면 15분 확인·아침 깨우기가 선다
+IDS = [OWNER + '.' + x for x in ('set', 'fetch', 'judge', 'item', 'open', 'contract', 'probe', 'try', 'add', 'fix', 'reject', 'new')]
+KEEP = ('collect.tick', 'collect.wake', 'collect.at', 'collect.web')     # 예약·홈 «수집» 칸이 부르는 id — 바뀌면 15분 확인·아침 깨우기가 선다(옛 넘김 collect.lms* = S7 걷음)
 SWITCH = '3_시스템/collect.local.json'
 res = []
 
@@ -71,14 +71,14 @@ def probe(tv):
     """(따로 프로세스) 임시 볼트의 네 대본이 지금 파일에서 읽는 전체 스위치 — JSON 한 줄"""
     ts = os.path.join(tv, '3_시스템')
     out = {}
-    for name in ('web-collect', 'lms-auto', 'filter-learn'):
+    for name in ('web-collect', 'collect-browser', 'filter-learn'):
         m = module_of(name.replace('-', '_'), os.path.join(ts, name + '.py'))
         sw = m.switches()
         out[name] = [sw.get('all_off') is True, sw.get('auto_judge') is True]
         if name == 'web-collect':
             out['auto_on'] = m.auto_on({'id': 't', 'filter': {'card': 'x'}})
-        if name == 'lms-auto':
-            out['paused'] = m.write_known()['paused']
+        if name == 'collect-browser':
+            out['paused'] = m.source('mylms').write_known()['paused']
     cd = module_of('collect_desk', os.path.join(tv, '.claude', 'skills', 'collect_desk', 'scripts', 'collect_desk.py'))
     sw = cd.switches()
     out['collect_desk'] = [sw.get('all_off') is True, sw.get('auto_judge') is True]
@@ -140,15 +140,12 @@ def main():
     got = {a['id']: o for a, o in acts}
     mine_p = [p for p in problems if 'collect' in p]
     ok('brain.py 가 collect_desk.* 10 을 읽음 · 수집 행위 문제 0', all(i in got for i in IDS) and not mine_p, ([i for i in IDS if i not in got], mine_p))
-    keep = KEEP if os.path.isfile(os.path.join(SYS, 'lms-auto.py')) else tuple(i for i in KEEP if not i.startswith('collect.lms'))   # 학교 LMS 대본이 없으면(배포판) collect.lms* 행위는 optional 로 빠진다(11-16)
-    ok('예약·홈이 부르는 id 그대로(%s = 코어)' % ' · '.join(keep), all(got.get(i) == 'core' for i in keep), {i: got.get(i) for i in keep})
+    ok('예약·홈이 부르는 id 그대로(%s = 코어)' % ' · '.join(KEEP), all(got.get(i) == 'core' for i in KEEP), {i: got.get(i) for i in KEEP})
+    ok('옛 넘김 id(collect.lms·collect.lms.wake) 없음(S7)', not [i for i in got if i.startswith('collect.lms')], [i for i in got if i.startswith('collect.lms')])
     ps = os.path.join(SYS, 'lms-tasks.ps1')
-    if os.path.exists(ps):
-        used = set(re.findall(r'\brun (collect\.[a-z.]+)', read(ps)))
-        used |= set(re.findall(r"\['(collect\.[a-z.]+)'[\],]", read(os.path.join(SYS, 'lms-auto.py'))))     # 시각 예약 명령 줄은 lms-auto.py desired_tasks 가 짓는다(11-11)
-        ok('예약 명령 줄(lms-tasks.ps1 · lms-auto.py 시각 예약)이 부르는 id 가 코어에 있음(옛 깨우기 예약의 collect.lms.wake 는 KEEP 이 지킴)', 'collect.lms' in used and all(got.get(i) == 'core' for i in used), used)
-    else:
-        print('  (lms-tasks.ps1 없음 — 이 예약이 없는 판 · 건너뜀)')
+    used = set(re.findall(r'\brun (collect\.[a-z.]+)', read(ps))) if os.path.exists(ps) else set()
+    used |= set(re.findall(r"\['(collect\.[a-z.]+)'[\],]", read(os.path.join(SYS, 'collect-schedule.py')) + read(os.path.join(SYS, 'collect-browser.py'))))     # 15분·시각 예약 명령 줄은 예약 엔진·로그인 가족이 짓는다(S7)
+    ok('예약 명령 줄(예약 엔진 15분·시각 예약 · 로그인 가족 · 개인 lms-tasks.ps1)이 부르는 id 가 코어에 있음', 'collect.tick' in used and all(got.get(i) == 'core' for i in used), used)
     txt = read(os.path.join(MOD, 'view', 'index.html')) + ''.join(read(p) for p in sorted(__import__('glob').glob(os.path.join(MOD, 'skills', '*', 'SKILL.md'))))
     called = set(re.findall(r'\b' + OWNER + r'\.(?!py\b)([a-z]+)', txt))
     ok('화면·스킬이 부르는 행위 id 가 다 선언됨', called and {OWNER + '.' + x for x in called} <= set(IDS), sorted(called))
@@ -160,9 +157,9 @@ def main():
     reach = [x for x in (con.get('touches') or []) + (con.get('reads') or []) + watch if x.startswith('1_수집')]
     ok('contract·watch 가 1_수집 에 안 닿음 · forbids 에 1_수집/**', '1_수집/**' in (con.get('forbids') or []) and not reach, (reach, con.get('forbids')))
 
-    # ── ⑤ 전체 스위치 ── 엔진 셋 중 lms-auto(학교 LMS · 개인 층)가 없는 볼트(배포판)에선 ⑤·⑥·깨우기를 건너뛴다(11-16 · 통과로 세지 않음)
-    if not os.path.isfile(os.path.join(SYS, 'lms-auto.py')):
-        print('  (lms-auto.py 없음 — ⑤ 전체 스위치 · ⑥ mylms 주소 · 깨우기 통일 건너뜀)')
+    # ── ⑤ 전체 스위치 ── 로그인 조리법 mylms(개인 층)가 없는 볼트(배포판)에선 ⑤·⑥·깨우기를 건너뛴다(11-16 · 통과로 세지 않음)
+    if not os.path.isfile(os.path.join(SYS, 'collect', 'browser', 'mylms.json')):
+        print('  (로그인 조리법 mylms 없음 — ⑤ 전체 스위치 · ⑥ mylms 주소 · 깨우기 통일 건너뜀)')
     else:
         root = tempfile.mkdtemp(prefix='collect-core-')
         try:
@@ -189,16 +186,20 @@ def temp_vault(root):
     ts = os.path.join(tv, '3_시스템')
     for d in ('lms', 'collect', os.path.join('_index', 'lms'), os.path.join('_index', 'collect')):
         os.makedirs(os.path.join(ts, d), exist_ok=True)
-    for f in ('web-collect.py', 'lms-auto.py', 'filter-learn.py', 'notice-filter.py', 'fileops.py', 'roles.py', 'roles.json', 'claude_bin.py', 'schedule.py',
-              'options.py', 'options.registry.json'):    # lms-tasks.ps1 은 옮기지 않는다 — 예약은 PC 전체 것이라 시험 볼트에서 진짜 대본이 돌면 안 된다
+    for f in ('web-collect.py', 'filter-learn.py', 'notice-filter.py', 'fileops.py', 'roles.py', 'roles.json', 'collectlib.py', 'collect-schedule.py', 'claude_bin.py', 'schedule.py', 'lms-schedule.py',
+              'options.py', 'options.registry.json', 'collect-browser.py', 'collect-tick.py'):    # lms-tasks.ps1 은 옮기지 않는다 — 예약은 PC 전체 것이라 시험 볼트에서 진짜 대본이 돌면 안 된다
         if os.path.exists(os.path.join(SYS, f)):
             shutil.copy2(os.path.join(SYS, f), ts)
+    if os.path.isdir(os.path.join(SYS, 'collect-adapters')):     # 로그인 가족 어댑터 · 조리법(개인 층 · 배포판엔 조리법 없음 · 11-16 S4)
+        shutil.copytree(os.path.join(SYS, 'collect-adapters'), os.path.join(ts, 'collect-adapters'), ignore=shutil.ignore_patterns('__pycache__'))
+    if os.path.isdir(os.path.join(SYS, 'collect', 'browser')):
+        shutil.copytree(os.path.join(SYS, 'collect', 'browser'), os.path.join(ts, 'collect', 'browser'))
     tm = os.path.join(tv, '.claude', 'skills', 'collect_desk', 'scripts')
     os.makedirs(tm, exist_ok=True)
     shutil.copy2(DESK_PY, tm)
     with open(os.path.join(ts, 'lms', 'courses.json'), 'w', encoding='utf-8') as f:
         json.dump({}, f)
-    env = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', LMS_AUTO_STATE=os.path.join(root, 'lms-state'), DESK_NO_OPEN='1')
+    env = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', COLLECT_TEST_STATE=os.path.join(root, 'lms-state'), DESK_NO_OPEN='1')
     return tv, ts, env
 
 
@@ -218,10 +219,10 @@ def switch_cases(root):
              ('false', {'all_off': False, 'auto_judge': False}, None, (False, False)),
              ('깨짐', '{깨진', None, (False, False)),
              ('켬', {'all_off': True, 'auto_judge': True}, None, (True, True)),
-             ('옛 자리만(한 판 동안 읽음)', None, {'all_off': True, 'auto_judge': True}, (True, True)),
+             ('옛 자리만 = 안 읽음(S6 에 걷음)', None, {'all_off': True, 'auto_judge': True}, (False, False)),
              ('새 자리 우선(false 가 옛 자리 true 를 이김)', {'all_off': False, 'auto_judge': False}, {'all_off': True, 'auto_judge': True}, (False, False)),
-             ('새 자리 깨짐 + 옛 자리 = 옛 자리', '{깨진', {'all_off': True}, (True, False)),
-             ('칸마다 따로(새 자리 auto_judge · 옛 자리 all_off)', {'auto_judge': True}, {'all_off': True}, (True, True)),
+             ('새 자리 깨짐 + 옛 자리 = 켜짐(옛 자리 안 읽음)', '{깨진', {'all_off': True}, (False, False)),
+             ('새 자리 auto_judge 만 · 옛 자리 all_off 는 안 읽음', {'auto_judge': True}, {'all_off': True}, (False, True)),
              ('값 꼴 = true 일 때만(글자 "true"·1 은 끔)', {'all_off': 'true', 'auto_judge': 1}, None, (False, False)),
              ('옛 자리 mylms 칸만(enabled·wake) = 전체 스위치 아님', None, {'enabled': True, 'wake': False}, (False, False))]
     for name, n, o, (want_off, want_judge) in cases:
@@ -234,16 +235,16 @@ def switch_cases(root):
             ok(f'[스위치 {name}] 읽기', False, (r.returncode, r.stdout[-200:], r.stderr[-300:]))
             continue
         want = [want_off, want_judge]
-        same = all(got[k] == want for k in ('web-collect', 'lms-auto', 'filter-learn', 'collect_desk', 'view'))
+        same = all(got[k] == want for k in ('web-collect', 'collect-browser', 'filter-learn', 'collect_desk', 'view'))
         ok(f'[스위치 {name}] 엔진 셋·창 대본·화면 = 전체 끔 {want_off} · 자동 판정 {want_judge} · known paused · 자동 판정 대상',
            same and got['auto_on'] is want_judge and got['paused'] is want_off, got)
     put(new, None)
     put(old, None)
 
-    # 창 set — 새 자리에 쓰고 옛 자리 같은 칸은 걷는다 · mylms 칸(enabled·wake)은 옛 자리 그대로(정할 것 2 전)
+    # 창 set — 새 자리에만 쓴다 · 옛 자리(로그인 출처 settings 파일)의 스위치 칸은 S6 부터 안 읽고 안 건드린다(남은 칸은 적용 대본이 옮김)
     dk = lambda *a: subprocess.run([sys.executable, os.path.join(tv, '.claude', 'skills', 'collect_desk', 'scripts', 'collect_desk.py'), *a],
                                    cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
-    known = lambda: (load(os.path.join(ts, 'lms', 'known.json')) or {}).get('paused')
+    known = lambda: (load(os.path.join(ts, 'collect-ext', 'known-mylms.json')) or {}).get('paused')     # 확장 폴더 = 본체 collect-ext(S5)
     r = dk('set', '*', 'all_off', 'true')
     ok('창 set * all_off true = 새 자리에만 · 옛 자리 안 생김 · known paused', r.returncode == 0 and load(new) == {'all_off': True} and not os.path.exists(old) and known() is True,
        (r.returncode, r.stderr[-200:], load(new), os.path.exists(old), known()))
@@ -251,16 +252,16 @@ def switch_cases(root):
     ok('창 set * auto_judge true = 새 자리 칸 더함', r.returncode == 0 and load(new) == {'all_off': True, 'auto_judge': True}, (r.returncode, r.stderr[-200:], load(new)))
     put(old, {'all_off': True, 'auto_judge': True, 'enabled': False, 'wake': False})
     r = dk('set', '*', 'all_off', 'false')
-    ok('창 set * all_off false = 새 자리 false · 옛 자리 all_off 만 걷음', r.returncode == 0 and load(new) == {'all_off': False, 'auto_judge': True}
-       and load(old) == {'auto_judge': True, 'enabled': False, 'wake': False}, (r.returncode, r.stderr[-200:], load(new), load(old)))
+    ok('창 set * all_off false = 새 자리 false · 옛 자리 그대로', r.returncode == 0 and load(new) == {'all_off': False, 'auto_judge': True}
+       and load(old) == {'all_off': True, 'auto_judge': True, 'enabled': False, 'wake': False}, (r.returncode, r.stderr[-200:], load(new), load(old)))
     r = dk('set', '*', 'auto_judge', 'false')
-    ok('창 set * auto_judge false = 옛 자리에 mylms 칸만 남음', r.returncode == 0 and load(old) == {'enabled': False, 'wake': False}
+    ok('창 set * auto_judge false = 새 자리만 · 옛 자리 그대로', r.returncode == 0 and load(old) == {'all_off': True, 'auto_judge': True, 'enabled': False, 'wake': False}
        and load(new) == {'all_off': False, 'auto_judge': False}, (r.returncode, r.stderr[-200:], load(new), load(old)))
     r = dk('set', 'mylms', 'wake', 'true')
-    ok('창 set mylms wake = 기능 단계로(desk.json 에 안 씀 · 깨우기 통일) · 전체 스위치 안 건드림', r.returncode == 0 and load(old) == {'enabled': False}
+    ok('창 set mylms wake = 기능 단계로(settings 에 안 씀 · 옛 wake 칸 걷음 · 깨우기 통일) · 전체 스위치 안 건드림', r.returncode == 0 and load(old) == {'all_off': True, 'auto_judge': True, 'enabled': False}
        and load(new) == {'all_off': False, 'auto_judge': False}, (r.returncode, r.stderr[-200:], load(new), load(old)))
     before = (read(new), read(old))
-    for args in (('*', 'all_off', '켬'), ('*', 'wake', 'false')):
+    for args in (('*', 'all_off', '켬'), ('*', 'enabled', 'false')):     # * wake 는 S6 부터 받음(깨우기는 로그인 출처 모두에 하나 · brain-base 단계 탭)
         r = dk('set', *args)
         ok(f'창 set {" ".join(args)} = 거절 · 파일 그대로', r.returncode == 2 and (read(new), read(old)) == before, (r.returncode, r.stderr[-200:]))
     put(new, None)
@@ -271,7 +272,8 @@ def mylms_url(root):
     src = read(DESK_PY)
     ok('collect_desk.py 에 학교 주소·MYLMS_URL 0', src and 'MYLMS_URL' not in src and not re.search(r'https?://[a-z0-9.-]*\.ac\.kr', src), re.findall(r'https?://[^\s\'"]+', src)[:3])
     tv, ts, env = os.path.join(root, 'vault'), os.path.join(root, 'vault', '3_시스템'), dict(os.environ, PYTHONIOENCODING='utf-8', DESK_NO_OPEN='1', FILEOPS_NO_OBSIDIAN='1')
-    man = os.path.join(ts, 'lms', 'manifest.json')
+    man = os.path.join(ts, 'collect', 'browser', 'mylms.json')    # 주소 = 로그인 조리법 ext.host(S5 · 확장 manifest 엔 호스트가 없다)
+    base = load(man) if isinstance(load(man), dict) else {'id': 'mylms', 'family': 'browser'}
     dk = lambda *a: subprocess.run([sys.executable, os.path.join(tv, '.claude', 'skills', 'collect_desk', 'scripts', 'collect_desk.py'), *a],
                                    cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
 
@@ -282,24 +284,27 @@ def mylms_url(root):
             return s['url'], s['host']
         except (ValueError, IndexError, StopIteration, KeyError):
             return ('읽기 실패', r.stderr[-200:])
-    for name, m, url in (('host_permissions 첫 줄', {'host_permissions': ['https://lms.example.edu/*', 'https://other.example.edu/*']}, 'https://lms.example.edu/'),
-                         ('manifest 없음', None, ''), ('와일드카드 호스트', {'host_permissions': ['https://*.example.edu/*']}, ''),
-                         ('host_permissions 꼴 틀림', {'host_permissions': 'https://lms.example.edu/*'}, '')):
+    for name, m, url in (('조리법 ext.host', {**base, 'ext': {'host': 'https://lms.example.edu'}}, 'https://lms.example.edu/'),
+                         ('와일드카드 호스트', {**base, 'ext': {'host': 'https://*.example.edu'}}, ''),
+                         ('ext.host 꼴 틀림', {**base, 'ext': {'host': ['https://lms.example.edu']}}, '')):
         put(man, m)
         u, h = row()
         o = dk('open', 'mylms')
         opened = o.returncode == 0 and o.stdout.strip() == url if url else o.returncode == 2 and '주소 없음' in o.stderr
         ok(f'mylms 주소 · {name} = «{url or "빈칸"}» · 사이트 열기 {"그 주소" if url else "거절"}', u == url and h == (url.split('/')[2] if url else '') and opened,
            (u, h, o.returncode, o.stdout[-100:], o.stderr[-100:]))
-    real = load(os.path.join(SYS, 'lms', 'manifest.json'))
+    put(man, None)                  # 조리법이 없으면 그 출처 줄이 없다(S6 · 단위 지도만으로는 줄이 안 생김) · 열기 거절
+    o = dk('open', 'mylms')
+    ok('mylms 조리법 없음 = 줄 없음 · 사이트 열기 거절', row()[0] == '읽기 실패' and o.returncode == 2 and '주소 없음' in o.stderr, (row(), o.returncode, o.stderr[-100:]))
+    real = load(os.path.join(SYS, 'collect', 'browser', 'mylms.json'))
     if isinstance(real, dict):
         put(man, real)
         u, h = row()
-        ok('진짜 확장 manifest = https 주소 하나(호스트가 host_permissions 에 있음)', u.startswith('https://') and u.endswith('/') and h and any(h in p for p in real.get('host_permissions') or []), (u, h))
-    put(man, None)
+        ok('진짜 조리법 = https 주소 하나(호스트 = ext.host)', u.startswith('https://') and u.endswith('/') and h and h in str((real.get('ext') or {}).get('host')), (u, h))
+    put(man, base)
 
 
-MY_ON = '시험: 외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)'      # 시각 예약 맞추기(lms-auto.py --sync-tasks · 시험이면 dry) 한 줄 — 11-11 수집 설정
+MY_ON = '시험: 외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)'      # 시각 예약 맞추기(collect-schedule.py --sync · 시험이면 dry) 한 줄 — 11-11 수집 설정
 NONE = '시각 예약: 없음'
 STUB = """function Register-ScheduledTask {{ Add-Content -Path '{log}' -Value ('등록 ' + ($args -join ' ')) }}
 function Unregister-ScheduledTask {{ Add-Content -Path '{log}' -Value ('지움 ' + ($args -join ' ')) }}
@@ -310,17 +315,17 @@ function Get-ScheduledTaskInfo {{ $null }}
 
 
 def wake_cases(root):
-    """깨우기 통일(11-07 사용자 «두 스위치 통일») — 값은 기능 단계 lms.wake 하나 · 수집 창 깨우기·전체 끔·mylms 끔이 같은 예약 맞추기 길을 부름 · desk.json wake 는 안 읽음."""
+    """깨우기 통일(11-07 사용자 «두 스위치 통일») — 값은 기능 단계 collect.wake 하나 · 수집 창 깨우기·전체 끔·mylms 끔이 같은 예약 맞추기 길을 부름 · desk.json wake 는 안 읽음."""
     tv, ts = os.path.join(root, 'vault'), os.path.join(root, 'vault', '3_시스템')
-    env = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', LMS_AUTO_STATE=os.path.join(root, 'lms-state'), DESK_NO_OPEN='1')
+    env = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', COLLECT_TEST_STATE=os.path.join(root, 'lms-state'), DESK_NO_OPEN='1')
     new, old, opt = os.path.join(ts, 'collect.local.json'), os.path.join(ts, 'lms', 'desk.json'), os.path.join(ts, 'options.local.json')
     calls = os.path.join(root, 'lms-state', 'tasks-sync.log')     # 시험이면 맞추기가 할 일을 여기 한 줄씩(예약은 안 건드림)
     for p in (new, old, opt, calls):
         put(p, None)
     run = lambda *a: subprocess.run([sys.executable, *a], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
     dk = lambda *a: run(os.path.join(tv, '.claude', 'skills', 'collect_desk', 'scripts', 'collect_desk.py'), *a)
-    state = lambda: run(os.path.join(ts, 'lms-auto.py'), '--wake-state').stdout.strip()
-    level = lambda: ((load(opt) or {}).get('levels') or {}).get('lms.wake')
+    state = lambda: run(os.path.join(ts, 'collect-browser.py'), '--wake-state').stdout.strip()
+    level = lambda: ((load(opt) or {}).get('levels') or {}).get('collect.wake')
     last = lambda: (read(calls).strip().splitlines() or [''])[-1]
     wake_on = lambda: next((x.get('wakeOn') for x in json.loads(dk('view').stdout.strip().splitlines()[-1])['sources'] if x['id'] == 'mylms'), None)
 
@@ -348,7 +353,7 @@ def wake_cases(root):
        (r.returncode, r2.returncode, last(), len(read(calls).splitlines()) - n0))
     put(new, {'all_off': True})
     call = ("import importlib.util as u,sys;s=u.spec_from_file_location('la',r'%s');m=u.module_from_spec(s);s.loader.exec_module(m);"
-            "m.hold_awake=lambda:print('HOLD');sys.argv=['x','--wake'];m.main()") % os.path.join(ts, 'lms-auto.py')
+            "m.Source.hold_awake=lambda self:print('HOLD');sys.argv=['x','--wake'];m.main()") % os.path.join(ts, 'collect-browser.py')     # 깨우기는 로그인 가족(11-16 S4)
     r = run('-c', call)
     ok('[깨우기] 꺼진 날 아침 깨우기 = 크롬 안 띄움 · 예약을 값대로 맞춤(다음 날부터 안 깨움)', 'HOLD' not in r.stdout and last() == NONE, (r.stdout[-200:], last()))
     put(new, None)
@@ -361,10 +366,9 @@ def wake_cases(root):
         return print('  (lms-tasks.ps1 없음 — 진짜 예약 대본 시험 건너뜀)')
     src = read(real)
     dry_rm = 'if ($DryRun) { Write-Output "시험: $n 지움"; return }'
-    i_gate, i_tick = src.find('if ($DryRun -or $WakeOnly) { exit 0 }'), src.find('Register-ScheduledTask -TaskName $tick')
-    guarded = (src.count('Unregister-ScheduledTask') == 1 and 0 < src.find(dry_rm) < src.find('Unregister-ScheduledTask')     # 15분 지우기는 한 곳 · 시험이면 그 앞에서 끝
-               and 0 < src.find('--sync-tasks') < i_gate < i_tick and src.count('Register-ScheduledTask -TaskName') == 1)      # 시각 예약은 lms-auto.py --sync-tasks 한 곳(시험이면 --dry)
-    ok('진짜 lms-tasks.ps1 — 지우기는 Drop-Task 한 곳(시험이면 안 지움) · 시각 예약은 --sync-tasks · 시험·-WakeOnly 면 15분 등록 전에 끝남', guarded, '대본 꼴이 바뀜 — 시험을 다시 볼 것')
+    guarded = (src.count('Unregister-ScheduledTask') == 1 and 0 < src.find(dry_rm) < src.find('Unregister-ScheduledTask')     # 지우기는 한 곳 · 시험이면 그 앞에서 끝
+               and "Join-Path $sys 'collect-schedule.py'" in src and '--sync' in src and 'Register-ScheduledTask' not in src)      # 등록은 예약 엔진 --sync 한 곳(시험이면 --dry · S7)
+    ok('진짜 lms-tasks.ps1 — 지우기는 Drop-Task 한 곳(시험이면 안 지움) · 등록은 collect-schedule.py --sync 뿐(제 등록 0)', guarded, '대본 꼴이 바뀜 — 시험을 다시 볼 것')
     if not guarded:
         return
     ps = os.path.join(ts, 'lms-tasks-시험.ps1')

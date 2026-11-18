@@ -8,6 +8,8 @@
   py -3 3_시스템/drift.py            전체 리포트(줄마다 종류 · 파일:줄 · 내용)
   py -3 3_시스템/drift.py --brief    종류별 건수 한 줄
   py -3 3_시스템/drift.py --ops      운영 위험만(세션 시작용) — 없으면 출력 없음
+  py -3 3_시스템/drift.py --mem      PC 줄(메모리 넘침·재부팅·NVIDIA 오버레이·남은 시험 프로세스) — 건강 창(brain.py doctor)이 같은 것을 보인다
+  py -3 3_시스템/drift.py --kill-test  남은 시험 프로세스 끄기(건강 «고치기»로 고를 때만 · 시험 잠금이 있으면 안 끔)
 
 쓰는 곳: weekly.py(전수) · mdtable.py hook(쓰는 순간 그 파일 상한) · hooks/session-notice.py(운영 위험).
 새 옛 이름은 RETIRED 에 더한다. 이력을 적은 줄(옛·철회 등)과 `drift:ok` 가 붙은 줄은 세지 않는다.
@@ -267,10 +269,13 @@ def ops_rows():
         found.add("ANTHROPIC_BASE_URL")
     if found:
         rows.append(("운영", "환경 변수", " · ".join(sorted(found)) + " 있음 — claude -p 가 구독을 벗어나 과금될 수 있다"))
-    try:                                # 서버 자동 커밋(11-12 안 A) — 막힘은 위 «자동 커밋»(hooks.log BLOCKED)이 센다 · 그 밖의 실패만
-        a = json.load(open(os.path.join(HERE, "_index", "server", "autocommit.json"), encoding="utf-8"))
+    try:                                # 기록 보존 순찰(11-12 안 A · 11-17 코어로 옮김 M8 = 3_시스템/autocommit.py) — 막힘은 위 «자동 커밋»(hooks.log BLOCKED)이 센다 · 그 밖의 실패만
+        p = os.path.join(HERE, "_index", "autocommit.json")
+        if not os.path.exists(p):       # 옮기기 전 자리(폰 서버가 쓰던 것) — 새 순찰이 한 번 돌면 새 자리만
+            p = os.path.join(HERE, "_index", "server", "autocommit.json")
+        a = json.load(open(p, encoding="utf-8"))
         if a.get("fail_at") and a.get("result") != "막힘":
-            rows.append(("운영", "자동 커밋(서버)", f"{a.get('result')} — {time.strftime('%m-%d %H:%M', time.localtime(a['fail_at']))} · 3_시스템/_index/server/server.log"))
+            rows.append(("운영", "자동 커밋(순찰)", f"{a.get('result')} — {time.strftime('%m-%d %H:%M', time.localtime(a['fail_at']))} · 3_시스템/_index/hooks.log «기록보존» 줄"))
     except (OSError, ValueError, KeyError):
         pass
     try:                                # 구독 끊김(11-11 · claude_bin 상태 파일) — 적혀 있을 때만 다시 잰다(다시 구독했으면 여기서 풀림 · 평소 비용 0)
@@ -282,6 +287,209 @@ def ops_rows():
     except Exception:                   # 건강 점검이 이것 때문에 죽지 않게
         pass
     return rows
+
+
+# ── PC 메모리(11-18) — 램 13.9GB 에 커밋 29/36GB: 넘친 몫이 페이지 파일로 가 PC 가 느려졌다(claude 27개 11GB · 폰 RC 세션 6개 3.3GB ·
+#    NVIDIA 오버레이 1.75GB · 남은 pwsh). 건강 창(brain.py doctor)이 줄로 보인다 · ctypes 만(psutil·PowerShell 없음 · 0.2초 안팎) · 못 잰 줄은 빠진다.
+MEM_RATIO, UP_DAYS, BIG_N, BIG_GB, HEAVY_H = 1.5, 7, 3, 0.5, 6
+NV_OVERLAY = {"nvidia overlay.exe", "nvidia share.exe"}
+EMU = re.compile(r"^(emulator|qemu-system-[\w.-]+)\.exe$", re.I)
+KILL_CMD = "py -3 3_시스템/drift.py --kill-test"
+
+
+def _cmdline(h):
+    """열린 프로세스의 명령 줄(NtQueryInformationProcess 60 · 윈도 8.1~) · 못 읽으면 ''"""
+    import ctypes
+    from ctypes import wintypes
+    nt = ctypes.windll.ntdll
+    n = wintypes.ULONG(0)
+    for size in (8192, 65536):
+        buf = ctypes.create_string_buffer(size)
+        if nt.NtQueryInformationProcess(h, 60, buf, size, ctypes.byref(n)) == 0:     # UNICODE_STRING{길이 USHORT · 최대 USHORT · 포인터} + 글
+            ln = ctypes.c_ushort.from_buffer(buf, 0).value
+            ptr = ctypes.c_void_p.from_buffer(buf, ctypes.sizeof(ctypes.c_void_p)).value
+            return ctypes.wstring_at(ptr, ln // 2) if ptr else ""
+        if n.value <= size:
+            break
+    return ""
+
+
+def processes():
+    """{pid: (부모 pid, 이름, 사적 바이트, 명령 줄)} — 명령 줄은 Obsidian.exe 만(격리 옵시디언 가르기) · 못 연 프로세스는 바이트 0"""
+    import ctypes
+    from ctypes import wintypes
+
+    class PE(ctypes.Structure):
+        _fields_ = [("size", wintypes.DWORD), ("usage", wintypes.DWORD), ("pid", wintypes.DWORD), ("heap", ctypes.c_size_t),
+                    ("mod", wintypes.DWORD), ("threads", wintypes.DWORD), ("ppid", wintypes.DWORD), ("pri", ctypes.c_long),
+                    ("flags", wintypes.DWORD), ("exe", ctypes.c_wchar * 260)]
+
+    class PMC(ctypes.Structure):
+        _fields_ = [("cb", wintypes.DWORD), ("faults", wintypes.DWORD)] + [(n, ctypes.c_size_t) for n in
+                    ("peak_ws", "ws", "qpp", "qp", "qpnp", "qnp", "pf", "peak_pf", "private")]
+    k = ctypes.windll.kernel32
+    k.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    k.OpenProcess.restype = wintypes.HANDLE
+    snap = k.CreateToolhelp32Snapshot(2, 0)
+    if not snap or snap == ctypes.c_void_p(-1).value:
+        return {}
+    rows, e = [], PE()
+    e.size = ctypes.sizeof(PE)
+    try:
+        more = k.Process32FirstW(wintypes.HANDLE(snap), ctypes.byref(e))
+        while more:
+            rows.append((e.pid, e.ppid, e.exe))
+            more = k.Process32NextW(wintypes.HANDLE(snap), ctypes.byref(e))
+    finally:
+        k.CloseHandle(wintypes.HANDLE(snap))
+    out = {}
+    for pid, ppid, name in rows:
+        priv, cmd = 0, ""
+        h = k.OpenProcess(0x1000, False, pid) if pid else None      # PROCESS_QUERY_LIMITED_INFORMATION
+        if h:
+            try:
+                m = PMC()
+                m.cb = ctypes.sizeof(PMC)
+                if k.K32GetProcessMemoryInfo(wintypes.HANDLE(h), ctypes.byref(m), m.cb):
+                    priv = m.private
+                if name.lower() == "obsidian.exe":
+                    cmd = _cmdline(wintypes.HANDLE(h))
+            finally:
+                k.CloseHandle(wintypes.HANDLE(h))
+        out[pid] = (ppid, name, priv, cmd)
+    return out
+
+
+def machine():
+    """{ram, commit (GB) · up_days · procs} — 잴 수 없는 칸은 빠진다(윈도 밖·권한·오류)"""
+    out = {}
+    if os.name != "nt":
+        return out
+    import ctypes
+    k = ctypes.windll.kernel32
+    try:
+        class MS(ctypes.Structure):
+            _fields_ = [("len", ctypes.c_ulong), ("load", ctypes.c_ulong)] + [(n, ctypes.c_ulonglong) for n in ("total", "avail", "tp", "ap", "tv", "av", "ae")]
+        m = MS()
+        m.len = ctypes.sizeof(MS)
+        if k.GlobalMemoryStatusEx(ctypes.byref(m)):
+            out["ram"], out["commit"] = m.total / 2 ** 30, (m.tp - m.ap) / 2 ** 30     # 커밋 = 커밋 한도 - 남은 커밋(작업 관리자 «커밋됨»)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        k.GetTickCount64.restype = ctypes.c_ulonglong
+        out["up_days"] = k.GetTickCount64() / 86400000          # 잠든 시간 포함 · 빠른 시작(끄기 = 최대 절전)도 이어서 센다 — 다시 시작만 0
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        out["procs"] = processes()
+    except Exception:  # noqa: BLE001
+        pass
+    return out
+
+
+def heavy_locked():
+    """빅보스 시험 잠금(무거운 자원을 쓰는 중) — 있으면 시험 프로세스는 쓰는 중이다. HEAVY_H 시간 넘은 잠금은 묵은 것(풀기를 잊음)이라 안 센다
+    (11-18 잼: duo-1114/heavy.lock 0바이트 11-14 04:07 가 나흘째 남아 있었다 — 세면 이 줄이 영영 안 뜬다)"""
+    now = time.time()
+    return any(now - os.path.getmtime(p) < HEAVY_H * 3600 for p in glob.glob(os.path.join(HERE, "_index", "bigboss", "*", "heavy.lock")))
+
+
+def test_procs(procs):
+    """[(pid, 종류)] — 시험이 남기는 것: 에뮬레이터(emulator·qemu) · adb 서버 · 격리 옵시디언(기본 프로필이 아닌 --user-data-dir 의 주 프로세스)"""
+    home = os.path.normcase(os.path.normpath(os.path.join(os.environ.get("APPDATA", ""), "obsidian")))
+    out = []
+    for pid, (_pp, name, _b, cmd) in procs.items():
+        low = name.lower()
+        if EMU.match(name):
+            out.append((pid, "에뮬레이터"))
+        elif low == "adb.exe":
+            out.append((pid, "adb"))
+        elif low == "obsidian.exe" and "--type=" not in cmd:
+            m = re.search(r'--user-data-dir=(?:"([^"]+)"|(\S+))', cmd)
+            if m and os.path.normcase(os.path.normpath(m.group(1) or m.group(2))) != home:
+                out.append((pid, "격리 옵시디언"))
+    return out
+
+
+def mem_rows(m=None, locked=None):
+    """[(이름, 상태, 줄)] — 건강 창 줄(brain.py doctor). 메모리는 늘 한 줄(✓ 커밋/램) · 나머지는 문제일 때만. 못 잰 줄은 빠진다."""
+    m = machine() if m is None else m
+    procs = m.get("procs") or {}
+    rows = []
+    if m.get("ram") and m.get("commit") is not None:
+        if m["commit"] > MEM_RATIO * m["ram"]:
+            grp = {}
+            for _pp, name, b, _c in procs.values():
+                g = grp.setdefault(re.sub(r"\.exe$", "", name, flags=re.I), [0, 0])
+                g[0] += 1
+                g[1] += b
+            big = sorted(((n, c, b / 2 ** 30) for n, (c, b) in grp.items() if b / 2 ** 30 >= BIG_GB), key=lambda x: -x[2])[:BIG_N]
+            rows.append(("메모리", "warn", f"메모리 넘침 {m['commit']:.0f}/{m['ram']:.1f} GB(커밋/램)" +
+                         (" · 큰 것: " + ", ".join(f"{n} {c}개 {gb:.1f}GB" if c > 1 else f"{n} {gb:.1f}GB" for n, c, gb in big) if big else "")))
+        else:
+            rows.append(("메모리", "ok", f"커밋 {m['commit']:.0f}/{m['ram']:.1f} GB(램의 {m['commit'] / m['ram']:.1f}배)"))
+    if m.get("up_days", 0) > UP_DAYS:
+        rows.append(("재부팅", "warn", f"켜진 지 {int(m['up_days'])}일 · 재부팅 권함"))
+    nv = [b for _pp, name, b, _c in procs.values() if name.lower() in NV_OVERLAY]
+    if nv:
+        rows.append(("NVIDIA 오버레이", "warn", f"NVIDIA 오버레이 켜짐(약 {sum(nv) / 2 ** 30:.1f}GB) · NVIDIA 앱에서 끔"))
+    left = test_procs(procs)
+    if left and not (heavy_locked() if locked is None else locked):
+        kinds = {}
+        for _pid, kind in left:
+            kinds[kind] = kinds.get(kind, 0) + 1
+        rows.append(("시험 프로세스", "warn", f"남은 시험 프로세스 {len(left)}개({', '.join(f'{k} {n}' for k, n in kinds.items())}) — 끄기 = `{KILL_CMD}`(건강 «고치기»로 · 시험 잠금이 없을 때만)"))
+    return rows
+
+
+def kill_test(procs=None, locked=None):
+    """남은 시험 프로세스를 끈다(자식째) — 사용자가 건강 «고치기»로 고를 때만 부른다(자동으로 안 끔). 시험 잠금이 있으면 안 끔."""
+    if heavy_locked() if locked is None else locked:
+        return None
+    procs = processes() if procs is None else procs
+    done = []
+    for pid, kind in test_procs(procs):
+        fam = _family(pid, procs)           # taskkill /T 는 죽은 부모의 pid 를 다시 받은 프로세스 아래 남의 고아까지 끈다 — 시작 시각으로 가른다
+        r = subprocess.run(["taskkill", "/F"] + [x for q in fam for x in ("/PID", str(q))], capture_output=True, timeout=30,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        done.append((pid, kind, r.returncode == 0))
+    return done
+
+
+def _start(pid):
+    """프로세스 시작 시각(FILETIME) · 못 열면 None"""
+    import ctypes
+    from ctypes import wintypes
+    k = ctypes.windll.kernel32
+    k.OpenProcess.restype = wintypes.HANDLE
+    h = k.OpenProcess(0x1000, False, int(pid))
+    if not h:
+        return None
+    try:
+        t = (wintypes.FILETIME * 4)()
+        if not k.GetProcessTimes(wintypes.HANDLE(h), *[ctypes.byref(x) for x in t]):
+            return None
+        return (t[0].dwHighDateTime << 32) | t[0].dwLowDateTime
+    finally:
+        k.CloseHandle(wintypes.HANDLE(h))
+
+
+def _family(pid, procs):
+    """pid 와 그 아래(손주까지) — 부모보다 먼저 뜬 것은 뺀다"""
+    sub = {}
+    for p, row in procs.items():
+        if p != row[0]:
+            sub.setdefault(row[0], []).append(p)
+    out, todo = [], [pid]
+    while todo:
+        q = todo.pop()
+        if q in out:
+            continue
+        out.append(q)
+        sq = _start(q)
+        todo += [c for c in sub.get(q, []) if sq is not None and (_start(c) or 0) >= sq]
+    return out
 
 
 def props_rows():
@@ -315,6 +523,17 @@ def main(argv):
     if "--ops" in argv:
         for k, w, t in ops_rows():
             print(f"{w}: {t}")
+        return 0
+    if "--mem" in argv:                 # 건강 창 PC 줄(메모리·재부팅·NVIDIA 오버레이·남은 시험 프로세스) — brain.py doctor 가 같은 것을 부른다
+        for n, s, t in mem_rows():
+            print(f"{'✓' if s == 'ok' else '△'} {n}: {t}")
+        return 0
+    if "--kill-test" in argv:           # 건강 «고치기»로 사용자가 고를 때만
+        done = kill_test()
+        if done is None:
+            print("시험 잠금(_index/bigboss/*/heavy.lock)이 있어 안 끔 — 시험이 도는 중")
+        else:
+            print("끌 것 없음" if not done else "\n".join(f"{'끔' if ok else '못 끔'} {kind} pid {pid}" for pid, kind, ok in done))
         return 0
     rows = all_rows()
     if "--brief" in argv:

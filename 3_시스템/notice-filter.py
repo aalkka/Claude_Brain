@@ -12,7 +12,11 @@
 꽁돈(11-10 · 황금 태그): 조리법 filter.gold 가 켠 글은 추출 때 지급 형태·선정 뒤 의무·소득 심사도 뽑는다(같은 호출).
     판정이 해당·확인 필요이고 카드 «꽁돈» 칸(현금·막는 의무·소득 심사)을 넘으면 일정 줄에 #꽁돈 · 판정표에 «꽁돈» · 수집 창 한 줄 맨 앞에 «꽁돈».
 
-  py -3.11 3_시스템/notice-filter.py extract [--max N] [--again 글번호...]   # 추출 안 된 공지만 claude -p(--again = 첨부 색인을 고친 글도 다시) — 사용량이 든다(누를 때만) · 끝나면 settle
+분류 엔진 잇기(범용 도구 셋 S4 · 11-18): 판정(judge_one)·꽁돈(gold)은 sort 판정 장부에서 읽는다(bridge · 체계 3_시스템/sort/공지-들이기·꽁돈 ·
+    겉 출력은 옛 길과 바이트 같음 = _eval/sort_notice_golden.py). 옛 길 = collect.local.json "sort": false · sort 가 오류를 내면 그 회차만 옛 길 + 대기열 한 줄.
+
+  py -3.11 3_시스템/notice-filter.py extract [--max N] [--again 글번호...] [--batch N]   # 추출 안 된 공지만 claude -p(--again = 첨부 색인을 고친 글도 다시) — 사용량이 든다(누를 때만) · 끝나면 settle
+                                                         # --batch N = 묶어 부르기(같은 지시문 글 N건까지 한 호출 · 기본 1 = 끔)
   py -3.11 3_시스템/notice-filter.py judge                # 캐시로 판정·출력만(사용량 0)
 """
 import argparse
@@ -30,6 +34,7 @@ SYS = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(SYS)
 sys.path.insert(0, SYS)
 import roles  # noqa: E402 — 노트는 이름으로 찾는다(볼트 개혁 R6 · 옮겨도 따라감)
+import collectlib as cl  # noqa: E402 — 로그인 출처 조리법 읽기(S6)
 ME = roles.me()                                     # 사용자 호칭(프로필) — 표시·장부 글에
 CARD = os.path.join(VAULT, *(roles.find_note('자격-카드') or roles.path('notes', '자격-카드.md')).split('/'))
 RECIPES = os.path.join(SYS, 'collect')          # 거를 출처 = 조리법에 "filter" 가 있는 것(출처 이름을 코드에 두지 않는다)
@@ -41,8 +46,7 @@ KEEP = ('해당', '확인 필요', '관심')                    # 볼트에 들�
 ARCH = os.path.join(STATE, 'archive')                # 보관 칸 — 볼트에 들였다가 빼낸 글(첨부째 · 볼트와 같은 상대 경로 · 자동으로 지우지 않음)
 MARKS = os.path.join(STATE, '평가.json')              # 사용자 표시(헛것·쓸모)와 놓침 기록 — 성과 칸의 정답
 QUEUE = os.path.join(SYS, '_index', '수집-대기열.md')
-LMS_SID = 'lms-post'
-LMS_PENDING = os.path.join(SYS, '_index', 'lms', '마감-대기.json')
+POST_HINT = '«마감»은 제출·신청처럼 내가 해야 할 일의 마감이다. 수업·행사·시험 날짜는 마감이 아니다.\n'   # 로그인 출처 글 — 조리법 posts.hint 가 덮어쓴다
 STATUS = os.path.join(STATE, '.status.txt')          # 세션 시작이 읽는 한 줄(생산자 = judge · 소비자 = 훅 — 1.5절과 같은 분리)
 WD = '월화수목금토일'
 
@@ -79,20 +83,47 @@ GOLD = """
    선정된 뒤 해야 하는 일만(연구·결과 보고서 제출 · 정기 활동·멘토링 · 근로·봉사 시간 · 사용계획서·영수증 · 행사 참석 · 성적 유지). 지원할 때 내는 서류는 의무가 아니다.
  "소득심사":{"반영":true,"근거":"<원문 그대로>"} — 자격 조건은 아니지만 심사에서 소득·가계 형편을 본다는 문장이 있을 때만. 없으면 null."""
 GOLD_DEFAULT = {'지급': ['현금', '혼합'], '막는 의무': ['보고서', '활동', '근로봉사', '사용계획'], '소득심사 막음': True}   # 카드 «꽁돈» 칸이 덮어쓴다
+# 묶어 부르기(11-18 · 설계 §5) — 같은 지시문 글 여러 개를 한 호출로. 고정분(지시문 약 2,800 토큰)을 나눠 낸다. 기본 끔(--batch 1) · 질 시험 = _eval/sort_batch_quality.py
+BATCH = """
+여러 공지를 한 번에 준다(«=== 공지 k ===» 줄로 나뉨). 공지마다 위 꼴의 JSON 하나를 따로 만들고 맨 앞에 "번호":k 칸을 더한다.
+공지 사이에 조건·근거를 섞지 않는다(근거는 그 공지 원문에서만). 출력 = JSON 배열 하나만(앞뒤 글 없음): [{"번호":1,...},{"번호":2,...}]"""
+BATCH_IN = 12000            # 한 호출 입력 토큰 상한(추정 = 2,787 + 0.324 × 글자 · sort.py 와 같은 식)
 
 SEOUL_GU = '종로 중 용산 성동 광진 동대문 중랑 성북 강북 도봉 노원 은평 서대문 마포 양천 강서 구로 금천 영등포 동작 관악 서초 강남 송파 강동'.split()
-FIELD_OK = r'이공|자연과학|이학|이과|물리|기초과학|과학기술|STEM|자연계'
-FIELD_NO = r'의생명|의학|의과|치의|한의|약학|간호|보건|농업|농촌|농학|수산|인문|사회과학|예체능|예술|체육|경영|법학|교육|신학|사범'
+# 전공 분야 낱말(공지가 «허용»·«제외»로 쓰는 말) — 내 분야는 카드 «전공분야»(이 낱말 중 내 것 · 비면 전공 조건 = 모름) · 나머지 = 남의 분야(S7 · 전엔 이공계 «물리»를 박아 둠)
+FIELD_WORDS = ('이공 자연과학 이학 이과 물리 기초과학 과학기술 STEM 자연계 '
+               '의생명 의학 의과 치의 한의 약학 간호 보건 농업 농촌 농학 수산 인문 사회과학 예체능 예술 체육 경영 법학 교육 신학 사범').split()
+STATUS_WORDS = ('학부', '대학원', '재학', '휴학', '신입생', '졸업예정')     # 신분 조건 값(추출 지시 «신분» 줄과 같은 말) — 내 것 = 카드 «신분» 글에 든 낱말
+
+
+def field_re(words):
+    return '|'.join(re.escape(w) for w in words) if words else r'(?!)'
 
 
 _card = []
 
 
 def card():
+    """자격 카드의 JSON — 카드가 없거나 JSON 칸이 없으면 빈 카드(모든 조건 «모름» → 빼지 않음 · 확인 필요)와 대기열 한 줄.
+    11-16: 배포판에서 카드가 없으면 FileNotFoundError 로 판정이 멈췄다(S6). 카드 만들기 = collect_desk.py new card(빈 틀)."""
     if not _card:
-        t = open(CARD, encoding='utf-8').read()
-        _card.append(json.loads(re.search(r'```json\s*(\{.*?\})\s*```', t, re.S).group(1)))
+        try:
+            t = open(CARD, encoding='utf-8').read()
+            _card.append(json.loads(re.search(r'```json\s*(\{.*?\})\s*```', t, re.S).group(1)))
+        except (OSError, AttributeError, ValueError) as e:
+            _card.append({})
+            cl.queue_add('card', f'자격 카드 없음·못 읽음({type(e).__name__}) — 판정은 빼지 않고 «확인 필요»로 · 만들기 = collect_desk.py new card', who=ME, once='line', path=QUEUE)
     return _card[0]
+
+
+def post_sources():
+    """로그인 출처의 «마감 불명» 글 — 조리법 posts{sid, pending, name, hint}(개인 층 · 일정 생성기가 pending 에 적는다). 출처 이름을 코드에 두지 않는다(S6)."""
+    out = []
+    for rc in cl.browser_recipes(SYS):
+        p = rc.get('posts')
+        if isinstance(p, dict) and p.get('sid') and isinstance(p.get('pending'), str):
+            out.append({'sid': p['sid'], 'pending': cl.rpath(p['pending'], SYS), 'name': p.get('name') or rc['id'], 'hint': p.get('hint') or POST_HINT})
+    return out
 
 
 def recipes():
@@ -130,14 +161,15 @@ def notices(sid=None):
                    'att': [] if where == '대기 칸' else attached_text(f, ARCH if where == '보관 칸' else VAULT),
                    'url': it.get('url') or (re.search(r'^url: "([^"]+)"', t, re.M) or [None, ''])[1],
                    'title': re.search(r'^# (.*)$', t, re.M).group(1), 'date': it.get('date') or '', 'again': bool(it.get('reextract'))}   # again = 글이 수정돼 새 판을 받음(web-collect revise) — 다시 뽑을 때까지 옛 캐시로 판정
-    if not sid or sid == LMS_SID:        # LMS 글 — 날짜는 있는데 마감인지 불명확한 글(schedule.py 가 적는다). 같은 단추가 뽑고, 결과는 schedule.py 가 일정 줄로 쓴다
-        for pid, it in (json.load(open(LMS_PENDING, encoding='utf-8')) if os.path.exists(LMS_PENDING) else {}).items():
+    for ps in post_sources():            # 로그인 출처 글 — 날짜는 있는데 마감인지 불명확한 글(일정 생성기가 적는다). 같은 단추가 뽑고, 결과는 일정 생성기가 줄로 쓴다
+        if sid and sid != ps['sid']:
+            continue
+        for pid, it in (json.load(open(ps['pending'], encoding='utf-8')) if os.path.exists(ps['pending']) else {}).items():
             f = os.path.join(VAULT, it['path'])
             if os.path.exists(f):
                 t = open(f, encoding='utf-8').read()
-                yield {'sid': LMS_SID, 'rc': {'id': LMS_SID, 'name': 'LMS 글', 'filter': {}}, 'id': pid, 'path': f, 'text': t.split('\n---', 1)[1] if '\n---' in t else t,
-                       'where': '대기 칸', 'staged': False, 'att': [], 'url': '', 'title': it['title'], 'date': it['date'],
-                       'hint': '이 글은 강의 게시판·공지 글이다. «마감»은 과제·제출·신청처럼 학생이 해야 할 일의 마감이다. 수업·시험 날짜는 마감이 아니다.\n'}
+                yield {'sid': ps['sid'], 'rc': {'id': ps['sid'], 'name': ps['name'], 'filter': {}}, 'id': pid, 'path': f, 'text': t.split('\n---', 1)[1] if '\n---' in t else t,
+                       'where': '대기 칸', 'staged': False, 'att': [], 'url': '', 'title': it['title'], 'date': it['date'], 'hint': ps['hint']}
 
 
 def attached_text(post_md, root=VAULT, per=3500, total=9000):
@@ -189,24 +221,41 @@ def parse_json(out):
     return None
 
 
-def extract_one(n):
-    import ingest_vision as iv
+def body_of(n):
     text = n['text']
     if len(text) > 9000:
         text = text[:9000] + '\n…(이하 생략)'
     att = ''.join(f'\n\n=== 첨부: {name} (색인 글자 · OCR 일 수 있음) ===\n{t}' for name, t in n['att'])
-    content = [{'type': 'text', 'text': f'{n.get("hint", "")}제목: {n["title"]}\n등록일자: {n["date"]}\n\n{text}{att}'}]
+    return f'{n.get("hint", "")}제목: {n["title"]}\n등록일자: {n["date"]}\n\n{text}{att}'
+
+
+def _add_usage(tot, usage):
+    tot['in'] += usage.get('in', 0)
+    tot['out'] += usage.get('out', 0)
+    tot['cost'] += usage.get('cost') or 0.0
+    for k, val in (usage.get('parts') or {}).items():
+        tot[k] = tot.get(k, 0) + val
+    if usage.get('rate_limit'):
+        tot['rate_limit'] = usage['rate_limit']
+
+
+def _stamp(d, n, usage):
+    import ingest_vision as iv
+    d['_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+    d['_model'] = iv.MODEL
+    d['_tokens'] = usage
+    d['_att'] = [name for name, _ in n['att']]
+    return d
+
+
+def extract_one(n):
+    import ingest_vision as iv
+    content = [{'type': 'text', 'text': body_of(n)}]
     d, tot = None, {'in': 0, 'out': 0, 'cost': 0.0}
     system = SYSTEM + (GOLD if gold_on(n) else '')
     for attempt in range(2):            # JSON 이 깨지면 한 번 더 묻는다(10-27: 36건 중 4건 «"근거":"…","}» 꼴)
         out, usage, err = iv._run(content, system=system)
-        tot['in'] += usage.get('in', 0)
-        tot['out'] += usage.get('out', 0)
-        tot['cost'] += usage.get('cost') or 0.0
-        for k, val in (usage.get('parts') or {}).items():
-            tot[k] = tot.get(k, 0) + val
-        if usage.get('rate_limit'):
-            tot['rate_limit'] = usage['rate_limit']
+        _add_usage(tot, usage)
         if err:
             return None, tot, err
         d = parse_json(out)
@@ -215,11 +264,72 @@ def extract_one(n):
     usage = tot
     if not isinstance(d, dict):
         return None, usage, 'JSON 아님(2회): ' + out[:120]
-    d['_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
-    d['_model'] = iv.MODEL
-    d['_tokens'] = usage
-    d['_att'] = [name for name, _ in n['att']]
-    return d, usage, ''
+    return _stamp(d, n, usage), usage, ''
+
+
+def parse_array(out):
+    m = re.search(r'\[.*\]', out or '', re.S)
+    if not m:
+        return None
+    for t in (m.group(0), re.sub(r'",\s*"\s*\}', '"}', m.group(0))):
+        try:
+            v = json.loads(t)
+            return v if isinstance(v, list) else None
+        except ValueError:
+            continue
+    return None
+
+
+def extract_many(ns):
+    """묶어 부르기 — 같은 지시문(꽁돈 칸 켬·끔이 같음)의 글 여러 개를 한 호출로. 돌려줌 = [(d | None, 사용량, 오류)] 글마다(사용량은 고르게 나눔 · «묶음» 칸).
+    배열이 깨지면 한 번 더 · 그래도 빠진 글은 그 글만 한 건씩(extract_one) — 묶음이 망가져도 글은 안 잃는다."""
+    import ingest_vision as iv
+    if len(ns) == 1:
+        return [extract_one(ns[0])]
+    system = SYSTEM + (GOLD if gold_on(ns[0]) else '') + BATCH
+    content = [{'type': 'text', 'text': '\n\n'.join(f'=== 공지 {k} ===\n{body_of(n)}' for k, n in enumerate(ns, 1))}]
+    tot, got = {'in': 0, 'out': 0, 'cost': 0.0}, {}
+    for attempt in range(2):
+        out, usage, err = iv._run(content, system=system)
+        _add_usage(tot, usage)
+        if err:
+            return [(None, tot if i == 0 else {'in': 0, 'out': 0, 'cost': 0.0}, err) for i in range(len(ns))]
+        arr = parse_array(out) or []
+        got = {x.get('번호'): x for x in arr if isinstance(x, dict) and isinstance(x.get('번호'), int)}
+        if all(k in got for k in range(1, len(ns) + 1)):
+            break
+    k_ok = [k for k in range(1, len(ns) + 1) if k in got]
+    share = {'in': round(tot['in'] / len(ns)), 'out': round(tot['out'] / len(ns)), 'cost': tot['cost'] / len(ns), '묶음': len(ns)}
+    res = []
+    for k, n in enumerate(ns, 1):
+        if k in got:
+            d = {x: v for x, v in got[k].items() if x != '번호'}
+            res.append((_stamp(d, n, dict(share)), dict(share), ''))
+        else:
+            r = extract_one(n)                       # 빠진 글만 한 건씩
+            res.append(r)
+    if len(k_ok) < len(ns):
+        print(f'  ⚠ 묶음 {len(ns)}건 중 {len(ns) - len(k_ok)}건 빠짐 — 한 건씩 다시 뽑음')
+    return res
+
+
+def batches(todo, size):
+    """묶음 나누기 — 같은 지시문(gold_on)끼리 차례대로 size 건 · 입력 BATCH_IN 토큰까지(한 건은 늘 들어감). size 1 = 한 건씩."""
+    if size <= 1:
+        return [[n] for n in todo]
+    out = []
+    for key in dict.fromkeys(gold_on(n) for n in todo):
+        cur, tok = [], 2787
+        for n in (x for x in todo if gold_on(x) == key):
+            t = 0.324 * len(body_of(n))
+            if cur and (len(cur) >= size or tok + t > BATCH_IN):
+                out.append(cur)
+                cur, tok = [], 2787
+            cur.append(n)
+            tok += t
+        if cur:
+            out.append(cur)
+    return out
 
 
 def clear_again(n):
@@ -246,10 +356,11 @@ def stale(n):
     return bool(d.get('첨부에만') or not d.get('조건')) and (dl is None or dl >= date.today().isoformat())
 
 
-def extract(maxn, refresh=False, workers=1, sid=None, settle=True, stop_on_warning=False, again=()):
+def extract(maxn, refresh=False, workers=1, sid=None, settle=True, stop_on_warning=False, again=(), batch=1):
     """추출 안 된 공지만 claude -p → 캐시. settle=True 면 끝에 엔진 settle 을 실행시킨다(엔진이 부를 때는 False).
     stop_on_warning = 사용량 경고(한도 가까움)가 뜨면 거기서 멈춘다 — 자동 추출(조리법 filter.auto)용.
-    again = 캐시가 있어도 다시 뽑을 글번호(첨부 색인을 고친 공고 — 사람이 짚을 때만). 돌려줌 = 합계 dict."""
+    again = 캐시가 있어도 다시 뽑을 글번호(첨부 색인을 고친 공고 — 사람이 짚을 때만). batch > 1 = 묶어 부르기(기본 1 = 끔 · 하나씩).
+    돌려줌 = 합계 dict."""
     import ingest_vision as iv
     cb = getattr(iv, 'claude_bin', None)            # 리허설 대역(flow_rehearsal_check)엔 없다
     why = iv.subscription()
@@ -276,9 +387,20 @@ def extract(maxn, refresh=False, workers=1, sid=None, settle=True, stop_on_warni
             time.sleep(20)                                   # 10-29: 5초 뒤 재시도도 실패, 수십 초 뒤엔 성공(갱신 잠금이 풀리는 시간)
             r = extract_one(n)
         return r
-    ex = cf.ThreadPoolExecutor(workers) if workers > 1 else None
+
+    def many(g):
+        rs = extract_many(g)
+        if any(r[2] and re.search(r'OAuth|refresh', r[2]) for r in rs):
+            time.sleep(20)
+            rs = extract_many(g)
+        return rs
+    ex = cf.ThreadPoolExecutor(workers) if workers > 1 and batch <= 1 else None
+    if batch > 1:                       # 묶음은 하나씩 차례로(사용량 경고에 바로 멈춤)
+        stream = ((n, r) for g in batches(todo, batch) for n, r in zip(g, many(g)))
+    else:
+        stream = zip(todo, ex.map(one, todo)) if ex else ((n, one(n)) for n in todo)
     try:                                # 하나씩(기본)이면 사용량 경고에 바로 멈출 수 있다
-        for n, (d, usage, err) in (zip(todo, ex.map(one, todo)) if ex else ((n, one(n)) for n in todo)):
+        for n, (d, usage, err) in stream:
             tot['in'] += usage.get('in', 0)
             tot['out'] += usage.get('out', 0)
             tot['cost'] += usage.get('cost') or 0.0
@@ -307,13 +429,15 @@ def extract(maxn, refresh=False, workers=1, sid=None, settle=True, stop_on_warni
         if ex:
             ex.shutdown(cancel_futures=True)
     print(f'추출 끝 — 성공 {tot["ok"]} · 실패 {tot["err"]} · 토큰 입력 {tot["in"]:,} · 출력 {tot["out"]:,} · 환산 ${tot["cost"]:.3f}')
+    if tot['ok']:
+        rebridge()                      # 새 캐시 — 같은 프로세스의 다음 판정(엔진 settle 이 이어 부름)이 sort.run 을 다시
     if tot['ok'] and settle:            # 판정이 난 대기 글을 볼트로 들이거나 장부로 — 엔진 몫(이 파일은 엔진을 부르지 않고 실행만 시킨다)
         import subprocess
         py = ['py', '-3'] if shutil.which('py') else [sys.executable]
         p = subprocess.run(py + [os.path.join(SYS, 'web-collect.py'), '--settle'], cwd=VAULT, capture_output=True, text=True,
                            encoding='utf-8', errors='replace')
         print((p.stdout or '').strip()[-600:] or f'settle rc={p.returncode} {(p.stderr or "")[-300:]}')
-        if any(n['sid'] == LMS_SID for n in todo):   # LMS 글 결과는 일정 생성기가 줄로 쓴다
+        if any(n['sid'] in {p['sid'] for p in post_sources()} for n in todo):   # 로그인 출처 글 결과는 일정 생성기가 줄로 쓴다
             subprocess.run(py + [os.path.join(SYS, 'schedule.py'), 'build'], cwd=VAULT, capture_output=True)
     return tot
 
@@ -332,14 +456,18 @@ def check(c, me):
         allow = v.get('목록') or []
         if not allow:
             return '모름', '신분 값 없음'
-        mine = {'학부', '재학'}
+        mine = {w for w in STATUS_WORDS if w in str(me.get('신분') or '')}
+        if not mine:
+            return '모름', '내 신분 모름(카드)'
         if mine & set(allow):
-            return '충족', '학부 재학'
+            return '충족', str(me.get('신분'))
         return '불충족', f'대상 {allow}'
     if ax == '학년':
         allow = [int(x) for x in (v.get('목록') or []) if str(x).isdigit()]
         if not allow:
             return '모름', '학년 값 없음'
+        if me.get('학년') is None:
+            return '모름', '내 학년 모름(카드)'
         if me['학년'] in allow:
             return '충족', f'{me["학년"]}학년'
         nxt = next_grade(me)
@@ -383,16 +511,22 @@ def check(c, me):
     if ax == '전공':
         allow, deny = ' '.join(map(str, v.get('허용') or [])), ' '.join(map(str, v.get('제외') or []))
         mine = f'{me.get("단과대", "")} {me.get("학과", "")}'
+        own = [w for w in (me.get('전공분야') or []) if isinstance(w, str) and w.strip()]
+        ok_re, no_re = field_re(own), field_re([w for w in FIELD_WORDS if w not in own])
         if allow:
             if re.search(r'불문|제한 ?없', allow):
                 return '충족', '전공 불문'
-            if re.search(FIELD_OK, allow):
-                return '충족', f'{allow} ∋ 물리'
-            if re.search(FIELD_NO, allow) and not re.search(FIELD_OK, allow):
+            if not own:
+                return '모름', f'분야 {allow} · 내 분야 모름(카드 전공분야)'
+            if re.search(ok_re, allow):
+                return '충족', f'{allow} ∋ {re.search(ok_re, allow).group(0)}'
+            if re.search(no_re, allow):
                 return '불충족', f'분야 {allow} · 나 {mine}'
             return '모름', f'분야 {allow}'
         if deny:
-            return ('불충족', f'제외 {deny}') if re.search(r'물리|이과|이학|자연', deny) else ('충족', f'제외 {deny} 아님')
+            if not own:
+                return '모름', f'제외 {deny} · 내 분야 모름(카드 전공분야)'
+            return ('불충족', f'제외 {deny}') if re.search(ok_re, deny) else ('충족', f'제외 {deny} 아님')
         return '모름', '전공 값 없음'
     if ax == '특수':
         need = v.get('필요') or v.get('목록') or v.get('설명')
@@ -698,7 +832,7 @@ def judge_rules(n, d, me):
     skip = (n['rc'].get('filter') or {}).get('title_skip')      # gate() 와 같은 제외어 — 이미 볼트에 든 글도 일정에 다시 안 올린다(11-05 대산농촌재단)
     if skip and re.search(skip, n['title']) and not interest(n['title'], me):
         return '비해당', [('불충족', '제목 제외(조리법 title_skip)', {'근거': n['title']})]
-    rule = card_rule(n['title'], me) if n['rc'].get('filter') else None     # LMS 글(filter {})은 제목 규칙 대상이 아니다
+    rule = card_rule(n['title'], me) if n['rc'].get('filter') else None     # 로그인 출처 글(filter {})은 제목 규칙 대상이 아니다
     if rule:
         return '비해당', [('불충족', f'제목 규칙({rule})', {'근거': n['title']})]
     strong, weak = src_text(n)
@@ -742,6 +876,7 @@ def deadline(n, d):
 
 def judged(sid):
     """{글번호: (판정, 근거 한 줄, 마감)} — 마감과 무관한 판정(해당·확인 필요·관심·비해당). 추출 캐시가 있는 글만(LLM 0)."""
+    bridge()
     me, out = card(), {}
     for n in notices(sid):
         if not os.path.exists(cpath(n)):
@@ -783,6 +918,7 @@ def mark(aid, what, memo='', **more):
     m = load_marks()
     m[f'{hits[0][0]}:{hits[0][1]}'] = {'평가': what, '메모': memo, **{k: v for k, v in more.items() if v}, 'at': time.strftime('%Y-%m-%d %H:%M')}
     save_marks(m)
+    rebridge()                          # 표시가 판정 재료(쓸모 = 다시 안 뺌) — 다음 판정이 sort.run 을 다시
     print(f'표시 {hits[0][0]} {hits[0][1]} = {what}')
 
 
@@ -840,6 +976,7 @@ def write_status(S):
     msg = ' · '.join(x for x in (f'판정 대기 {pending}건 — 추출 단추 `py -3.11 3_시스템/notice-filter.py extract`' if pending else '',
                                  f'수집 대기열 열린 {qopen}건 — `3_시스템/_index/수집-대기열.md`' if qopen else '') if x)
     if msg:
+        os.makedirs(STATE, exist_ok=True)       # 처음 볼트(배포판)엔 상태 폴더가 없다(S6 — 카드 없음 줄이 대기열에 생기며 처음 여기 닿음)
         with open(STATUS, 'w', encoding='utf-8', newline='\n') as f:
             f.write(msg + '\n')
     elif os.path.exists(STATUS):
@@ -847,6 +984,7 @@ def write_status(S):
 
 
 def judge(quiet=False):
+    bridge()
     me = card()
     rows, missing = [], 0
     for n in notices():
@@ -922,7 +1060,8 @@ def judge(quiet=False):
                 asks[k] = asks.get(k, 0) + 1
             if d.get('첨부에만'):
                 asks['조건이 첨부·그림에만'] = asks.get('조건이 첨부·그림에만', 0) + 1
-    L += ['', '## 카드에 물으면 줄어드는 모름', *[f'- {k}: {c}건' for k, c in sorted(asks.items(), key=lambda kv: -kv[1])]]
+    # 같은 수는 이름 차례(11-18) — 위 집합(set)이 프로세스마다 다른 차례로 돌아 판정표가 15분마다 흔들렸다
+    L += ['', '## 카드에 물으면 줄어드는 모름', *[f'- {k}: {c}건' for k, c in sorted(asks.items(), key=lambda kv: (-kv[1], kv[0]))]]
     os.makedirs(os.path.dirname(REPORT), exist_ok=True)
     with open(REPORT, 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(L) + '\n')
@@ -972,6 +1111,59 @@ def write_schedule(rows, SCHED, label):
         f.write('\n'.join(head + lines) + '\n')
 
 
+# ───────── 분류 엔진 잇기(범용 도구 셋 S4 · 11-18 · 설계 §9) ─────────
+# 판정(judge_one)·꽁돈(gold) = sort 판정 장부 읽기(sort_collect 다리). 한 프로세스에 sort.run 한 번 — 추출·표시 뒤엔 다시(rebridge).
+# 옛 길 = 스위치(collect.local.json "sort": false) · sort 오류 = 그 회차만 옛 길 + 대기열 한 줄(수집은 안 멈춤).
+_OLD = {'judge_one': judge_one, 'gold': gold}
+_bridged = []
+_sort_run = {}                          # 마지막 sort.run 요약(시험이 읽음)
+
+
+class _Me:
+    """이 모듈 자체 — 대본(__main__)으로 돌 때도 남이 spec 으로 읽을 때도 같은 전역(sort_collect 가 속성으로 읽고 바꿔 끼운다)."""
+    def __getattr__(self, k):
+        try:
+            return globals()[k]
+        except KeyError:
+            raise AttributeError(k) from None
+
+    def __setattr__(self, k, v):
+        globals()[k] = v
+
+
+def sort_on():
+    """옛 길 스위치 — 3_시스템/collect.local.json "sort": false 면 끔(이 PC 의 결정 · 없음·깨짐 = 켬)."""
+    return cl.switches(SYS, keys=('sort',)).get('sort') is not False
+
+
+def rebridge():
+    _bridged.clear()
+
+
+def bridge():
+    """판정 전에 한 번 — 켜졌으면 sort.run + 다리 · 끔·오류면 옛 함수. 돌려줌 = 이은 길인가."""
+    if _bridged:
+        return _bridged[0]
+    ok = False
+    if sort_on():
+        try:
+            import sort_collect as sc
+            _sort_run.clear()
+            _sort_run.update(sc.bridge(_Me(), dict(_OLD)) or {})
+            ok = True
+        except Exception as e:
+            globals().update(_OLD)
+            print(f'분류 엔진(sort) 오류 — 이 회차는 옛 판정 길: {type(e).__name__}: {str(e)[:160]}', file=sys.stderr)
+            try:
+                cl.queue_add('sort', '분류 엔진(sort) 오류 — 공지 판정은 옛 길로 돎(수집은 그대로) · `py -3 3_시스템/notice-filter.py judge` 로 까닭', who='Claude', once='line', path=QUEUE)
+            except OSError:
+                pass
+    else:
+        globals().update(_OLD)
+    _bridged[:] = [ok]
+    return ok
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('cmd', choices=['extract', 'judge', 'mark', 'miss', 'reject'])
@@ -984,9 +1176,10 @@ def main():
     ap.add_argument('--again', nargs='+', default=[], metavar='글번호', help='캐시가 있어도 이 글을 다시 뽑는다(첨부 색인을 고친 공고)')
     ap.add_argument('--workers', type=int, default=1, help='동시 claude -p 수(여럿이면 OAuth 갱신이 부딪힐 수 있음)')
     ap.add_argument('--source', help='이 출처 id 만')
+    ap.add_argument('--batch', type=int, default=1, help='묶어 부르기 — 같은 지시문 글 N건(≤6)까지 한 호출(기본 1 = 끔)')
     a = ap.parse_args()
     if a.cmd == 'extract':
-        extract(a.max, a.refresh, a.workers, a.source, again=a.again)
+        extract(a.max, a.refresh, a.workers, a.source, again=a.again, batch=max(1, min(6, a.batch)))
     elif a.cmd == 'mark':
         if len(a.args) < 2 or a.args[1] not in ('헛것', '쓸모'):
             sys.exit('mark <글번호> 헛것|쓸모 [메모]')

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "외부뇌 로그인 수집기",
+  "version": "0.4.1",
+  "description": "외부뇌 수집 — 로그인이 필요한 출처를 15분마다 가볍게 보고 바뀐 단위만 받는다(받기만). 출처 = PC 가 이 폴더에 쓰는 조리법(ext-state.json) · 볼트 반영은 PC.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnVSrOwA5zYvTB0EG+fisEXAFX04NhNuRdj5iLSQvQBRVDiukt/T1Kgujhg4vKijq1yiqQaD2SyJgKVUJrd4Jw3HXlPaxqn6HZSZGgFZTaueDmP/WVtYAzRM1seWfa0Y+sHkyufHq8TiXpw/rtGvhsuIzyE1GHY2Cct1pQVXC5JcM4HQn22hexG7+/zGigh9Ow21PZGrrxbzksLlbyiZo1sA/1y1UyZWPVicjDNkO/JP5fSkQd+7KrGCelxxQ3qVKPCDoZUf9QXJUj/pDdLqA3LylKrowDYGmip3aWE8isyH92MHWs+0+/HsmbHHpiVgUJlRlhhRhlxTf7WUKFjo1VwIDAQAB",
+  "permissions": [
+    "alarms",
+    "storage",
+    "scripting",
+    "declarativeNetRequest",
+    "notifications",
+    "webRequest",
+    "cookies",
+    "downloads"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "boot-0.4.1.js"
+  },
+  "action": {
+    "default_title": "외부뇌 로그인 수집기",
+    "default_popup": "popup.html"
+  },
+  "minimum_chrome_version": "116"
+}

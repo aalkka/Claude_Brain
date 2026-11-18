@@ -25,6 +25,9 @@
      배포판에 있는데 목록 밖 = «빼기 후보» · 여러 기능이 같이 쓰는 자리를 폴더째 적은 줄 = «목록 잘못»
   ⑥ 배포판 글(진단 기록·시험 포함)이 배포판에 없는 것을 가리킴 — 볼트에만 있는 코드 파일 · 배포판에 없는 모듈 ·
      not-shipped.txt(개인 층 · «정규식<TAB>이름»)의 이름. 선택 갈래·안내 글이면 --ack <배포판 파일> --ref --why 로 확인함을 적는다(새 이름이 나오면 다시 뜬다)
+  ⑦ 만드는 길 없는 개인 파일(배포 목록 «개인» 칸)
+  ⑧ 모듈 계약 — 이 볼트 모듈(꺼진 것·배포판에 안 싣는 것까지)이 쓰는 코어 이름(module.json uses_core)이 배포판에 없음 —
+     그 모듈을 배포판 꼴 볼트에 붙이면 깨진다(contracts.py names --core <배포판> · 11-17 mobility 범용화)
 배포판 worktree = 볼트 저장소의 worktree 가운데 `dist-sync` 가지 · 없으면(제작자 볼트가 아니면) 잴 것이 없다.
 """
 import argparse
@@ -437,6 +440,7 @@ def check(A=VAULT, B=None, do_fetch=False, ship_path=None):
     res["unsynced"], top = unsynced(A, B, ship, res["undecided"])
     res["drops"] = drops(B, ship)
     res["pointers"] = pointers(A, B, load_ack(A)) if ship is not None else []
+    res["make"] = make_paths(A, ship_path) if ship is not None else None
     res["last_publish"] = stamp(top)
     code, up, _ = git(B, "rev-parse", "--abbrev-ref", "@{upstream}")
     res["upstream"] = up.strip() if code == 0 else None
@@ -451,7 +455,65 @@ def check(A=VAULT, B=None, do_fetch=False, ship_path=None):
     ack = load_ack(A)
     gaps, res["external"] = external_gaps(A, B, ack)
     annotate(A, B, res["unsynced"], dist_texts(B), gaps, ack)
+    res["contracts"] = contract_gaps(A, B)
     return res
+
+
+def contract_gaps(A, B):
+    """⑧ 이 볼트 모듈이 쓰는 코어 이름(uses_core)이 배포판에 없음 → ["모듈 → 파일 이름 없음 …"]. 꺼진 모듈·안 싣는 모듈도 잰다."""
+    s = importlib.util.spec_from_file_location("dist_contracts", os.path.join(HERE, "contracts.py"))
+    c = importlib.util.module_from_spec(s)
+    s.loader.exec_module(c)
+    try:
+        broken, _ = c.names(A, B, on_only=False)
+    except (OSError, ValueError, KeyError, ImportError) as e:
+        return ["못 잼(%s)" % type(e).__name__]
+    return ["%s → %s %s" % (b["module"], b["file"], "파일 없음" if b["missing"] is None else "이름 없음 " + ", ".join(b["missing"])) for b in broken]
+
+
+def make_paths(A, ship_path=None):
+    """⑦ 개인 파일마다 «만드는 길»(11-16 S6 사용자 «배포판에 개인 파일을 만드는 법이 나와있어야함») — 배포 목록 «개인» 칸을 읽는다.
+    잡는 것: 살필 곳의 볼트 개인 파일이 어느 종류(자리 glob · 로그인 조리법이 가리키는 칸)에도 안 듦 · 종류에 길이 없음 · 예시가 볼트에 없거나 배포 목록 밖.
+    돌려줌 = [{path, why}] · 칸이 없으면 None(옛 목록 — 안 잼)."""
+    p = ship_path or os.path.join(A, *dd.SHIP_REL.split("/"))
+    try:
+        reg = (json.load(open(p, encoding="utf-8")) or {}).get("개인")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(reg, dict):
+        return None
+    ship = dd.load_ship(A, ship_path) or {}
+    shipped = lambda rel: rel in ship or any(x.endswith("/") and rel.startswith(x) for x in ship)  # noqa: E731
+    kinds = [k for k in reg.get("종류") or [] if isinstance(k, dict)]
+    out = []
+    for k in kinds:
+        if not k.get("길"):
+            out.append({"path": k.get("이름") or "?", "why": "만드는 길 없음(종류에 «길» 칸 없음)"})
+        ex = k.get("예시")
+        if ex and (not os.path.exists(os.path.join(A, *ex.split("/"))) or not shipped(ex)):
+            out.append({"path": ex, "why": "예시(빈 틀)가 볼트에 없거나 배포 목록 밖 — %s" % (k.get("이름") or "?")})
+    import glob
+    named = set()                    # 로그인 조리법이 칸으로 가리키는 자리(단위 지도·설정 — 옛 자리에 있어도 그 종류)
+    for rp in glob.glob(os.path.join(A, "3_시스템", "collect", "browser", "*.json")):
+        try:
+            rc = json.load(open(rp, encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        for k in kinds:
+            for f in k.get("조리법칸") or []:
+                if isinstance(rc, dict) and isinstance(rc.get(f), str):
+                    named.add("3_시스템/" + rc[f])
+    pats = [g for k in kinds for g in k.get("자리") or []]
+    seen = set()
+    for g in reg.get("살필") or []:
+        for f in glob.glob(os.path.join(A, *g.split("/")), recursive=True):
+            rel = os.path.relpath(f, A).replace("\\", "/")
+            if not os.path.isfile(f) or rel in seen or rel in named or "/__pycache__/" in rel:
+                continue
+            seen.add(rel)
+            if not any(fnmatch.fnmatch(rel, x) for x in pats):
+                out.append({"path": rel, "why": "개인 파일인데 종류(만드는 길)가 없음 — 배포 목록 «개인» 칸에 더하거나 자리를 옮김"})
+    return out
 
 
 def external_gaps(A, B, ack=None):
@@ -471,11 +533,11 @@ def external_gaps(A, B, ack=None):
 
 def scope(r):
     """범위 칸 — 정할 것(목록 밖 새 코어) · 빼기 후보 · 가리킴 · 목록의 잘못."""
-    return len(r.get("undecided", [])) + len(r.get("drops", [])) + len(r.get("pointers", [])) + len((r.get("ship") or {}).get("잘못", []))
+    return len(r.get("undecided", [])) + len(r.get("drops", [])) + len(r.get("pointers", [])) + len((r.get("ship") or {}).get("잘못", [])) + len(r.get("make") or [])
 
 
 def total(r):
-    return len(r["unsynced"]) + len(r["unpushed"]) + len(r["uncommitted"]) + len(r["remote_only"]) + len(r.get("external", [])) + scope(r)
+    return len(r["unsynced"]) + len(r["unpushed"]) + len(r["uncommitted"]) + len(r["remote_only"]) + len(r.get("external", [])) + len(r.get("contracts", [])) + scope(r)
 
 
 def todo(r):
@@ -492,6 +554,8 @@ def todo(r):
         t.append("원격 받아 합치기")
     if r.get("external"):
         t.append("바깥 설정 안내 채우기")
+    if r.get("contracts"):
+        t.append("모듈 계약 맞추기(코어 이름을 싣거나 모듈을 고침)")
     return " · ".join(t)
 
 
@@ -505,9 +569,10 @@ def summary(r):
         return "배포판 최신(어긋남 0 · 원격 받아 본 때 %s)%s" % (r["fetched"], note)
     parts = [("정할 것", len(r.get("undecided", []))), ("빼기 후보", len(r.get("drops", []))),
              ("없는 것을 가리킴", len(r.get("pointers", []))), ("배포 목록 잘못", len((r.get("ship") or {}).get("잘못", []))),
+             ("만드는 길 없는 개인 파일", len(r.get("make") or [])),
              ("안 올린 고침", len(r["unsynced"])), ("커밋 안 함", len(r["uncommitted"])),
              ("push 안 함", len(r["unpushed"])), ("받을 것", len(r["remote_only"])),
-             ("안내 없는 바깥 설정", len(r.get("external", [])))]
+             ("안내 없는 바깥 설정", len(r.get("external", []))), ("모듈 계약 어긋남", len(r.get("contracts", [])))]
     if r.get("ship", 0) is None:
         note += " · 배포 목록 없음(옛 동작 — 코어 자리의 새 파일이 기본으로 실린다)"
     return "배포판 어긋남 %d — %s · 할 일 %s%s" % (n, " · ".join("%s %d" % p for p in parts if p[1]), todo(r), note)
@@ -539,6 +604,11 @@ def report(r):
         L += ["   - %s (목록 잘못 — 낱개 경로로)" % x for x in bad]
         L.append("⑥ 배포판 글이 배포판에 없는 것을 가리킴 %d" % len(r["pointers"]))
         L += ["   - %s — %s" % (x["path"], " · ".join(x["why"])) for x in r["pointers"]]
+        mk = r.get("make")
+        L.append("⑦ 만드는 길 없는 개인 파일 %s" % ("— 배포 목록에 «개인» 칸 없음(안 잼)" if mk is None else len(mk)))
+        L += ["   - %s — %s" % (x["path"], x["why"]) for x in mk or []]
+    L.append("⑧ 모듈이 쓰는 코어 이름이 배포판에 없음 %d" % len(r.get("contracts", [])))
+    L += ["   - " + c for c in r.get("contracts", [])]
     L.append(summary(r))
     return "\n".join(L)
 

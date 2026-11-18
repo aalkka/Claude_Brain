@@ -1,0 +1,22 @@
+{
+ "_": "예시 — 로그인 출처 조리법(가족 browser)의 빈 틀. collect_desk.py new browser <id> <https://주소> 가 이것을 3_시스템/collect/browser/<id>.json(개인 층)으로 옮기며 id·주소·자리를 채운다. 칸 뜻 = 3_시스템/collect-browser.py 머리글. LearningX 게시판도 받으려면 adapters 에 learningx 를 더하고 ext.tools.learningx 에 그 학교의 게시판 도구 번호(과목 메뉴 주소 /courses/<과목>/external_tools/<번호>)를 넣는다.",
+ "id": "{id}",
+ "name": "{id}",
+ "family": "browser",
+ "adapters": ["canvas"],
+ "ext": {"host": "{host}", "keep_days": 14},
+ "run_prefix": "{id}-run-",
+ "raw_prefix": "{id}-",
+ "raw_dir": "_{id}",
+ "units": "collect/browser/{id}/units.json",
+ "units_root": "school",
+ "settings": "collect/browser/{id}/settings.json",
+ "state": "_index/{id}",
+ "manifest": "_index/{id}/manifest.json",
+ "at_default": ["06:55"],
+ "action": "collect.tick",
+ "wake_level": "collect.wake",
+ "group": "강의",
+ "filer": "collect-file.py",
+ "login": {"line": "{id} 로그인 만료 — 크롬에서 로그인"}
+}

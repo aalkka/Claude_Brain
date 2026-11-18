@@ -64,6 +64,12 @@ COLLECT_STATE = "3_시스템/_index/collect"
 COLLECT_ARCH = COLLECT_STATE + "/archive"
 
 
+def browser_manifests():
+    """로그인 출처(조리법 collect/browser/*.json)의 파일화 장부 — 경로를 글자로 든 데이터(S6 · 출처 이름을 코드에 두지 않는다)."""
+    import collectlib
+    return ["3_시스템/" + rc["manifest"] for rc in collectlib.browser_recipes(HERE) if isinstance(rc.get("manifest"), str)]
+
+
 def rel(a):
     return os.path.relpath(a, VAULT).replace("\\", "/")
 
@@ -168,7 +174,7 @@ def classify_sources():
     new = roles.path("sources") + "/배움"
     if school != new:
         rows.append({"src": school, "dst": new, "kind": "dir", "sure": "높음",
-                     "why": "원본 층 영역 = 배움(설계안 §19.2) · 수집 상태·보관 칸·색인·LMS 목록 함께"})
+                     "why": "원본 층 영역 = 배움(설계안 §19.2) · 수집 상태·보관 칸·색인·로그인 출처 목록 함께"})
     for d in sorted(os.listdir(absv(school))):
         c = roles.canon(d)
         if os.path.isdir(absv(school + "/" + d)) and c and c != d:
@@ -400,7 +406,7 @@ def plan(table, out):
             ops.append({"op": "mv", "src": COLLECT_ARCH + "/" + after_dirs(m["src"], mir[:i]), "dst": COLLECT_ARCH + "/" + m["dst"],
                         "why": "R9 원본 층 이전 — 수집 보관 칸 안 색인 거울"})
     if smoves:
-        data += sorted(rel(x) for x in glob.glob(absv(COLLECT_STATE) + "/*.json")) + ["3_시스템/_index/lms/manifest.json"]  # LMS 목록 경로 — 10-31 R9 때 빠뜨려 옛 자리로 남았다(11-03 고침)
+        data += sorted(rel(x) for x in glob.glob(absv(COLLECT_STATE) + "/*.json")) + browser_manifests()  # 로그인 출처 목록 경로 — 10-31 R9 때 빠뜨려 옛 자리로 남았다(11-03 고침 · S6 = 조리법 manifest 칸)
     # 옛 경로 → 새 경로(긴 것부터) — 경로를 글자로 든 데이터(찾기 골든셋 정답 칸 · 수집 상태 등)를 같은 표로 고친다
     pmap = sorted({(r["src"], r["dst"]) for r in moves} | {(r["src"], r["dst"]) for r in follow}, key=lambda x: -len(x[0]))
     p = {"title": "R9 구조 이전 (%s)" % dt.date.today().isoformat(), "table": rel(os.path.abspath(table)),

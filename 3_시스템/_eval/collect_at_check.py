@@ -6,7 +6,7 @@
 ① web-collect due() — 시각이 지났고 그 뒤 안 받았을 때만 · 정하기 전 시각은 안 따라잡음 · 실패 뒤 한 시간 · 시각 없으면 recheck_hours · 틀린 꼴은 주기로
 ② 수집 창 set — 출처 at·주기(주기를 고르면 시각을 걷음)·묶음(@공지·@강의)·mylms at · 꼴·개수 거절 · 바꿀 때마다 시각 예약 맞추기(시험이면 dry 한 줄)
 ③ 예약 꼴 — task_xml 이 XML 로 읽힘 · 매일 그 시각(다음 그 시각부터) · 깨우기 켬/끔 · 명령 줄 = brain.py run … --by schedule · 잠든 PC(wake_pc) 깨움/깬 뒤가 모든 예약에
-④ lms-auto --at — 받을 차례 아니면 «받을 차례 아님» 기록만(GET 0) · 전체 끔이면 건너뜀
+④ collect-schedule --at — 받을 차례 아니면 «받을 차례 아님» 기록만(GET 0) · 전체 끔이면 건너뜀
 ⑤ chrome_up — 프로필 lockfile 을 크롬처럼 쓰기 막음으로 쥐면 떠 있음 · 놓으면·없으면 꺼짐
 """
 import ctypes
@@ -106,7 +106,7 @@ def desk_cases(root):
     ok('[창] 시각 있는 출처를 끔 = 예약에서 빠짐', r.returncode == 0 and 'school-b' not in last() and 'school-a 등록(07:30' in last(), last())
 
     # ④ --at — 받을 차례 아님 · 전체 끔
-    la = os.path.join(ts, 'lms-auto.py')
+    la = os.path.join(ts, 'collect-schedule.py')
     st = os.path.join(ts, '_index', 'collect', 'school-a.json')
     ccc.put(st, {'last_run': time.time(), 'last_try': time.time(), 'items': {}})
     r = subprocess.run([sys.executable, la, '--at', 'school-a'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
@@ -114,14 +114,14 @@ def desk_cases(root):
     ok('[--at] 방금 받은 출처 = «받을 차례 아님» 기록 · 웹 새 글 0', r.returncode == 0 and '시각 school-a: web-collect rc=0 받을 차례 아님' in alog and '웹 새 글 0' in r.stdout, (r.stdout[-200:], r.stderr[-200:], alog[-300:]))
     ccc.put(os.path.join(ts, 'collect.local.json'), {'all_off': True})
     r = subprocess.run([sys.executable, la, '--at', 'school-a'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
-    r2 = subprocess.run([sys.executable, la, '--sync-tasks'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
+    r2 = subprocess.run([sys.executable, la, '--sync'], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
     ok('[--at] 전체 끔 = 건너뜀 · 맞추기 = 시각 예약 없음', '전체 꺼짐' in r.stdout and r2.stdout.strip() == '시각 예약: 없음', (r.stdout[-100:], r2.stdout[-200:]))
     ccc.put(os.path.join(ts, 'collect.local.json'), None)
-    return mod('la', la)
+    return mod('cs', la), mod('cb', os.path.join(ts, 'collect-browser.py'))
 
 
 def xml_cases(la):
-    x = la.task_xml(['09:00', '21:30'], False, ['collect.lms', '--', '--at', 'school-a'], '장학 & 학사 <시험>')
+    x = la.task_xml(['09:00', '21:30'], False, ['collect.at', '--', '--at', 'school-a'], '장학 & 학사 <시험>')
     ns = {'t': 'http://schemas.microsoft.com/windows/2004/02/mit/task'}
     try:
         root = ET.fromstring(x.split('\n', 1)[1])
@@ -132,9 +132,31 @@ def xml_cases(la):
     ok('[예약] XML · 시각 둘 = 매일 트리거 둘 · 시작점은 지금 뒤 하루 안 · 깨우기 끔 · 놓치면 곧',
        len(st) == 2 and all(0 < s - time.time() <= 86400 for s in st) and root.find('.//t:WakeToRun', ns).text == 'false'
        and root.find('.//t:StartWhenAvailable', ns).text == 'true' and all(root.find('.//t:DaysInterval', ns) is not None for _ in st), (st, x[:300]))
-    ok('[예약] 명령 줄 = brain.py run collect.lms --by schedule -- --at school-a · 설명 글 그대로(꺾쇠·& 이스케이프)',
-       args.endswith('brain.py" run collect.lms --by schedule -- --at school-a') and '장학 & 학사 <시험>' in root.find('.//t:Description', ns).text, args)
-    ok('[예약] 깨우기 켬 = WakeToRun true', '<WakeToRun>true</WakeToRun>' in la.task_xml(['06:55'], True, ['collect.lms.wake'], 'mylms'))
+    ok('[예약] 명령 줄 = brain.py run collect.at --by schedule -- --at school-a · 설명 글 그대로(꺾쇠·& 이스케이프)',
+       args.endswith('brain.py" run collect.at --by schedule -- --at school-a') and '장학 & 학사 <시험>' in root.find('.//t:Description', ns).text, args)
+    ok('[예약] 깨우기 켬 = WakeToRun true', '<WakeToRun>true</WakeToRun>' in la.task_xml(['06:55'], True, ['collect.tick', '--', '--at', 'mylms'], 'mylms'))
+    # 15분 반영 예약(S7 · 본체 길) — 꼴 · 맡은 예약 찾기(이름이 달라도 명령 줄로 · 시각 받기 --at 은 아님)
+    x = la.tick_xml()
+    root = ET.fromstring(x.split('\n', 1)[1])
+    ok('[15분] XML · 15분 되풀이 · 끝없음 · 깨우기 끔 · 명령 = run collect.tick --by schedule',
+       root.find('.//t:Repetition/t:Interval', ns).text == 'PT15M' and root.find('.//t:Repetition/t:Duration', ns) is None and root.find('.//t:WakeToRun', ns).text == 'false'
+       and root.find('.//t:Arguments', ns).text.endswith('run collect.tick --by schedule'), x[:300])
+    row = lambda n, cmd: '"PC","\\%s","N/A","준비","대화형","N/A","0","me","%s","C:\\v","설명 run collect.tick --by schedule"' % (n, cmd)     # schtasks 실제 꼴 — 명령 줄 안 따옴표를 안 겹침(11-16 실측)
+    old = row('외부뇌 LMS 반영', 'C:\\Windows\\pyw.exe -3.11 "C:\\v\\3_시스템\\brain.py" run collect.tick --by schedule')
+    at = row('외부뇌-수집 mylms', 'C:\\Windows\\pyw.exe -3.11 "C:\\v\\3_시스템\\brain.py" run collect.tick --by schedule -- --at mylms')
+    ok('[15분] 맡은 예약 = 옛 이름도 명령 줄로 찾음 · --at 예약은 아님 · 없으면 빈칸(만듦)',
+       la.tick_owner([old, at]) == '외부뇌 LMS 반영' and la.tick_owner([at]) == '' and la.tick_owner([]) == '', (la.tick_owner([old, at]), la.tick_owner([at])))
+    # 다른 볼트가 맡음(11-17 · 시험 사본이 진짜 예약을 덮어쓴 일) — 그 볼트 brain.py 가 있으면 주인 · 사라진 사본 · 이 볼트 · 남의 예약은 아님
+    here = os.path.join(la.VAULT, '3_시스템', 'brain.py')
+    live = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'brain.py')        # 늘 있는 파일(이 볼트 판이지만 시험 볼트 VAULT 와 경로가 다름)
+    live_v = os.path.dirname(os.path.dirname(os.path.abspath(live)))
+    w = lambda n, p, tail='run collect.tick --by schedule': row(n, 'C:\\Windows\\pyw.exe -3.11 "%s" %s' % (p, tail))
+    ok('[주인] 살아 있는 다른 볼트 = 막음 · 사라진 사본·이 볼트·남의 예약 = 안 막음',
+       la.foreign_owner([w('외부뇌-수집 ku', os.path.abspath(live), 'run collect.at --by schedule -- --at ku')]) == live_v
+       and la.foreign_owner([w('외부뇌-수집 ku', 'C:\\gone-xyz\\3_시스템\\brain.py', 'run collect.at --by schedule -- --at ku')]) == ''
+       and la.foreign_owner([w('외부뇌 LMS 반영', here)]) == ''
+       and la.foreign_owner([w('딴 예약', os.path.abspath(live), 'run collect.at --by schedule -- --at ku')]) == '' and la.foreign_owner([]) == '',
+       (live_v, la.VAULT))
 
 
 def chrome_cases(la, root):
@@ -155,14 +177,14 @@ def main():
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8')
     due_cases(mod('wc', os.path.join(SYS, 'web-collect.py')))
-    if not os.path.isfile(os.path.join(SYS, 'lms-auto.py')):     # 시각 예약 엔진·mylms·크롬은 학교 LMS 대본 안(개인 층 · 배포판엔 없음) — ① 웹 due 만 잰다(11-16)
-        print('  (lms-auto.py 없음 — ② 수집 창 set · ③ 예약 꼴 · ④ --at · ⑤ chrome_up 건너뜀 · 통과로 세지 않음)')
+    if not os.path.isfile(os.path.join(SYS, 'collect', 'browser', 'mylms.json')):     # ②~⑤ 는 로그인 조리법 mylms 가 있는 볼트에서만(개인 층 · 배포판엔 없음) — ① 웹 due 만 잰다(11-16)
+        print('  (로그인 조리법 mylms 없음 — ② 수집 창 set · ③ 예약 꼴 · ④ --at · ⑤ chrome_up 건너뜀 · 통과로 세지 않음)')
         print(f'\n{sum(res)}/{len(res)} 통과')
         return 0 if all(res) else 1
     root = tempfile.mkdtemp(prefix='collect-at-')
-    la = desk_cases(root)
-    xml_cases(la)
-    chrome_cases(la, root)
+    cs, cb = desk_cases(root)
+    xml_cases(cs)
+    chrome_cases(cb, root)
     print(f'\n{sum(res)}/{len(res)} 통과')
     return 0 if all(res) else 1
 

@@ -9,6 +9,7 @@
 안 보던 자리: 옵시디언 설정·스니펫·새 플러그인(폴더째 ack · 까닭) · «필요 ←»(배포판 코어가 부름) · 안 싣기로 했는데 부름
 """
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -113,6 +114,100 @@ def external_tests(A, E):
     print("%s 있는 기능만 물음 — %s" % ("✓" if ok else "✗", sorted(r["id"] for r in rows)))
     if not ok:
         FAIL.append("있는 기능만 물음")
+
+
+def module_outside_tests(root):
+    """바깥 설정 칸(M6 · 11-17) — 켜진 모듈의 contributes.outside 가 합쳐지고 · 재기 다섯 가지가 0·1·2 로 갈리고 ·
+    앱 재기는 report 를 모듈마다 한 번 · 줄 차례 = 필수 PC → 필수 폰 → 선택 · 끄면 사라짐 · scan --module 이 안 덮인 종류를 잡음."""
+    s = importlib.util.spec_from_file_location("dist_external", os.path.join(HERE, "external.py"))
+    ex = importlib.util.module_from_spec(s)
+    s.loader.exec_module(ex)
+    os.makedirs(root)
+    M = ".claude/skills/demo-out"
+    put(root, M + "/module.json", json.dumps({"schema": 1, "contributes": {"outside": M + "/outside.json"}}))
+    put(root, M + "/here.txt", "x\n")
+    count = os.path.join(root, "reports.txt")
+    rep = "import sys,json; open(sys.argv[1],'a').write('1'); print(json.dumps({'a1': True, 'a2': False}))"
+    items = [
+        {"id": "demo-out.opt", "이름": "선택", "기기": "pc", "필수": False, "재기": {"명령": "exit 0"}, "안내": ["하나", "둘"]},
+        {"id": "demo-out.ph1", "이름": "폰 됨", "기기": "폰", "필수": True, "재기": {"앱": "a1"}, "안내": ["하나", "둘"]},
+        {"id": "demo-out.ph2", "이름": "폰 안 됨", "기기": "폰", "필수": True, "재기": {"앱": "a2"}, "안내": ["하나", "둘"]},
+        {"id": "demo-out.ph3", "이름": "폰 보고 없음", "기기": "폰", "필수": True, "재기": {"앱": "a3"}, "안내": ["하나", "둘"]},
+        {"id": "demo-out.c0", "이름": "명령 됨", "기기": "pc", "필수": True, "재기": {"명령": "exit 0"}, "하기": "x"},
+        {"id": "demo-out.c1", "이름": "명령 안 됨", "기기": "pc", "필수": True, "재기": {"명령": "exit 1"}, "하기": "x"},
+        {"id": "demo-out.c2", "이름": "명령 모름", "기기": "pc", "필수": True, "재기": {"명령": "exit 2"}, "하기": "x"},
+        {"id": "demo-out.f1", "이름": "파일 있음", "기기": "pc", "필수": True, "재기": {"파일": M + "/here.txt"}, "하기": "x"},
+        {"id": "demo-out.f0", "이름": "파일 없음", "기기": "pc", "필수": True, "재기": {"파일": M + "/none.txt"}, "하기": "x"},
+        {"id": "demo-out.r0", "이름": "레지스트리 없음", "기기": "pc", "필수": True, "재기": {"레지스트리": {"키": "HKCU\\Software\\demo-out-xyz", "값": "v"}}, "하기": "x"},
+        {"id": "demo-out.eye", "이름": "화면", "기기": "폰", "필수": True, "재기": {"화면": "폰에서 본다"}, "안내": ["하나", "둘"]},
+    ]
+    put(root, M + "/outside.json", json.dumps({"이름": "데모", "report": ["{py}", "-c", rep, count], "항목": items}, ensure_ascii=False))
+    rows = ex.check(root)
+    got = {r["id"]: r["됨"] for r in rows if r.get("모듈") == "demo-out"}
+    want = {"demo-out.opt": True, "demo-out.ph1": True, "demo-out.ph2": False, "demo-out.ph3": None, "demo-out.c0": True,
+            "demo-out.c1": False, "demo-out.c2": None, "demo-out.f1": True, "demo-out.f0": False, "demo-out.r0": False, "demo-out.eye": None}
+    order = [r["id"] for r in rows if r.get("모듈") == "demo-out"]
+    first_ph = order.index("demo-out.ph1")
+    ok = (got == want and order[-1] == "demo-out.opt" and all(i.startswith("demo-out.c") or i.startswith("demo-out.f") or i.startswith("demo-out.r") for i in order[:first_ph])
+          and open(count).read() == "1")
+    text = ex.check_text(rows)
+    ok = ok and "[데모(demo-out) · 폰] 폰 됨" in text and "기기 보고가 없음" in text
+    print("%s 모듈 바깥 설정 — 재기 다섯·0·1·2·차례·report 한 번 %s" % ("✓" if ok else "✗", "" if ok else (got, order)))
+    if not ok:
+        FAIL.append("모듈 바깥 설정")
+    put(root, ".claude/settings.json", json.dumps({"enabledPlugins": {"demo-out@skills-dir": False}}))  # mf:allow-path  (임시 볼트 안 — 모듈 켬·끔 흉내)
+    gone = [r for r in ex.check(root) if r.get("모듈")]
+    print("%s 모듈 바깥 설정 — 끄면 사라짐 %d" % ("✓" if not gone else "✗", len(gone)))
+    if gone:
+        FAIL.append("모듈 끄면 사라짐")
+    put(root, ".claude/settings.json", "{}")  # mf:allow-path  (임시 볼트 안 — 모듈 켬·끔 흉내)
+    put(root, M + "/scripts/reg.ps1", "Register-ScheduledTask -TaskName demo\n")
+    gaps, bad = ex.scan_module("demo-out", root)
+    items[4]["종류"] = ["작업 스케줄러"]
+    put(root, M + "/outside.json", json.dumps({"이름": "데모", "report": ["{py}", "-c", rep, count], "항목": items}, ensure_ascii=False))
+    gaps2, _ = ex.scan_module("demo-out", root)
+    ok = [g[1] for g in gaps] == ["작업 스케줄러"] and not bad and gaps2 == []
+    print("%s scan --module — 안 덮인 종류 %s · 종류를 더하면 %d" % ("✓" if ok else "✗", [g[1] for g in gaps], len(gaps2)))
+    if not ok:
+        FAIL.append("scan --module")
+
+
+def contract_tests(root):
+    """⑧ 모듈 계약 — 볼트 모듈이 쓰는 코어 이름(uses_core)이 배포판에 없으면 센다 · 넣으면 0 · 꺼진 모듈도 잰다 ·
+    contracts run = 켜진 모듈의 update_check 만 돌리고 실패를 «깨짐»으로."""
+    A, B = os.path.join(root, "vault"), os.path.join(root, "dist")
+    DATA = "3_시스템/demo-data.json"  # mf:allow-path  (임시 사본 안 — 이름 없이 «있는지만» 재는 코어 파일)
+    MJ = ".claude/skills/demo-mod/module.json"
+    ok = True
+
+    def say(name, cond, detail=""):
+        nonlocal ok
+        print("%s 모듈 계약 — %s%s" % ("✓" if cond else "✗", name, (" · " + str(detail)) if detail else ""))
+        if not cond:
+            ok = False
+            FAIL.append("모듈 계약 " + name)
+
+    put(A, PY, "def foo():\n    pass\n")
+    put(A, DATA, "{}\n")
+    put(A, MJ, json.dumps({"schema": 1, "uses_core": {PY: ["foo"], DATA: []},
+                           "contributes": {"update_check": [["{py}", "-c", "import sys; sys.exit(1)"]]}}))
+    put(B, PY, "def bar():\n    pass\n")
+    got = dc.contract_gaps(A, B)
+    say("배포판에 이름·파일 없음 = 2", got == ["demo-mod → %s 이름 없음 foo" % PY, "demo-mod → %s 파일 없음" % DATA], got)
+    put(B, PY, "if True:\n    foo = 1\n")
+    put(B, DATA, "{}\n")
+    say("넣으면 0(if 안 이름도 셈)", dc.contract_gaps(A, B) == [])
+    s = importlib.util.spec_from_file_location("dist_contracts", os.path.join(HERE, "contracts.py"))
+    ct = importlib.util.module_from_spec(s)
+    s.loader.exec_module(ct)
+    rows = ct.run_checks(A)
+    say("켜진 모듈 시험 실패 = 깨짐", [r["code"] for r in rows] == [1], rows)
+    say("깨짐 글 맨 위", ct.text([], {"파일": 2, "이름": 1}, rows).startswith("⛔ demo-mod 계약 깨짐"))
+    put(A, ".claude/settings.json", json.dumps({"enabledPlugins": {"demo-mod@skills-dir": False}}))  # mf:allow-path  (임시 볼트 안 — 모듈 켬·끔 흉내)
+    put(B, PY, "x = 1\n")
+    say("꺼진 모듈도 잼(배포판 기준)", len(dc.contract_gaps(A, B)) == 1)
+    say("꺼진 모듈 시험은 안 돎", ct.run_checks(A) == [])
+    return ok
 
 
 def ship_tests(root):
@@ -323,6 +418,8 @@ def main():
             FAIL.append("안 보던 자리")
 
         ship_tests(os.path.join(tmp, "ship"))
+        contract_tests(os.path.join(tmp, "contract"))
+        module_outside_tests(os.path.join(tmp, "outside"))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("통과" if not FAIL else "실패: " + ", ".join(FAIL))

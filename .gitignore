@@ -11,6 +11,8 @@ _변환본/
 !1_수집/**/
 !1_수집/**/*.md
 !1_수집/_inbox/.gitkeep
+# PDF 원본 위 필기의 짝(brain-source 필기 13차 · 원본 옆 `<이름> (필기).note`) = 손글씨라 추적(원본 PDF 는 계속 제외 · 11-18)
+!1_수집/**/* (필기).note
 # 원본 색인 — ingest.py 가 원본에서 다시 만든다(md 지만 제외). (2026-10-14)
 1_수집/_색인/
 # 0_작업 = 진행 중 작업 폴더. 넣고 지우기 자유 · 끝나면 승격하거나 삭제.
@@ -18,6 +20,7 @@ _변환본/
 0_작업/**
 !0_작업/**/
 !0_작업/**/*.md
+!0_작업/**/* (필기).note
 # 튜토리얼 연습 폴더 — brain-base 엔진이 만들고 장 끝·그만·닫힘·다음에 켤 때 바로 지운다(2026-11-07). 연습 노트가 커밋되지 않게.
 0_작업/튜토리얼/
 # 영상·무손실 오디오 — 볼트 어디서든 git 에 넣지 않는다(GitHub 100MB push 차단 · 저장소 영구 증가).
@@ -45,6 +48,9 @@ __pycache__/
 .obsidian/plugins/brain-base/data.json
 .obsidian/plugins/brain-calendar/data.json
 .obsidian/plugins/brain-source/data.json
+# 로그인 수집 확장이 읽는 출처 목록·«이미 받은 것» — collect-browser.py 가 조리법·manifest 에서 다시 만든다(파생물 · 개인 값)
+3_시스템/collect-ext/ext-state.json
+3_시스템/collect-ext/known-*.json
 # 휴지통 — fileops·옵시디언이 지운 것을 30일 둔다(되살리기용).
 .trash/
 

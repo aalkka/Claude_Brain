@@ -73,7 +73,8 @@ try:
                'src-a:b3': {'평가': '헛것', '메모': '대학원생 연구자용', '길': '단추'},
                'src-a:b4': {'평가': '헛것', '메모': '거절'}}, open(marks, 'w', encoding='utf-8'), ensure_ascii=False)
     nf.CARD, nf.RECIPES, nf.STATE, nf.STAGE, nf.CACHE, nf.MARKS, nf.QUEUE, nf.VAULT, nf.ARCH = cf, os.path.join(T, 'collect'), os.path.join(T, 'state'), os.path.join(T, 'state', 'stage'), os.path.join(T, 'state', '조건'), marks, q, T, os.path.join(T, 'arch')
-    nf.REPORT, nf.STATUS, nf.LMS_PENDING = os.path.join(T, 'state', '판정.md'), os.path.join(T, 'state', '.status.txt'), os.path.join(T, '없음.json')
+    nf.REPORT, nf.STATUS = os.path.join(T, 'state', '판정.md'), os.path.join(T, 'state', '.status.txt')
+    nf.post_sources = lambda: []        # 로그인 출처 «마감 불명» 글 칸 = 조리법(S6) — 시험은 없음
     nf._card.clear()
     fl.RECIPES, fl.STATE, fl.LOG, fl.VAULT = nf.RECIPES, nf.STATE, os.path.join(T, 'state', '되먹임.jsonl'), T
     os.makedirs(os.path.join(T, '2_지식', '일정'))

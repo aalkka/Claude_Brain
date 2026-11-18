@@ -691,11 +691,26 @@ def memo_of(ctx, r):
     return [m for m in ("%s.md" % s, "%s (%s).md" % (s, e[1:])) if os.path.isfile(ctx.abs(m))]
 
 
+def ink_pair_of(ctx, r):
+    """PDF 원본 옆 필기 짝(`<이름> (필기).note` · brain-source 필기 13차 · 11-18) — 있으면 그 경로."""
+    s, e = posixpath.splitext(r)
+    m = "%s (필기).note" % s
+    return m if e.lower() == ".pdf" and os.path.isfile(ctx.abs(m)) else None
+
+
 def pair_memos(ctx, rs, rd):
-    """짝 메모도 같이 옮긴다 — brain-source followRename 과 같은 규칙."""
+    """짝 메모도 같이 옮긴다 — brain-source followRename 과 같은 규칙 · PDF 의 필기 짝(`<이름> (필기).note`)도."""
     so, eo = posixpath.splitext(rs)
     sn, en = posixpath.splitext(rd)
     out = []
+    ink = ink_pair_of(ctx, rs)
+    if ink:
+        new = "%s (필기).note" % sn
+        if ink.lower() != new.lower():
+            if os.path.exists(ctx.abs(new)):
+                print("  ⚠ 필기 짝을 못 옮김(새 자리에 이미 있음): %s" % new)
+            else:
+                out.append((ink, new))
     for old in memo_of(ctx, rs):
         new = "%s (%s).md" % (sn, en[1:]) if old.endswith(" (%s).md" % eo[1:]) else "%s.md" % sn
         if old.lower() == new.lower():
@@ -774,7 +789,9 @@ def op_mv(ctx, src, dst, why, lenient=False, by_undo=None, core_ok=False):
     ev = ctx.add(kind, src=rs, dst=rd, why=why, undo_of=by_undo, links=sum(k for _, k in ch),
                  linkfiles=[f for f, _ in ch][:20], made=[ctx.rel(m) for m in made], **info, **({"via": via} if via else {}))
     for o, n in memos:
-        ctx.add("mv", src=o, dst=n, why="짝 메모 따라감", parent=ev["id"])
+        ctx.add("mv", src=o, dst=n, why="필기 짝 따라감" if o.endswith(" (필기).note") else "짝 메모 따라감", parent=ev["id"])
+        if o.endswith(" (필기).note"):
+            ink_bg_path(ctx, n, rd)
     print("%s %s → %s%s%s" % (LABEL[kind], rs, rd, " (파일 %d)" % info["n"] if isdir else "", " · 옵시디언이 옮김" if via else ""))
     if ch or memos or rel_fix:
         print("  링크 고침 %d파일(%d곳)%s%s" % (len(ch), sum(k for _, k in ch),
@@ -787,6 +804,25 @@ def op_mv(ctx, src, dst, why, lenient=False, by_undo=None, core_ok=False):
     if src_n:
         print("  · 원본 %d개의 색인은 ingest.py 가 해시로 다시 잇는다(옵시디언이 켜져 있으면 brain-source 가 곧)" % src_n)
     return ev
+
+
+def ink_bg_path(ctx, note, pdf):
+    """필기 짝 머리 줄의 bg.path 를 새 원본 경로로(머리 = 첫 줄 JSON · 나머지 줄은 그대로 · 줄끝 그대로)."""
+    a = ctx.abs(note)
+    try:
+        with open(a, "rb") as f:
+            raw = f.read()
+        nl = raw.find(b"\n")
+        head = json.loads(raw[: nl if nl >= 0 else len(raw)].decode("utf-8").rstrip("\r"))
+        if not isinstance(head.get("bg"), dict) or head["bg"].get("path") == pdf:
+            return
+        head["bg"]["path"] = pdf
+        line = json.dumps(head, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        cr = b"\r" if nl > 0 and raw[nl - 1:nl] == b"\r" else b""
+        with open(a, "wb") as f:
+            f.write(line + cr + (raw[nl:] if nl >= 0 else b"\n"))
+    except (OSError, ValueError) as e:
+        print("  ⚠ 필기 짝 머리(bg.path)를 못 고침: %s · %s" % (note, e))
 
 
 def op_rm(ctx, src, why, count=None, user_asked=False, lenient=False, by_undo=None, core_ok=False, quiet=False):
@@ -819,6 +855,9 @@ def op_rm(ctx, src, why, count=None, user_asked=False, lenient=False, by_undo=No
         print("  ⚠ 이것을 가리키던 링크 %d곳이 깨진다(되살리면 돌아옴)" % nlink)
     if memo:
         print("  · 짝 메모는 남김(사람 것): %s" % ", ".join(memo))
+    ink = None if info["kind"] == "dir" else ink_pair_of(ctx, rs)
+    if ink:                                                 # 필기 짝은 원본과 같이 휴지통(같은 묶음 → undo 한 번에 둘 다 · 11-18)
+        op_rm(ctx, ink, why="필기 짝 따라감", user_asked=True, lenient=True, by_undo=by_undo, core_ok=core_ok, quiet=True)
     return ev
 
 

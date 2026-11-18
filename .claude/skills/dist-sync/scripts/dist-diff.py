@@ -54,14 +54,17 @@ PERSONAL = [
     # 학교 수집(LMS·공지 조리법·판정)·보고서 대본은 특정 학교·과제에 묶여 있다 · 행위는 optional 이라 없어도 고장이 아니다
     "2_지식/일정/*", "2_지식/notes/*", ".claude/skills/eye/*", ".claude/skills/study-helper/*",  # mf:allow-path
     "3_시스템/lms/*", "3_시스템/lms-*", "3_시스템/collect/*",  # mf:allow-path  (수집 엔진 web-collect·notice-filter 는 코어로 · 11-09)
+    "3_시스템/sort/*",  # mf:allow-path  (분류 체계·태그 사전 = 사용자 것 · 빈 틀 = 3_시스템/sort-examples · 11-19)
+    "3_시스템/collect-ext/ext-state.json", "3_시스템/collect-ext/known-*.json",  # mf:allow-path  (확장 폴더의 PC 파생물 · 출처 호스트·과목 번호 · .gitignore 와 같음 · S7 — 폴더째 실리는 collect-ext/ 안이라 ① 에 «새 파일»로 떴다)
     "3_시스템/labreport-*", "3_시스템/dsl-report-build.py", "3_시스템/md2docx-simple.py",  # mf:allow-path
     "3_시스템/ask.py", "3_시스템/travel-mode.ps1",  # mf:allow-path
     # 2026-11-09 — 배포판에 안 싣는 모듈(빅보스·로드맵·폰 연결 mobility) · 이 PC 의 값 · 그래프 색표 · LMS 예약·깨우기 시험
     ".claude/skills/bigboss/*", ".claude/skills/interactive_roadmap/*", "3_시스템/*.local.json", "3_시스템/graph_topics.json",  # mf:allow-path
     ".claude/skills/mobility/*",  # mf:allow-path  (폰 연결 모듈 · 11-16 — 폰 앱·폰 플러그인이 배포판에 없음)
     "3_시스템/m2-setup.ps1", "3_시스템/wake-test.ps1",  # mf:allow-path  (LMS 무인 수집 예약·깨우기 시험 — 개인 층 · 서버는 11-16 mobility 로)
-    # 개인 층 대상(학교 LMS 대본·서버·lms-intake·lms-auto)·안 싣는 모듈(로드맵·study-helper)을 돌리는 시험 · 제작자 노트를 묻는 검색 골든셋
-    "3_시스템/_eval/lms_*", "3_시스템/_eval/flow_rehearsal_check.py",  # mf:allow-path
+    # 개인 층 대상(학교 LMS 대본·서버·lms-intake·로그인 조리법 mylms)·안 싣는 모듈(로드맵·study-helper)을 돌리는 시험 · 제작자 노트를 묻는 검색 골든셋
+    "3_시스템/_eval/lms_*", "3_시스템/_eval/browser_cookie_report_check.py", "3_시스템/_eval/browser_report_file_check.py", "3_시스템/_eval/collect_ext_cookie_check.py", "3_시스템/_eval/collect_ext_popup_check.mjs",  # mf:allow-path  (S7 이름 바꿈 · 옛 lms_* — 진짜 조리법·학교 쿠키 이름에 기댐)
+    "3_시스템/_eval/flow_rehearsal_check.py",  # mf:allow-path
     "3_시스템/_eval/r6_intake_check.py", "3_시스템/_eval/collect_desk_off_check.py", "3_시스템/_eval/roadmap_engine_check.py", "3_시스템/_eval/module_toggle_check.py",  # mf:allow-path
     "3_시스템/_eval/golden.jsonl", "3_시스템/_eval/golden-paraphrase.jsonl",  # mf:allow-path
 ]
@@ -185,7 +188,7 @@ CORE = [
     # 받는 문 — 볼트 밖 → 받은함(ADR-031 · 2026-11-03)
     "3_시스템/door.py",  # mf:allow-path
     # 코어 훅·행위가 부르는 대본(2026-11-03 반영 때 층 분류) — 표 고침·MOC·어긋남·기록·주간·일정·변환 · 대화창 규약 글
-    "3_시스템/mdtable.py", "3_시스템/moc.py", "3_시스템/drift.py", "3_시스템/record.py", "3_시스템/weekly.py",  # mf:allow-path
+    "3_시스템/mdtable.py", "3_시스템/moc.py", "3_시스템/drift.py", "3_시스템/record.py", "3_시스템/weekly.py", "3_시스템/speed.py",  # mf:allow-path  (speed = weekly «속도» 칸 · 11-16)
     "3_시스템/skillstat.py", "3_시스템/schedule.py", "3_시스템/docpdf.py", "3_시스템/vault-chat/*",  # mf:allow-path
     # 공휴일 표 받기(캘린더가 읽음 · 표는 일정 폴더 — 개인) — 2026-11-03
     "3_시스템/holidays.py",  # mf:allow-path
@@ -201,6 +204,15 @@ CORE = [
     "3_시스템/gather/*",  # mf:allow-path
     # 초안 비교 한 장(스킬 draft · 11-13) — 스킬이 부르는 그리기·검사 대본과 바탕 꼴. 빠지면 배포판의 draft 가 안 돈다
     "3_시스템/draft.py", "3_시스템/draft/*",  # mf:allow-path
+    # 모듈 계약 코어(module.json uses_core · 11-18 mobility 범용화 10단계 잼) — 깨끗한 배포판에서 폰 서버가 `import nowin` 으로 못 떴다.
+    # nowin = 창 없이 부르기 · autocommit = 기록 보존 순찰(M8) · sort·tag = 분류·태그 도구(알림 alert.py 가 부름)
+    "3_시스템/nowin.py", "3_시스템/autocommit.py", "3_시스템/sort.py", "3_시스템/tag.py",  # mf:allow-path
+    # 수집 엔진 범용화(LMS 범용화 S1~S7 · 11-16~17) — 공통 엔진·로그인 가족·예약·받은 파일·15분 확인 · 플랫폼 어댑터·크롬 확장·개인 파일 빈 틀(사용자 결정: 가족·어댑터는 배포판 실음)
+    # 새 web-collect·collect_desk 가 collectlib 를 부른다 — 빠지면 배포판 수집이 안 뜬다(11-19 publish 때 «층 미정»으로 남아 있었음)
+    "3_시스템/collectlib.py", "3_시스템/collect-browser.py", "3_시스템/collect-file.py", "3_시스템/collect-schedule.py", "3_시스템/collect-tick.py",  # mf:allow-path
+    "3_시스템/collect-adapters/*", "3_시스템/collect-ext/*", "3_시스템/collect-examples/*",  # mf:allow-path
+    # 분류·태그 가족(스킬 sort · 11-18) — 어댑터(수집글·가격줄)·받은함 그림자·되먹임 · 가격 조회 가족(sort.py ADAPTERS 가 부름 · 키 없으면 조용히 «키 없음») · 체계 빈 틀
+    "3_시스템/sort_collect.py", "3_시스템/sort_inbox.py", "3_시스템/sort_learn.py", "3_시스템/sort_price.py", "3_시스템/collect_price.py", "3_시스템/sort-examples/*",  # mf:allow-path
 ]
 
 # publish 방향에서 배포판에 새어 나가면 안 되는 것 (2026-08-03 전수검사 계열)

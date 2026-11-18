@@ -79,6 +79,28 @@ q{display:block;color:var(--tx3);font-size:var(--fs1);quotes:"«" "»"}
 #more:hover{color:var(--tx)}
 .empty{padding:36px 10px;text-align:center;color:var(--tx3)}
 .err{color:var(--err);font-size:var(--fs1);white-space:pre-wrap}
+/* 폰 = 좁은 표(11-17 사용자 고름 «B») — 제목·마감·내 칸만 · 나머지 거르기 칸은 머리 칩 · 칸 너비 끌기 없음 · html.ph 일 때만(PC·탭은 위 그대로) */
+.ph #app{padding:0 0 24px}
+.ph .hd{flex-wrap:nowrap;align-items:center;margin:0;padding:8px 12px 6px}
+.ph .hd .sp{flex:1}
+.pchip{display:inline-flex;align-items:center;gap:3px;height:28px;font-size:var(--fs1);color:var(--tx2);border:1px solid var(--line);border-radius:999px;padding:0 10px;white-space:nowrap}
+.pchip.on{color:var(--accent);border-color:var(--accent)}
+.pchip .a{font-size:10px}
+.ph table{table-layout:fixed}
+.ph th{padding:6px 8px}
+.ph th:first-child,.ph td:first-child{padding-left:12px}
+.ph th .f{display:inline-block;padding:6px;margin:-6px -6px -6px -2px;font-size:11px}
+.ph td{padding:8px}
+.ph td.t{min-width:0}
+.ph .tt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ph td.d b,.ph td.d span{display:block;margin:0}
+.ph .mine{min-width:44px;height:26px;padding:0 8px;text-align:center}
+.ph tr.det td{padding:10px 12px 12px 14px}
+.ph .seg button{height:30px;padding:0 12px}
+.ph .btn{height:30px}
+.ph .menu label,.ph .menu button{min-height:36px;padding:0 10px;font-size:var(--fs2)}
+.ph .menu .n{margin-left:auto;padding-left:12px;color:var(--tx3)}
+.ph #more{margin:10px 12px 0}
 </style>
 </head>
 <body>
@@ -95,6 +117,13 @@ const val=(r,k)=>{const x=r[k];return Array.isArray(x)?(x.length?x.join('·'):nu
 const key=(r,k)=>{const x=val(r,k);return x===null?NONE:typeof x==='boolean'?(x?'예':'아니오'):String(x)};
 const due=r=>{if(!r['마감'])return null;const d=new Date(r['마감']+'T00:00:00'),n=r.D;return{tag:n<0?'지남':n===0?'오늘':'D-'+n,date:`${d.getMonth()+1}/${d.getDate()} (${WD[d.getDay()]})`,cls:n>=0&&n<=3?'hot':n>=0&&n<=7?'warm':''}};
 const mineCols=()=>S.v.columns.filter(c=>c.kind==='mine');
+// 기기(11-17) — ① 부모가 넘긴 env.device(phone·tablet·desktop) ② 이 화면의 입력 신호: 손가락 화면(pointer:coarse·hover:none)이면 화면 짧은 변 600 미만 = 폰 · 아니면 탭
+// ③ 신호가 없으면 폭(600 이하 = 폰) — 로드맵 화면과 같은 가르기. 폭만으로 가르지 않는 까닭: PC 의 좁은 칸·탭 반쪽 창이 폰 꼴이 되면 안 된다.
+let DEV=null;
+function devOf(){if(DEV)return DEV;const mm=q=>matchMedia(q).matches;if(window.matchMedia)return mm('(pointer:coarse)')&&mm('(hover:none)')?(Math.min(screen.width,screen.height)<600?'phone':'tablet'):'desktop';return innerWidth<=600?'phone':'desktop'}
+const PH=()=>devOf()==='phone';
+/** 폰 표의 칸 = 제목 · 첫 날짜 칸 · 내 칸(원래 차례) — 나머지는 줄을 누른 세부에 */
+function phCols(){const cs=S.v.columns,d=cs.find(c=>c.kind==='date');const o=cs.filter(c=>c.id==='제목'||c===d||c.kind==='mine');return o.length?o:cs.slice(0,1)}
 function num(x){const m=String(x).replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*(만|억)?/);return m?parseFloat(m[1])*(m[2]==='억'?1e4:1):NaN}
 function sorted(rows){const k=S.key,has=rows.filter(r=>val(r,k)!==null),no=rows.filter(r=>val(r,k)===null);
   has.sort((a,b)=>{let x=val(a,k),y=val(b,k);if(k==='금액'){x=num(x);y=num(y);if(isNaN(x))x=-1;if(isNaN(y))y=-1}else if(typeof x==='boolean'){x=+x;y=+y}return(x<y?-1:x>y?1:0)*(S.rev?-1:1)});return has.concat(no)}
@@ -107,7 +136,7 @@ function cell(c,r){const x=r[c.id];
   if(c.id==='의무')return`<td class="x">${x&&x.length?esc(x.join('·')):'<span class="mut">없음</span>'}</td>`;
   const v=val(r,c.id);return`<td class="x">${v===null?'':esc(v)}</td>`}
 const MARK={'충족':['✓','ok'],'불충족':['✕','no'],'모름':['?','un']};
-function detail(r){const s=r['세부']||{},d=due(r),o=[];
+function detail(r,more){const s=r['세부']||{},d=due(r),o=[];
   const facts=[];
   if(s['요약'])facts.push(['요약',esc(s['요약'])]);
   if(d)facts.push(['마감',`${esc(d.tag)} · ${esc(d.date)}`]);
@@ -118,6 +147,7 @@ function detail(r){const s=r['세부']||{},d=due(r),o=[];
   if(s['소득심사'])facts.push(['소득 심사',`<q>${esc(s['소득심사'])}</q>`]);
   facts.push(['판정',esc(r['판정'])+(s['첨부에만']?' <span class="mut">첨부에만</span>':'')]);
   facts.push(['출처',`${esc(r['출처'])} <span class="mut">${esc(r['날짜'])}</span>`]);
+  for(const c of more||[]){const h=c.head||c.id,v=val(r,c.id);if(v!==null&&!facts.some(f=>f[0]===h))facts.splice(facts.length-2,0,[esc(h),esc(typeof v==='boolean'?(v?'예':'아니오'):v)])}
   o.push(`<dl>${facts.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`);
   if(s['조건']&&s['조건'].length)o.push(`<div class="sec">자격</div><ul class="conds">${s['조건'].map(c=>{const[m,cl]=MARK[c['결과']]||['·',''];return`<li><span class="m ${cl}">${m}</span><span>${esc(c['축'])}</span><span>${esc(c['값'])}</span>${c['근거']?`<q>${esc(c['근거'])}</q>`:''}</li>`}).join('')}</ul>`);
   const acts=[];
@@ -128,6 +158,7 @@ function detail(r){const s=r['세부']||{},d=due(r),o=[];
 function draw(){const v=S.v;if(!v)return;const app=$('#app');
   if(v.error){app.innerHTML=`<div class="err">${v.error.map(esc).join('\n')}</div>`;return}
   if(S.key===null){S.key=v.sort[0].replace(/^-/,'');S.rev=v.sort[0].startsWith('-')}
+  const ph=PH();document.documentElement.classList.toggle('ph',ph);if(ph)return drawPh();
   const rows=shown(),gone=Object.values(v.hidden||{}).reduce((a,b)=>a+b,0);
   const fch=Object.entries(S.f).filter(([,s])=>s.size).map(([k,s])=>`<button class="fchip" data-clear="${esc(k)}">${esc(k)} ${esc([...s].join('·'))} ✕</button>`);
   let h=`<div class="hd"><b>${esc(v.name)}</b><span class="cnt">${rows.length}건</span>${fch.join('')}</div>`;
@@ -141,6 +172,25 @@ function draw(){const v=S.v;if(!v)return;const app=$('#app');
   const past=S.past?`${tb}<tbody>${(v.gone||[]).map(r=>tr(r,true)).join('')}</tbody></table>`:'';
   h+=`<div class="main"><div class="tw">${tb}<thead>${head}</thead><tbody>${body}</tbody></table>${more}${past}</div></div>`;
   app.innerHTML=h}
+// 폰 좁은 표(초안 B) — 머리 = 정렬 · ▾ = 거르기 · 표에 없는 거르기 칸 = 머리 줄 칩(지급 ▾) · 줄 누름 = 세부(숨은 칸 값 포함) · 내 칸 = 상태 단추
+function drawPh(){const v=S.v,app=$('#app'),cols=phCols(),ids=cols.map(c=>c.id),rest=v.columns.filter(c=>!ids.includes(c.id)&&c.kind!=='gold');
+  const rows=shown(),gone=Object.values(v.hidden||{}).reduce((a,b)=>a+b,0),gold=v.columns.some(c=>c.kind==='gold');
+  const hd=k=>{const c=v.columns.find(x=>x.id===k);return c?(c.head||c.id):k};
+  const chips=v.filters.filter(k=>!ids.includes(k)).map(k=>{const n=S.f[k]&&S.f[k].size;return`<button class="pchip${n?' on':''}" data-menu="${esc(k)}">${esc(hd(k))}${n?` ${n}`:''}<span class="a">▾</span></button>`}).join('');
+  let h=`<div class="hd"><b>${esc(v.name)}</b><span class="cnt">${rows.length}건</span><span class="sp"></span>${chips}</div>`;
+  const PW={date:78,mine:66},tb=`<table><colgroup>${cols.map(c=>`<col${PW[c.kind]?` style="width:${PW[c.kind]}px"`:''}>`).join('')}</colgroup>`;
+  const head=`<tr>${cols.map(c=>{const fl=v.filters.includes(c.id),on=S.f[c.id]&&S.f[c.id].size;return`<th class="${c.id===S.key?'s':''}"><span class="h" data-sort="${esc(c.id)}">${esc(c.head||c.id)}${c.id===S.key?`<span class="a">${S.rev?'▼':'▲'}</span>`:''}</span>${fl?`<span class="f${on?' on':''}" data-menu="${esc(c.id)}">▾</span>`:''}</th>`}).join('')}</tr>`;
+  const tr=(r,dim)=>`<tr class="row${r['꽁돈']&&gold?' gold':''}${S.open===r.id?' sel':''}${dim?' dim':''}" data-id="${esc(r.id)}">${cols.map(c=>phCell(c,r)).join('')}</tr>`
+    +(S.open===r.id?`<tr class="det"><td colspan="${cols.length}">${detail(r,rest)}</td></tr>`:'');
+  const body=rows.length?rows.map(r=>tr(r,false)).join(''):`<tr><td class="empty" colspan="${cols.length}">없음</td></tr>`;
+  const more=gone?`<button id="more">${S.past?'접기':Object.entries(v.hidden).map(([k,n])=>`${esc(k)} ${n}`).join(' · ')}</button>`:'';
+  const past=S.past?`${tb}<tbody>${(v.gone||[]).map(r=>tr(r,true)).join('')}</tbody></table>`:'';
+  h+=`<div class="main"><div class="tw">${tb}<thead>${head}</thead><tbody>${body}</tbody></table>${more}${past}</div></div>`;
+  app.innerHTML=h}
+function phCell(c,r){
+  if(c.kind==='date'){const d=due(r);if(!d)return'<td class="d"><span>—</span></td>';const t=new Date(r['마감']+'T00:00:00');return`<td class="d"><b class="${d.cls}">${d.tag}</b><span>${t.getMonth()+1}/${t.getDate()}</span></td>`}
+  if(c.id==='제목')return`<td class="t"><span class="tt">${esc(r[c.id])}</span></td>`;
+  return cell(c,r)}
 // 칸 너비 — S.w = {칸 id: px}(없으면 브라우저가 나눔) · 처음 값 = .moa «widths»(자료로 옴) · 끈 뒤 brain-base 에 cols 로 알린다(받는 쪽이 파일에 적으면 다시 열어도 남음)
 const MINW=40;
 const fixed=()=>!!(S.w&&Object.keys(S.w).length);
@@ -163,16 +213,18 @@ document.addEventListener('pointerup',endDrag);
 document.addEventListener('pointercancel',endDrag);
 document.addEventListener('dblclick',e=>{if(!e.target.closest('[data-rz]')||!fixed())return;S.w=null;send({t:'cols',widths:{}});draw()});
 function find(id){return[...S.v.rows,...(S.v.gone||[])].find(r=>r.id===id)}
-function menu(el,html){const m=$('#menu'),b=el.getBoundingClientRect();m.innerHTML=html;m.hidden=false;m.style.left=Math.min(b.left,innerWidth-m.offsetWidth-8)+'px';m.style.top=(b.bottom+4)+'px'}
+function menu(el,html){const m=$('#menu'),b=el.getBoundingClientRect();m.innerHTML=html;m.hidden=false;m.style.left=Math.min(b.left,innerWidth-m.offsetWidth-8)+'px';m.style.top=(b.bottom+4)+'px';
+  if(PH()&&b.bottom+4+m.offsetHeight>innerHeight-8)m.style.top=Math.max(8,b.top-4-m.offsetHeight)+'px'}
 function closeMenu(){$('#menu').hidden=true;S.menu=null}
-function filterMenu(el,k){S.menu=['f',k];const set=S.f[k]||new Set(),vals=[...new Set(S.v.rows.map(r=>key(r,k)))].sort();
-  menu(el,vals.map(x=>`<label><input type="checkbox" data-fv="${esc(x)}"${set.has(x)?' checked':''}>${esc(x)}</label>`).join(''))}
+function filterMenu(el,k){S.menu=['f',k];const set=S.f[k]||new Set(),vals=[...new Set(S.v.rows.map(r=>key(r,k)))].sort(),ph=PH();
+  menu(el,vals.map(x=>`<label><input type="checkbox" data-fv="${esc(x)}"${set.has(x)?' checked':''}>${esc(x)}${ph?`<span class="n">${S.v.rows.filter(r=>key(r,k)===x).length}</span>`:''}</label>`).join(''))}
 function mineMenu(el,field,id){S.menu=['m',field,id];const c=mineCols().find(x=>x.id===field),r=find(id);
-  menu(el,c.options.map(x=>`<button data-set="${esc(x)}" data-field="${esc(field)}" data-id="${esc(id)}">${r&&r[field]===x?'● ':''}${esc(x)}</button>`).join('')+`<button data-set="" data-field="${esc(field)}" data-id="${esc(id)}">—</button>`)}
+  menu(el,c.options.map(x=>`<button data-set="${esc(x)}" data-field="${esc(field)}" data-id="${esc(id)}">${r&&r[field]===x?'● ':''}${esc(x)}</button>`).join('')+`<button data-set="" data-field="${esc(field)}" data-id="${esc(id)}">${PH()?'✕':'—'}</button>`)}
 function setMine(field,id,value){const r=find(id);if(r){r[field]=value||null}send({t:'set',field,id,value});closeMenu();draw()}
 addEventListener('message',e=>{const m=e.data||{};
   if(m.t==='theme'){for(const[k,x]of Object.entries(m.vars||{}))if(x)document.documentElement.style.setProperty(k,x)}
-  else if(m.t==='data'){S.v=m.data;if(S.drag){S.pend=true;return}takeW(m.data);closeMenu();draw()}});
+  else if(m.t==='data'){S.v=m.data;if(S.drag){S.pend=true;return}takeW(m.data);closeMenu();draw()}
+  else if(m.t==='env'&&(m.device||null)!==DEV){DEV=m.device||null;if(S.v&&!S.drag){closeMenu();draw()}}});
 addEventListener('resize',()=>S.v&&!S.drag&&draw());
 document.addEventListener('click',e=>{const q=s=>e.target.closest(s);let t;
   if(t=q('[data-set]')){setMine(t.dataset.field,t.dataset.id,t.dataset.set);return}

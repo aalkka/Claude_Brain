@@ -23,6 +23,9 @@ import time
 # sh 판의 grep -E 와 같은 뜻(줄 단위 = [^-] 가 줄을 넘지 않게 \n 을 뺌 · 바이트 = C 로캘 \b)
 SECRET = re.compile(rb"(\bsk-[A-Za-z0-9_-]{16,}|\bghp_[A-Za-z0-9]{16,}|\bAKIA[0-9A-Z]{16}|-----BEGIN[^-\n]*PRIVATE KEY-----)")
 SENSITIVE = re.compile(rb"^sensitive:[ \t\r\v\f]*true[ \t\r\v\f]*$", re.M)
+# 필기 .note 의 획 자료 칸 "z":"…"(점 부호 글)는 우연히 sk-… 꼴이 된다(11-17 Notes_261116 획 9496개 중 하나 · 커밋 9시간 막힘).
+# .note 에서만 그 칸을 비우고 나머지(글상자 글 등)는 그대로 검사한다.
+STROKE = re.compile(rb'"z":"[^"]*"')
 OUT = sys.stdout.buffer
 EX_MARK = "# 외부뇌 민감 노트(pre-commit) — 노트에서 sensitive: true 를 빼거나 지우면 다음 커밋 때 이 두 줄이 지워진다"
 LOG = "3_시스템/_index/hooks.log"  # 훅은 저장소 뿌리에서 돈다
@@ -231,7 +234,7 @@ def main():
         b = data[p]
         f = p.decode("utf-8", "surrogateescape")
         shown = f.encode("utf-8", "surrogateescape").decode("utf-8", "replace")
-        if SECRET.search(b):
+        if SECRET.search(STROKE.sub(b'"z":""', b) if f.endswith(".note") else b):
             say("❌ secret 의심: {} (커밋 차단)".format(shown))
             fail = True
         if not f.endswith(".md"):

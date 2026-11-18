@@ -6,13 +6,16 @@ root = tempfile.mkdtemp(prefix="follow-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")
 os.makedirs(S)
-for f in ("fileops.py", "roles.py", "roles.json", "follow.py"):
+for f in ("fileops.py", "roles.py", "roles.json", "follow.py", "collectlib.py"):
     shutil.copy2(os.path.join(REAL, f), os.path.join(S, f))
 R = json.load(open(os.path.join(S, "roles.json"), encoding="utf-8"))["roles"]
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8", FILEOPS_NO_OBSIDIAN="1", FOLLOW_NO_INGEST="1")
 TXT = "내용이 충분히 긴 줄 " * 12
 K, W, SCH, IDX = R["field_notes"], R["work"], R["school"], R["source_index"]
-MAN = os.path.join(S, "_index", "lms", "manifest.json")
+MAN = os.path.join(S, "_index", "school-lms", "manifest.json")
+os.makedirs(os.path.join(S, "collect", "browser"))     # 로그인 출처 = 조리법 하나(S6 · follow 가 장부 자리를 조리법에서 읽는다)
+json.dump({"id": "school-lms", "family": "browser", "manifest": "_index/school-lms/manifest.json", "raw_dir": "_school"},
+          open(os.path.join(S, "collect", "browser", "school-lms.json"), "w", encoding="utf-8"))
 res = []
 
 

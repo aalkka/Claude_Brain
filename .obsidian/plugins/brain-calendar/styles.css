@@ -169,6 +169,10 @@ body.bc-dragging, body.bc-dragging * { user-select: none; cursor: grabbing !impo
 .bc-bell svg { width: 14px; height: 14px; }
 .bc-bell.is-idle { opacity: 0; }
 .bc-row:hover .bc-bell.is-idle, .is-mobile .bc-bell.is-idle, .bc-bell.is-idle:focus-visible { opacity: 1; }
+/* 0.8.4 «알림 전부» 끔 — 줄 종 흐림(안 울리는 종은 올릴 때만 흐리게) */
+.bc-bell.is-all-off { opacity: 0.35; }
+.bc-bell.is-idle.is-all-off { opacity: 0; }
+.bc-row:hover .bc-bell.is-idle.is-all-off, .is-mobile .bc-bell.is-idle.is-all-off, .bc-bell.is-idle.is-all-off:focus-visible { opacity: 0.35; }
 /* 알림 상자(초안 2차 A «수 · 단위 · 시각 칸») — 칸마다 한 줄 · 오른쪽 = 실제 울릴 때 */
 .bc-al { width: 300px; display: flex; flex-direction: column; gap: 4px; font-size: var(--font-ui-smaller); }
 .bc-al-row { display: flex; align-items: center; gap: 4px; min-height: 26px; }

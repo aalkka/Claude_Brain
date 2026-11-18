@@ -97,8 +97,70 @@ def broken(raw, why):
         pass
 
 
+EDIT_TOOLS = ("edit", "write", "multiedit")
+
+
+def phone_lock(s):
+    """폰·탭이 고치는 중인 노트(11-17 사용자 «모바일에서 수정 중이라면 다른 기기에서의 수정을 막고») — Claude 의 Edit·Write 를 막을 까닭 · 아니면 None.
+    값싼 1차 = 서버가 쓰는 locks.json(없거나 그 노트가 없으면 바로 통과 · 파일 하나 읽기). 걸리면 서버(/v1/locks)에 다시 물어
+    서버가 안 닿으면(꺼짐) 통과한다 — 남은 파일 때문에 Claude 가 멈춰 서지 않게. Bash·대본은 안 본다(그 충돌은 폰이 삼자 비교로 고르게 한다)."""
+    m = TOOL.search(s)
+    if not m or m.group(1).lower() not in EDIT_TOOLS:
+        return None
+    m = FILEP.search(s)
+    if not m:
+        return None
+    import json
+    import time
+    vault = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    state = os.path.join(vault, "3_시스템", "_index", "server")
+    try:
+        with open(os.path.join(state, "locks.json"), encoding="utf-8") as f:
+            items = json.load(f).get("items") or {}
+    except (OSError, ValueError, AttributeError):
+        return None
+    if not items:
+        return None
+    p = os.path.normcase(os.path.abspath(json.loads('"' + m.group(1) + '"')))
+    root = os.path.normcase(os.path.abspath(vault)) + os.sep
+    if not p.startswith(root):
+        return None
+    rel = p[len(root):].replace("\\", "/")
+    now = time.time()
+    if not any(os.path.normcase(k).replace("\\", "/") == rel and (v or {}).get("until", 0) > now for k, v in items.items()):
+        return None
+    import urllib.request
+    try:
+        with open(os.path.join(state, "token"), encoding="utf-8") as f:
+            key = f.read().strip()
+        try:
+            with open(os.path.join(state, "config.json"), encoding="utf-8") as f:
+                port = int(json.load(f).get("port") or 8377)
+        except (OSError, ValueError):
+            port = 8377
+        req = urllib.request.Request("http://127.0.0.1:{}/v1/locks".format(port), headers={"Authorization": "Bearer " + key})
+        with urllib.request.urlopen(req, timeout=1.5) as r:
+            got = json.loads(r.read())
+    except Exception:
+        return None                                 # 서버가 안 닿음 = 막지 않음
+    live = [x for x in got.get("items") or [] if os.path.normcase(str(x.get("path"))).replace("\\", "/") == rel]
+    if not live:
+        return None
+    x = live[0]
+    return ("⛔ 사용자가 {}에서 이 노트({})를 고치는 중이라 Edit·Write 를 막았다 · 약 {}초 뒤 풀림(마지막 입력 뒤 {}초 · 닫거나 앱을 내리면 바로). "
+            "기다렸다가 다시 하거나 다른 일부터 한다. 폰 입력을 덮지 않게 Bash·대본으로 우회하지 않는다."
+            .format(x.get("label") or "폰", rel, x.get("left", "?"), got.get("ttl", "?")))
+
+
 def main():
     raw = sys.stdin.buffer.read()
+    try:
+        why = phone_lock(raw.decode("utf-8", "replace"))
+    except Exception:
+        why = None                                  # 잠금 판정이 고장 나도 막지 않는다
+    if why:
+        sys.stderr.buffer.write(why.encode("utf-8"))
+        return 2
     try:
         if not needs_gate(raw.decode("utf-8", "replace")):
             return 0

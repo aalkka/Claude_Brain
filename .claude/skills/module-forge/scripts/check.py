@@ -11,7 +11,10 @@ block: ①'_'접두(로더 스킵) ②모듈명↔코어스킬 동명 ③노트 
        ⑤예약훅(I2) ⑥모듈간 touches 동일경로 ⑦deps 순환·미존재 ⑧코어 config 키 선언(I3)
        ⑨스크립트의 1_수집 접근·코어파일 참조(I1) · reads 선언의 1_수집·코어파일 ⑩산출물 폴더 규약(notes/ 금지·타모듈 침범)
        ⑪contributes 행위·건강 선언(id 접두 '<모듈>.'·겹침·risk·builtin·대본 없음·모르는 자리표 — ADR-019)
+         · update_check(코어 업데이트 때 돌릴 시험 명령줄) · outside(바깥 설정 목록 꼴) · setup(조리법 꼴) · notes(설정 노트 선언)
        ⑫contributes 튜토리얼·설명서 선언(모듈 밖·대본 꼴·설명서 이름 규칙·겹침·코어 글이 모듈 장으로 링크 — ADR-035)
+       ⑬uses_core 코어 계약(11-17 mobility 범용화) — 모듈이 부르는 코어 이름을 코어 파일에서 ast 로 잰다(불러오지 않음).
+         없는 파일·없는 이름 = block · 밑줄 이름 = warn(코어 내부라 예고 없이 바뀐다)
          · 대본은 3_시스템/tutorial_lint.py 의 check_folder 로 잰다(코어와 같은 함수) — 합격선 미달이 block(형식 v1 도 미달 한 건 ·
            13장 모두 v2 로 옮김 11-08) · v1 장은 엔진이 못 읽는 꼴(legacy)도 함께 알린다
          · 미달·대본 없음이면 안내 줄(info·block)이 쓰는 순서 = SKILL «튜토리얼 만들기»(TUTORIAL_HOWTO)를 가리킨다
@@ -75,6 +78,54 @@ ACTION_RISKS = ("read", "write", "send", "usage")
 RUN_BUILTINS = {"py", "by", "vault"}            # brain.py 가 채우는 자리표
 RUN_SCRIPT_EXTS = (".py", ".ps1")               # brain.py 가 볼트 루트 기준으로 푸는 대본
 PLACEHOLDER = re.compile(r"\{(\w+)\}")
+# contributes.outside — 바깥 설정 항목의 «재기» 다섯 가지(dist-sync external.py 가 읽는 계약 · 11-17)
+OUTSIDE_MEASURES = ("명령", "파일", "레지스트리", "앱", "화면")
+OUTSIDE_DEVICES = ("pc", "폰")
+SETUP_ASK = ("늘", "못 잴 때만", "여럿일 때", "안 물음")
+# 코어 계약(⑬)이 아는 contributes 칸 — 그 밖은 «아직 읽는 곳 없음» info
+KNOWN_CONTRIB = {"actions", "doctor", "record", "view", "tutorial", "manual", "update_check", "outside", "setup", "notes", "phone"}
+# contributes.phone(11-18 · 폰 앱 모듈 · 제작자 설계 노트 §4) — mobility server.py 가 ping «modules» 로 읽는다.
+# app = 이 볼트 모듈이 켜질 때 켜는 앱 모듈 id(앱에 이미 든 것 · 낱말 · 소문자·숫자·-) · alerts·tiles = 뒤 판 몫(꼴만 잰다).
+PHONE_APP_ID = re.compile(r"^[a-z][a-z0-9-]*$")
+
+
+def top_names(path):
+    """코어 파일 맨 위 이름(함수·클래스·값·불러온 이름) — 불러오지 않고 ast 로만 읽는다(코어 부작용 0). 못 읽으면 None.
+    dist-sync contracts.py 에 같은 함수가 있다(모듈끼리 서로 기대지 않게 — 둘 중 하나를 고치면 다른 쪽도)."""
+    import ast
+    try:
+        with open(path, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+    except (OSError, SyntaxError, ValueError):
+        return None
+    names = set()
+
+    def grab(t):
+        if isinstance(t, ast.Name):
+            names.add(t.id)
+        elif isinstance(t, (ast.Tuple, ast.List)):
+            for e in t.elts:
+                grab(e)
+
+    def walk(body):
+        for n in body:
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                names.add(n.name)
+            elif isinstance(n, ast.Assign):
+                for t in n.targets:
+                    grab(t)
+            elif isinstance(n, (ast.AnnAssign, ast.AugAssign)):
+                grab(n.target)
+            elif isinstance(n, (ast.Import, ast.ImportFrom)):
+                for a in n.names:
+                    names.add((a.asname or a.name).split(".")[0])
+            elif isinstance(n, (ast.If, ast.Try, ast.With, ast.For, ast.While)):
+                for part in ("body", "orelse", "finalbody"):
+                    walk(getattr(n, part, None) or [])
+                for h in getattr(n, "handlers", None) or []:
+                    walk(h.body)
+    walk(tree.body)
+    return names
 
 
 def load_json(path):
@@ -293,6 +344,110 @@ def sync_surfaces(info):
     return True
 
 
+def in_module_file(mod_rel, rel):
+    r = norm(str(rel or ""))
+    return r if (r and under_any(r, [mod_rel]) and os.path.isfile(os.path.join(VAULT, *r.split("/")))) else None
+
+
+def outside_problems(module, mod_rel, rel, blocks, warns, argv_problems):
+    """contributes.outside — 모듈 안 JSON {이름, report?, 항목: [...]} · 항목 칸은 코어 external.json 과 같고 «기기»·«재기»가 더해진다.
+    재기 = {명령|파일|레지스트리|앱|화면: 값} 하나 · 사람이 따라 할 길(하기 또는 안내 2단계 이상) · 앱 재기는 report 명령이 있어야 한다."""
+    r = in_module_file(mod_rel, rel)
+    if not r:
+        blocks.append(f"contributes.outside — 모듈 안의 파일이 아님 '{rel}'.")
+        return
+    d = load_json(os.path.join(VAULT, *r.split("/")))
+    items = d.get("항목") if isinstance(d, dict) else None
+    if not isinstance(items, list):
+        blocks.append(f"바깥 설정 {r} — {{\"이름\": …, \"항목\": [...]}} 꼴이 아님.")
+        return
+    seen, apps = set(), False
+    for it in items:
+        iid = str(it.get("id") or "") if isinstance(it, dict) else ""
+        if not iid:
+            blocks.append(f"바깥 설정 {r} — id 없는 항목.")
+            continue
+        if not iid.startswith(module + "."):
+            blocks.append(f"바깥 설정 '{iid}' — '{module}.' 로 시작해야 한다(코어·다른 모듈 항목과 안 겹치게).")
+        if iid in seen:
+            blocks.append(f"바깥 설정 id 겹침 '{iid}'.")
+        seen.add(iid)
+        if not it.get("이름"):
+            blocks.append(f"바깥 설정 '{iid}' — 이름 없음.")
+        if it.get("기기", "pc") not in OUTSIDE_DEVICES:
+            blocks.append(f"바깥 설정 '{iid}' 기기 '{it.get('기기')}' — {'·'.join(OUTSIDE_DEVICES)} 중 하나.")
+        m = it.get("재기")
+        kinds = list(m) if isinstance(m, dict) else []
+        if len(kinds) != 1 or kinds[0] not in OUTSIDE_MEASURES:
+            blocks.append(f"바깥 설정 '{iid}' 재기 — {{{'|'.join(OUTSIDE_MEASURES)}: 값}} 하나여야 한다({json.dumps(m, ensure_ascii=False)[:60]}).")
+        else:
+            k, v = kinds[0], m[kinds[0]]
+            if k == "레지스트리" and not (isinstance(v, dict) and v.get("키") and "값" in v):
+                blocks.append(f"바깥 설정 '{iid}' 레지스트리 재기 — {{\"키\", \"값\", \"기대\"?}} 꼴.")
+            elif k != "레지스트리" and not (isinstance(v, str) and v.strip()):
+                blocks.append(f"바깥 설정 '{iid}' {k} 재기 — 빈 글.")
+            apps = apps or k == "앱"
+        guide = it.get("안내") or []
+        if not it.get("하기") and len(guide) < 2 and not it.get("할 일 없음"):
+            blocks.append(f"바깥 설정 '{iid}' — Claude 명령(하기)도 사람 단계(안내 2단계 이상)도 없음.")
+    if apps:
+        if "report" not in d:
+            blocks.append(f"바깥 설정 {r} — «앱» 재기가 있는데 report(기기 보고를 JSON 한 벌로 내는 명령줄)가 없음.")
+        else:
+            argv_problems(f"바깥 설정 {r} report", d["report"], set())
+    if not items:
+        warns.append(f"바깥 설정 {r} — 항목 0.")
+
+
+def setup_problems(mod_rel, rel, blocks):
+    """contributes.setup — 조리법 JSON {항목: [{id, 물음, 기본값?, 재기?, 쓰는 곳, 묻기}]} · 비밀(열쇠·키)은 두지 않는다."""
+    r = in_module_file(mod_rel, rel)
+    if not r:
+        blocks.append(f"contributes.setup — 모듈 안의 파일이 아님 '{rel}'.")
+        return
+    d = load_json(os.path.join(VAULT, *r.split("/")))
+    items = d.get("항목") if isinstance(d, dict) else None
+    if not isinstance(items, list) or not items:
+        blocks.append(f"조리법 {r} — {{\"항목\": [...]}} 꼴이 아님.")
+        return
+    seen = set()
+    for it in items:
+        iid = it.get("id") if isinstance(it, dict) else None
+        if not iid or iid in seen:
+            blocks.append(f"조리법 {r} — id 없거나 겹침({iid}).")
+            continue
+        seen.add(iid)
+        if not it.get("물음"):
+            blocks.append(f"조리법 '{iid}' — 물음 없음(사람에게 보일 한 줄).")
+        if it.get("묻기") not in SETUP_ASK:
+            blocks.append(f"조리법 '{iid}' 묻기 '{it.get('묻기')}' — {'·'.join(SETUP_ASK)} 중 하나.")
+        if not isinstance(it.get("쓰는 곳"), dict) or not it["쓰는 곳"]:
+            blocks.append(f"조리법 '{iid}' — 쓰는 곳 없음(config 키 · 노트 칸 · 노트 틀).")
+        if re.search(r"token|열쇠|키스토어|keystore|password|암호", iid + str(it.get("쓰는 곳")), re.I):
+            blocks.append(f"조리법 '{iid}' — 비밀은 조리법에 두지 않는다(열쇠는 서버가 만들고 짝짓기가 넘긴다).")
+
+
+def notes_problems(module, mod_rel, notes, blocks):
+    """contributes.notes — 모듈이 소유하는 설정 노트 [{id, name, path, template}] · 자리는 모듈 홈 · 틀은 모듈 안.
+    읽는 쪽은 path 에 없으면 이름(basename)으로 찾는다(옮겨도 따라감 · 옛 자리 한 판)."""
+    if not isinstance(notes, list):
+        blocks.append("contributes.notes 는 목록이어야 한다 — [{\"id\", \"name\", \"path\", \"template\"}].")
+        return
+    home = MODULES_ROOT + "/" + module + "/"
+    for n in notes:
+        nid = n.get("id") if isinstance(n, dict) else None
+        if not nid:
+            blocks.append("contributes.notes — id 없는 노트.")
+            continue
+        p = norm(n.get("path") or "")
+        if not p.startswith(home) or not p.endswith(".md"):
+            blocks.append(f"설정 노트 '{nid}' 자리 '{p}' — 모듈 홈 '{home}' 안의 md 여야 한다.")
+        elif os.path.splitext(os.path.basename(p))[0] != n.get("name"):
+            blocks.append(f"설정 노트 '{nid}' — name 이 자리의 파일 이름과 다름(이름으로 찾는다).")
+        if not in_module_file(mod_rel, n.get("template")):
+            blocks.append(f"설정 노트 '{nid}' — 틀이 모듈 안의 파일이 아님 '{n.get('template')}'.")
+
+
 def check(module, mods, core):
     blocks, warns, infos = [], [], []
 
@@ -468,6 +623,21 @@ def check(module, mods, core):
             elif not under_any(p, [mod_rel]):
                 warns.append(f"{what} — 모듈 밖 대본 '{p}'. 모듈을 빼거나 옮기면 깨진다(모듈 안 scripts/ 로).")
 
+    ph = con.get("phone")
+    if ph is not None:
+        if not isinstance(ph, dict):
+            warns.append("contributes.phone 은 객체여야 한다 — {\"app\": [\"alarm\", …]}(서버가 안 읽고 넘긴다).")
+        else:
+            app_ids = ph.get("app", [])
+            if not (isinstance(app_ids, list) and all(isinstance(a, str) and PHONE_APP_ID.match(a) for a in app_ids)):
+                warns.append("contributes.phone.app 은 앱 모듈 id(소문자 낱말) 목록이어야 한다 — 꼴이 다른 것은 서버가 건너뛴다.")
+            for k in ("alerts", "tiles"):
+                if k in ph and not isinstance(ph[k], list):
+                    warns.append(f"contributes.phone.{k} 는 목록이어야 한다.")
+            other = sorted(set(ph) - {"app", "alerts", "tiles"})
+            if other:
+                infos.append(f"contributes.phone.{', '.join(other)} — 읽는 곳 없음 · 무시됨.")
+
     acts = con.get("actions") or []
     if not isinstance(acts, list):
         blocks.append("contributes.actions 는 목록이어야 한다.")
@@ -514,6 +684,18 @@ def check(module, mods, core):
         html = str(v.get("html") or "")
         if not (under_any(norm(html), [mod_rel]) and os.path.isfile(os.path.join(VAULT, norm(html)))):
             blocks.append(f"contributes.view.html — 모듈 안의 화면 파일이 아님 '{html}'.")
+    # update_check — 코어 업데이트(dist-sync:update 적용 뒤) 때 돌릴 시험. 명령줄 하나 또는 명령줄 목록
+    if "update_check" in con:
+        u = con["update_check"]
+        cmds = u if isinstance(u, list) and u and all(isinstance(c, list) for c in u) else [u]
+        for i, c in enumerate(cmds):
+            argv_problems(f"contributes.update_check[{i}]", c, set())
+    if "outside" in con:
+        outside_problems(module, mod_rel, con["outside"], blocks, warns, argv_problems)
+    if "setup" in con:
+        setup_problems(mod_rel, con["setup"], blocks)
+    if "notes" in con:
+        notes_problems(module, mod_rel, con["notes"], blocks)
     # ── ⑫ 튜토리얼·설명서 선언 (ADR-035 — 켜진 모듈 것만 볼트 목록에 합쳐지고 끄면 빠진다) ──
     n_chap, n_man = 0, 0
     if "tutorial" in con:
@@ -568,7 +750,43 @@ def check(module, mods, core):
                 blocks.append(f"설명서 {base} — 프론트매터 없음.")
             for other in sorted({x for x in others if re.search(r"\[\[" + re.escape(x) + r"[\]|#]", text)}):
                 warns.append(f"설명서 {base} 가 다른 모듈의 장 [[{other}]] 로 링크 — 그 모듈을 끄면 깨진다.")
-    later = sorted(set(con) - {"actions", "doctor", "record", "view", "tutorial", "manual"})
+    # ── ⑬ 코어 계약 uses_core — {코어 파일: [이름…]} · 이름이 없으면 막는다(코어 업데이트가 빼면 모듈이 깨진다) ──
+    uc = mj.get("uses_core")
+    if uc is not None:
+        if not isinstance(uc, dict):
+            blocks.append("uses_core 는 {코어 파일: [이름…]} 이어야 한다(모듈이 부르는 코어 이름 목록).")
+        else:
+            n_names = 0
+            for rel, names in uc.items():
+                r = norm(rel)
+                if not (isinstance(names, list) and all(isinstance(x, str) and x for x in names)):
+                    blocks.append(f"uses_core '{r}' — 이름 목록(글자)이어야 한다.")
+                    continue
+                if under_any(r, [mod_rel]):
+                    blocks.append(f"uses_core '{r}' — 모듈 안 파일은 코어가 아니다.")
+                    continue
+                full = os.path.join(VAULT, *r.split("/"))
+                if not os.path.isfile(full):
+                    blocks.append(f"코어 계약 깨짐 — 코어 파일 없음 '{r}'. 코어가 옮기거나 지웠다(모듈을 고치거나 코어를 되돌림).")
+                    continue
+                n_names += len(names)
+                if not names:
+                    continue                     # [] = 있는지만(데이터 파일·명령줄 계약)
+                if not r.endswith(".py"):
+                    blocks.append(f"uses_core '{r}' — 이름은 .py 코어에만 단다(다른 파일은 [] = 있는지만).")
+                    continue
+                have = top_names(full)
+                if have is None:
+                    blocks.append(f"uses_core '{r}' — 코어 파일을 못 읽음(문법 오류).")
+                    continue
+                miss = [x for x in names if x not in have]
+                if miss:
+                    blocks.append(f"코어 계약 깨짐 — '{r}' 에 이름 없음: {', '.join(miss)}. 코어가 빼거나 바꿨다(모듈을 고치거나 코어를 되돌림).")
+                under = [x for x in names if x.startswith("_") and x in have]
+                if under:
+                    warns.append(f"uses_core '{r}' 의 밑줄 이름 {', '.join(under)} — 코어 내부라 예고 없이 바뀐다(감싸개 한 곳에서만 부르고 공개 이름으로 옮긴다).")
+            infos.append(f"코어 계약 {len(uc)}파일 · 이름 {n_names}개 — 코어 업데이트 때 함께 잰다(dist-sync contracts.py).")
+    later = sorted(set(con) - KNOWN_CONTRIB)
     if later:
         infos.append(f"contributes.{', '.join(later)} — 아직 읽는 곳 없음(바탕 플러그인 R5 부터) · 무시됨.")
     if mine:
