@@ -358,6 +358,7 @@
 "ede48696ebe0": "356c23fe3d7dc563"
 },
 ".claude/skills/sort/SKILL.md": {
+"afb0fc7a9b78": "98d9d36708e05ba5",
 "ce711818b454": "070273f62202b7c0"
 },
 ".claude/skills/weekly-review/SKILL.md": {
@@ -1489,6 +1490,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "58aef84ee327",
+"rev": "b9ea1d327af5",
 "schema": 1
 }
