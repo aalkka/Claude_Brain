@@ -23,8 +23,8 @@ description: 분류·태그·알림 범용 도구 셋(sort.py · tag.py · 알�
 
 ## 사람 태그 · 지금 알림
 - «이거 꽁돈»: `py -3 3_시스템/brain.py run tag.apply target=<대상 id> tag=<태그>`(«아님» = `-- --off` · 근거 = `--why <말>`) — 그 체계에 판정자 «사람» 판정을 적고 겹쳐 보이기를 다시 그린다. 대상 id = `collect:<출처>:<글번호>`(수집글) · 대상 밖이면 거절된다.
-- «지금 알려 줘»(대화 Claude 가 하나): `brain.py run mobility.alert_now title=<제목> -- --text <글> [--urgent]`(mobility 행위) — **진짜 폰에 간다**. 사용자가 알림을 바랄 때만 · 급함은 밤에도 울려야 할 때만.
-- 보기: `brain.py run tag.list` · `brain.py run mobility.alert_list` · `py -3 3_시스템/tag.py has <대상> <태그>`.
+- «지금 알려 줘»(대화 Claude 가 하나): `brain.py run mobility.alert_now title=<제목> -- --text <글> [--urgent]`(mobility 행위) — **진짜 폰에 간다**. 사용자가 알림을 바랄 때만 · 급함은 밤에도 울려야 할 때만. mobility 모듈이 없으면(배포판 기본) 폰 알림이 없다고 말하고 멈춘다.
+- 보기: `brain.py run tag.list` · `brain.py run mobility.alert_list`(mobility 있을 때) · `py -3 3_시스템/tag.py has <대상> <태그>`.
 
 ## 판정 대기(④ Claude)
 - 코드 규칙이 못 정한 것은 그 자리(수집글 = 출처)의 «판정 N» 에 쌓인다(`sort.py pending --place <자리>` = 건수·예상 사용량). 버튼(`sort.py judge --place <자리> --yes`)은 **사용량**이 든다 — 사용자가 수집 창에서 누른다. Claude 가 대신 누르지 않는다.
@@ -32,4 +32,4 @@ description: 분류·태그·알림 범용 도구 셋(sort.py · tag.py · 알�
 ## 지킬 것
 - 분류는 결정만 · 태그·알림은 동작만 — 태그 도구·알림 도구에 «붙일지·울릴지»를 넣지 않는다(체계 규칙으로).
 - `1_수집` 원본은 고치지 않는다(태그는 겹쳐 보이기). 노트 쓰기는 기본 끔 — 켜는 것은 사용자 결정.
-- 겉 동작 검사: `sort.py check` · `_eval/sort_check.py` · `_eval/sort_notice_golden.py`(py -3 · py -3.11) · `_eval/tag_alert_check.py`.
+- 겉 동작 검사: `sort.py check` · `_eval/sort_check.py` · `_eval/sort_notice_golden.py`(py -3 · py -3.11) · 알림 쪽은 mobility 모듈의 시험.
