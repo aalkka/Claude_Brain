@@ -582,10 +582,56 @@ def toks(q):
 
 
 _TEXTCACHE = {}
+# 낱말 찾기 글 곁 파일(11-19 작업세션) — 질의마다 노트 1,600여 개를 읽고 관리 블록 정규식·소문자로 바꾸는 데 2.3초(찾기의 절반).
+# 노트의 (수정 시각 ns · 크기)가 같으면 지난 결과를 쓴다 · 하나라도 새로 읽었으면 질의 끝에 다시 쓴다(원자 교체 · 실패는 무시).
+LEX_CACHE = os.path.join(INDEX_DIR, "lextext.pkl")
+_LEX = {"disk": None, "dirty": False}
+
+
+def _lex_disk():
+    if _LEX["disk"] is None:
+        try:
+            import pickle
+            with open(LEX_CACHE, "rb") as f:
+                d = pickle.load(f)
+            _LEX["disk"] = d if isinstance(d, dict) and d.get("v") == 1 else {"v": 1, "n": {}}
+        except Exception:
+            _LEX["disk"] = {"v": 1, "n": {}}
+    return _LEX["disk"]["n"]
+
+
+def _lex_save():
+    if not _LEX["dirty"]:
+        return
+    _LEX["dirty"] = False
+    tmp = LEX_CACHE + ".%d.tmp" % os.getpid()
+    try:
+        import pickle
+        live = set(_TEXTCACHE)
+        d = {"v": 1, "n": {k: v for k, v in _lex_disk().items() if k in live}}
+        with open(tmp, "wb") as f:
+            pickle.dump(d, f, protocol=pickle.HIGHEST_PROTOCOL)
+        os.replace(tmp, LEX_CACHE)
+    except Exception:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
+
+
 def note_text(rp):
     if rp not in _TEXTCACHE:
+        ap = os.path.join(VAULT, rp)
         try:
-            _TEXTCACHE[rp] = strip_managed(read_text(os.path.join(VAULT, rp))).lower()
+            st = os.stat(ap)
+            stamp = (st.st_mtime_ns, st.st_size)
+            hit = _lex_disk().get(rp)
+            if hit and hit[0] == stamp:
+                _TEXTCACHE[rp] = hit[1]
+            else:
+                _TEXTCACHE[rp] = strip_managed(read_text(ap)).lower()
+                _lex_disk()[rp] = (stamp, _TEXTCACHE[rp])
+                _LEX["dirty"] = True
         except OSError:
             _TEXTCACHE[rp] = ""
     return _TEXTCACHE[rp]
@@ -606,6 +652,7 @@ def lexical_scores(query, idx, disk=False):
     # MOC 설명 167쌍 0.65→0.85, hybrid 0.89→0.94 · 4→5/12 · 0.76→0.82. 근거 = _eval/results-hybrid.md.
     ts = toks(query)
     docs = [(rp, note_text(rp)) for rp in (disk_notes() if disk else notes(idx))]
+    _lex_save()
     docs = [(rp, t) for rp, t in docs if t]
     if not docs or not ts: return []
     avg = sum(len(t) for _, t in docs) / len(docs)

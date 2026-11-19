@@ -446,12 +446,14 @@ body.bb-still [class*="bb-"], body.bb-still [class*="bb-"]::before, body.bb-stil
 .theme-dark .bb-space-chip.is-cur:hover { background: var(--color-base-50); }
 .bb-space-chip svg { width: 14px; height: 14px; }
 /* 3차(사용자 11-18): 번호에 마우스를 올리면 오른쪽이 늘며 x — 누르면 그 공간 닫기 */
-/* x: 마우스를 0.35초 머물면 그 번호 오른쪽이 늘며 뜬다(지나가기만 하면 안 펴짐) · 탭 줄 끝에 x 폭(20px)을 비워 두었다가 펼 때 그 자리를 써서 올린 칩은 안 움직인다
-   (11-19 잼: 칩이 넓어지면 탭 줄이 칩을 왼쪽으로 밀어 x 가 커서 밑으로 옴 · 겹쳐 띄우면 1 에 올린 뒤 2 로 가다 1 의 x 를 누름) */
-.bb-spaces { padding-right: 20px; transition: padding-right 0s; }
-.bb-spaces:has(.bb-space-n:hover) { padding-right: 0; transition-delay: 0.35s; }
-.bb-space-n .bb-space-x { display: flex; align-items: center; box-sizing: border-box; max-width: 0; margin-left: 0; padding-left: 0; overflow: hidden; opacity: 0; border-left: 0 solid var(--background-modifier-border-hover); color: var(--text-muted); transition: all 0s; }
-.bb-space-n:hover .bb-space-x { max-width: 16px; margin-left: 4px; padding-left: 3px; border-left-width: 1px; opacity: 1; transition-delay: 0.35s; }
+/* x(0.49.19 · 사용자 11-19 «올리는 순간부터 자연스럽게»): 올리는 순간 그 번호 오른쪽이 0.18초 ease-out 으로 늘며 x · 내리면 같은 결로 줄어듦
+   탭 줄 끝에 x 폭(20px)을 비워 두고 같은 시간·같은 곡선으로 줄여 x 가 늘어난 만큼 정확히 메움 → 올린 칩과 그 왼쪽은 안 움직임
+   (11-19 잼: 칩이 넓어지면 탭 줄이 칩을 왼쪽으로 밀어 x 가 커서 밑으로 옴) · 펴지는 동안·지나가는 커서의 x 누름은 spaces.ts 가 막음(닫기 아님) */
+.bb-spaces { padding-right: 20px; transition: padding-right 0.18s ease-out; }
+.bb-spaces:has(.bb-space-n:hover) { padding-right: 0; }
+.bb-space-n .bb-space-x { display: flex; align-items: center; box-sizing: border-box; max-width: 0; margin-left: 0; padding-left: 0; overflow: hidden; opacity: 0; border-left: 0 solid var(--background-modifier-border-hover); color: var(--text-muted); transition: max-width 0.18s ease-out, margin-left 0.18s ease-out, padding-left 0.18s ease-out, border-left-width 0.18s ease-out, opacity 0.18s ease-out; }
+.bb-space-n:hover .bb-space-x { max-width: 16px; margin-left: 4px; padding-left: 3px; border-left-width: 1px; opacity: 1; }
+.bb-space-n > span:first-child { min-width: 10px; text-align: center; } /* 번호만으로 22px — 칩의 최소 폭(22px)이 x 의 첫 3.7px 를 삼키면 탭 줄 끝 빈자리만 줄어 칩이 움직인다(11-19 잼) */
 .bb-space-n .bb-space-x:hover { color: var(--text-normal); }
 .bb-space-n .bb-space-x svg { flex: none; width: 12px; height: 12px; }
 .bb-space-pop-every { margin: 0 2px 4px; }
@@ -465,7 +467,9 @@ body.bb-still [class*="bb-"], body.bb-still [class*="bb-"]::before, body.bb-stil
 .bb-space-pop-one { visibility: hidden; }
 .bb-space-pop .bb-tp-row:hover .bb-space-pop-one { visibility: visible; }
 /* 숨은 공간의 칸 — DOM 은 그 자리(다시 보일 때 배치를 다시 안 잼) · 칸 밖 · 그리기 건너뜀 · 맨 끝 칸의 크기 손잡이는 «보이는 것 중 맨 끝»으로 */
-.workspace-split.mod-root > .bb-space-off { position: absolute !important; content-visibility: hidden; opacity: 0; z-index: -1; flex: none !important; } /* 물려받는 속성(visibility·pointer-events)은 안 씀 — 바꾸면 큰 PDF 칸 안 모든 요소를 다시 꾸며 200ms(11-18 잼) */
+.workspace-split.mod-root > .bb-space-off { position: absolute !important; content-visibility: hidden; opacity: 0; z-index: -1; flex: none !important; transform: translateY(-200vh); } /* 물려받는 속성(visibility·pointer-events)은 안 씀 — 바꾸면 큰 PDF 칸 안 모든 요소를 다시 꾸며 200ms(11-18 잼) */
+/* translateY(0.49.21 · 사용자 11-19 «공간 바꾸니 공간 줄이 멈춤·창 닫기·최소화 안 눌림»): 숨긴 칸의 탭 줄 «창 끌기 영역»(-webkit-app-region: drag)은 투명·z-index 와 무관하게 윈도우 누름 판정에 남아
+   보이는 탭 줄의 칩·단추를 덮었다(WM_NCHITTEST = 끌기 · test/space_freeze_check) — 칸 크기는 그대로 두고 화면 밖으로만 옮겨 다시 재지 않는다 */
 .workspace-split.mod-root > .workspace-tabs:nth-last-child(1 of :not(.bb-space-off)) .workspace-leaf-resize-handle,
 .workspace-split.mod-root > .workspace-split:nth-last-child(1 of :not(.bb-space-off)) > .workspace-leaf-resize-handle { display: none; }
 

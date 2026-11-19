@@ -213,10 +213,19 @@ def weight_rows():
         n += len(fns)
     if n > WEIGHT["work_files"]:
         warn.append("작업 폴더 파일 %d — 초안·그림이 쌓이면 홈·폰 홈이 느려짐(work.plan)" % n)
-    try:
-        st = len(os.listdir(os.path.join(HERE, "_index", "stubs")))
-        if st > WEIGHT["stubs"]:
-            warn.append("세션 자국 %d개(_index/stubs) — 보존 일정표에 없음" % st)
+    import roles
+    try:   # 보존 일정표 «세션자국»이 자동이면 개수가 아니라 «기한 넘은 자국»을 잰다(30일치 ≈ 1,100개가 정상 · 11-19 health)
+        sd = os.path.join(HERE, "_index", "stubs")
+        fs = os.listdir(sd)
+        days = roles.retention("세션자국")
+        if days is None or "자동" not in roles.retention_how("세션자국"):
+            if len(fs) > WEIGHT["stubs"]:
+                warn.append("세션 자국 %d개(_index/stubs) — 보존 일정표 «세션자국»이 자동 휴지통이 아님" % len(fs))
+        else:
+            cut = time.time() - (days + 2) * 86400   # 하루 한 번 정리 + 여유 하루
+            od = sum(1 for f in fs if os.path.isfile(os.path.join(sd, f)) and os.path.getmtime(os.path.join(sd, f)) < cut)
+            if od:
+                warn.append("세션 자국 %d개가 %d일 넘음 — 정리가 안 돎(`py -3 3_시스템/session-stub.py prune`)" % (od, days))
     except OSError:
         pass
     big = []

@@ -532,7 +532,60 @@ def warn_cost(outdir, short, st):
         pass
 
 
+def prune_old(outdir, short):
+    """보존 일정표 «세션자국»(기본 30일 = PEND_MAX_AGE_D · 대화 기록 보존과 같음)보다 오래 안 바뀐 자국을 휴지통으로.
+
+    왜: 지우는 규칙이 없어 11-19 에 1,608개(그중 30일 넘은 것 531개)가 쌓였다 — scan_pending 은 30일 넘은 상태를 이미 안 보고,
+    대화 기록도 30일 뒤 없어지므로 남은 자국은 아무도 안 읽는다. 하루 한 번만(`.pruned` 시각) · fileops 한 묶음(장부·되돌리기).
+    칸이 없거나 «처리»에 «자동»이 없으면 아무것도 안 한다(사람이 표에서 끔)."""
+    mark = os.path.join(outdir, ".pruned")
+    try:
+        if os.path.exists(mark) and time.time() - os.path.getmtime(mark) < 86400:
+            return 0
+        open(mark, "w").close()
+        days = roles.retention("세션자국")
+        if days is None or "자동" not in roles.retention_how("세션자국"):
+            return 0
+    except Exception:
+        return 0
+    keep = {".titles.json", ".pruned", PEND_FILE, PEND_SKIP}
+    cut = time.time() - days * 86400
+    ops = []
+    for f in sorted(os.listdir(outdir)):
+        p = os.path.join(outdir, f)
+        if f in keep or f.startswith(".lock-") or short in f or not os.path.isfile(p):
+            continue
+        try:
+            if os.path.getmtime(p) < cut:
+                ops.append({"op": "rm", "src": SAVE_REL + f, "why": "세션 자국 %d일 지남(보존 일정표 «세션자국»)" % days, "quiet": True})
+        except OSError:
+            pass
+    if not ops:
+        return 0
+    plan = os.path.join(outdir, ".prune-plan.json")
+    with open(plan, "w", encoding="utf-8") as fh:
+        json.dump({"title": "세션 자국 정리 %d건" % len(ops), "ops": ops}, fh, ensure_ascii=False)
+    import subprocess
+    subprocess.run([sys.executable, os.path.join(VAULT, "3_시스템", "fileops.py"), "--by", "script:session-stub", "plan", plan, "--apply"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=600,
+                   creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    try:
+        os.remove(plan)
+    except OSError:
+        pass
+    return len(ops)
+
+
 def main():
+    if sys.argv[1:2] == ["prune"]:       # 손으로: py -3 3_시스템/session-stub.py prune
+        os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+        d = os.path.join(VAULT, "3_시스템", "_index", "stubs")
+        try:
+            os.remove(os.path.join(d, ".pruned"))
+        except OSError:
+            pass
+        print("세션 자국 휴지통으로 %d건" % prune_old(d, "--------"))
+        return 0
     argv = sys.argv[1:]
     skip = {argv.index("--out") + 1} if "--out" in argv else set()
     args = [a for i, a in enumerate(argv) if not a.startswith("--") and i not in skip]
@@ -591,6 +644,10 @@ def main():
             warn_cost(outdir, short,
                       json.load(open(os.path.join(outdir, ".state-" + short + ".json"),
                                      encoding="utf-8")))
+        except Exception:
+            pass
+        try:
+            prune_old(outdir, short)
         except Exception:
             pass
     return 0

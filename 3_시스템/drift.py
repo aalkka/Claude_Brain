@@ -292,7 +292,7 @@ def ops_rows():
 # ── PC 메모리(11-18) — 램 13.9GB 에 커밋 29/36GB: 넘친 몫이 페이지 파일로 가 PC 가 느려졌다(claude 27개 11GB · 폰 RC 세션 6개 3.3GB ·
 #    NVIDIA 오버레이 1.75GB · 남은 pwsh). 건강 창(brain.py doctor)이 줄로 보인다 · ctypes 만(psutil·PowerShell 없음 · 0.2초 안팎) · 못 잰 줄은 빠진다.
 MEM_RATIO, UP_DAYS, BIG_N, BIG_GB, HEAVY_H = 1.5, 7, 3, 0.5, 6
-NV_OVERLAY = {"nvidia overlay.exe", "nvidia share.exe"}
+NV_OVERLAY = {"nvidia overlay.exe", "nvidia share.exe", "presentmon_x64.exe"}   # PresentMon = NVIDIA 앱 성능 통계(FrameView) · 11-19 잼 1.9코어 상시
 EMU = re.compile(r"^(emulator|qemu-system-[\w.-]+)\.exe$", re.I)
 KILL_CMD = "py -3 3_시스템/drift.py --kill-test"
 

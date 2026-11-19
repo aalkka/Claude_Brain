@@ -83,6 +83,12 @@ def topics(vault=None):
     return out
 
 
+def forget_topics():
+    """주제 기억 비우기 — `2_지식/주제.md` 를 고친 뒤 같은 프로세스에서 topics() 가 새로 읽게 한다(서버처럼 오래 도는 쪽 · 11-19)."""
+    global _TOPICS
+    _TOPICS = None
+
+
 RETENTION = {"작업산출물": 0, "작업멈춤": 7, "받은함": 7, "휴지통": 30, "웹대기칸": 90}  # 보존.md 가 없거나 칸이 빠졌을 때(설계안 §4 값)
 
 

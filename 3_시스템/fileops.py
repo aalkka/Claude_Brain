@@ -1353,7 +1353,8 @@ def run_ops(ctx, ops, lenient):
             if k == "mv":
                 op_mv(ctx, o["src"], o["dst"], o.get("why", ""), lenient=lenient)
             elif k == "rm":
-                op_rm(ctx, o["src"], o.get("why", ""), count=o.get("count"), user_asked=o.get("user_asked", False), lenient=lenient)
+                # quiet = 링크 세기를 건너뜀(아무도 링크하지 않는 기계 자국 — 파일마다 볼트 전체를 훑어 1초씩 걸림 · 11-19 잼)
+                op_rm(ctx, o["src"], o.get("why", ""), count=o.get("count"), user_asked=o.get("user_asked", False), lenient=lenient, quiet=o.get("quiet", False))
             elif k == "mkdir":
                 op_mkdir(ctx, o["path"], o.get("why"), lenient=lenient)
             elif k == "rmdir":
