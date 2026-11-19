@@ -494,7 +494,7 @@ def make_paths(A, ship_path=None):
             out.append({"path": ex, "why": "예시(빈 틀)가 볼트에 없거나 배포 목록 밖 — %s" % (k.get("이름") or "?")})
     import glob
     named = set()                    # 로그인 조리법이 칸으로 가리키는 자리(단위 지도·설정 — 옛 자리에 있어도 그 종류)
-    for rp in glob.glob(os.path.join(A, "3_시스템", "collect", "browser", "*.json")):
+    for rp in glob.glob(os.path.join(A, *"3_시스템/collect/browser".split("/"), "*.json")):
         try:
             rc = json.load(open(rp, encoding="utf-8"))
         except (OSError, ValueError):
@@ -502,7 +502,7 @@ def make_paths(A, ship_path=None):
         for k in kinds:
             for f in k.get("조리법칸") or []:
                 if isinstance(rc, dict) and isinstance(rc.get(f), str):
-                    named.add("3_시스템/" + rc[f])
+                    named.add("3_시스템/" + rc[f])  # mf:allow-path  (조리법 칸이 가리키는 자리 이름 · 파일을 열지 않음)
     pats = [g for k in kinds for g in k.get("자리") or []]
     seen = set()
     for g in reg.get("살필") or []:

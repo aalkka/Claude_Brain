@@ -5,6 +5,9 @@
     ".obsidian/plugins/",
     ".obsidian/community-plugins.json"
   ],
+  "reads": [
+    "3_시스템/collect/browser/"
+  ],
   "forbids": [
     "1_수집/**"
   ],
