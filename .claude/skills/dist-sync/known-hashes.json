@@ -341,6 +341,7 @@
 "5d5b9a3513e6": "c2ed547ca9982776",
 "65b2d7f9e40e": "50726ba8dff4f900",
 "6afc547772a1": "aac414e889c3303b",
+"77fd643d0690": "70ec51e73cb89055",
 "a2851a96aad3": "ded937bb9dab580f",
 "d60821c0676b": "d12d5bebe0fcb143",
 "ed411a772462": "51d863715039892b"
@@ -557,6 +558,7 @@
 "68c9e42bc6e0": "06633b24bafe8107"
 },
 "3_시스템/_eval/gate-cases.tsv": {
+"1abee27e6def": "30dae4c01752c693",
 "8780af6fdc45": "ac810c32878d06bc",
 "89e093839df0": "6008587f2f3412a1",
 "aad8d28d884d": "a8c0703522f7ff6c",
@@ -663,7 +665,8 @@
 "62772cc779c7": "5ac91d18e5f9fe1f"
 },
 "3_시스템/_eval/stop_inbox_check.py": {
-"4d5cd1874c54": "446b6ac0a07c0f2a"
+"4d5cd1874c54": "446b6ac0a07c0f2a",
+"90f371913c09": "c98fb02a9d3ad392"
 },
 "3_시스템/_eval/subguard/fake_claude.cs": {
 "0ef38e43a9a3": "db7a0fe5b1a43238"
@@ -917,6 +920,7 @@
 "18aed672ef40": "804e826827a1f7b2"
 },
 "3_시스템/collect-file.py": {
+"19a260bd9a63": "095203d35d2013ef",
 "cbd654c36112": "31e08456dd6c327a"
 },
 "3_시스템/collect-schedule.py": {
@@ -975,6 +979,7 @@
 "0301e4980792": "b44b19f90955212c",
 "0d2125789af7": "3fa5d9a16bdc03e5",
 "3021cce6a750": "19abbdbdccb7a6f6",
+"4db1c7e50a44": "ca5ccd194886135d",
 "50fb8c941fd1": "746231363aaf1cb4",
 "70dc49bf7051": "02a2205b80295b71",
 "7c59d28451e6": "355f2e1eb09f44e7",
@@ -1053,6 +1058,7 @@
 "e5c9dec4cc7c": "76394f17e6f7233d"
 },
 "3_시스템/hooks/idle-save.py": {
+"20da9236ef9a": "30a5dc3a580657e3",
 "516d5db75671": "5530c110682e6a95",
 "bdbbb0c8654d": "b1477f8af4ac8dff",
 "c508a117a92f": "df85facfe141f81c",
@@ -1170,6 +1176,7 @@
 "e42b778bcf82": "0fc700396ef42936"
 },
 "3_시스템/ingest.py": {
+"755b1f65295a": "a37e5d5789d51b91",
 "93678cad42e5": "0b89fb41fee50b7d",
 "93d76ae1a4b6": "c4ab8919aa3183bc",
 "9bde91b6e63c": "5f6757c897f9c6cf",
@@ -1246,6 +1253,7 @@
 "a2c832443ed6": "2e59bcf00874a236"
 },
 "3_시스템/restructure.py": {
+"10db9a02e01b": "46a6eb6d6730f1b2",
 "24faac601950": "a36efc61fd17c2eb",
 "c2cc00c3c9d6": "1087dc4753d8181f",
 "e8a025398c63": "0773e4b331cc2a4a"
@@ -1275,6 +1283,7 @@
 "3571b7e7d79c": "462fd3612c8454c8",
 "35a39084af0e": "e218f87cd51abb9e",
 "586d4af073aa": "3d212746b35a29c9",
+"70fc513768b7": "5eef6da42a7b0b24",
 "73ad91edee57": "bd65c66488347683",
 "74ff41ec0321": "be8e3842dae55e59",
 "7f5c24b85d72": "4c0c5378956093ab",
@@ -1605,6 +1614,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "2fd35d53eabe",
+"rev": "7e3abe4f5b87",
 "schema": 1
 }
