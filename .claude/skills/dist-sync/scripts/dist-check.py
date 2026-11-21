@@ -53,7 +53,7 @@ FETCH_TIMEOUT = 60
 OBS = ".obsidian"  # mf:allow-path  (층 규칙이 안 보는 자리 — 읽고 알리기만)
 PLUG, SNIP = OBS + "/plugins/", OBS + "/snippets/"
 ENTRY = re.compile(r"^(- |\* |\d+\. |\||```|\{|\[)")        # 씨앗에서 항목(사용자 것)이 시작하는 줄
-TEXT = (".py", ".ps1", ".psm1", ".js", ".mjs", ".cjs", ".ts", ".md", ".json", ".css", ".html", ".cmd", ".bat", ".sh")
+# 글 파일 가름 = dd.text_encoding(확장자 무관 · 11-21 · 옛 TEXT 확장자 목록은 .html·.svg·.yml 등을 빠뜨렸다)
 # «부름»으로 안 치는 글 — 진단 기록·시험(가짜 경로)·층 규칙 목록(경로를 규칙으로 적을 뿐)
 REF_SKIP = ["3_시스템/_ref/*", "3_시스템/_eval/*", "*/test_*", "*/known-hashes.json",  # mf:allow-path
             ".claude/skills/dist-sync/scripts/*", ".claude/skills/dist-sync/external.json"]  # mf:allow-path
@@ -226,7 +226,7 @@ def pointers(A, B, ack):
     rules = ref_rules(A, B, files)
     out = []
     for rel in sorted(files):
-        if dd.layer(rel) not in ("코어", dd.L_CLAUDE, "씨앗") or not rel.endswith(TEXT) or any(fnmatch.fnmatch(rel, g) for g in RULE_FILES):
+        if dd.layer(rel) not in ("코어", dd.L_CLAUDE, "씨앗") or not dd.text_encoding(os.path.join(B, *rel.split("/"))) or any(fnmatch.fnmatch(rel, g) for g in RULE_FILES):
             continue
         try:
             with open(os.path.join(B, *rel.split("/")), encoding="utf-8", errors="replace") as f:
@@ -247,7 +247,7 @@ def dist_texts(B):
     """배포판 코어 글(진단 기록·시험·층 규칙 목록 빼고) — «배포판이 부르는데 없는 것»을 가린다. 번들의 \\uXXXX 는 풀어서."""
     out = {}
     for rel, p in dd.walk(B).items():
-        if dd.layer(rel) != "코어" or not rel.endswith(TEXT) or any(fnmatch.fnmatch(rel, g) for g in REF_SKIP):
+        if dd.layer(rel) != "코어" or not dd.text_encoding(p) or any(fnmatch.fnmatch(rel, g) for g in REF_SKIP):
             continue
         try:
             with open(p, encoding="utf-8", errors="replace") as f:

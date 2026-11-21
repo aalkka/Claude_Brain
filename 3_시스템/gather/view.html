@@ -130,7 +130,7 @@ const mineCols=()=>S.v.columns.filter(c=>c.kind==='mine');
 let DEV=null;
 function devOf(){if(DEV)return DEV;const mm=q=>matchMedia(q).matches;if(window.matchMedia)return mm('(pointer:coarse)')&&mm('(hover:none)')?(Math.min(screen.width,screen.height)<600?'phone':'tablet'):'desktop';return innerWidth<=600?'phone':'desktop'}
 const PH=()=>devOf()==='phone';
-/** 폰 표의 칸 = 꽁돈 칸(줄 금색 띠로 대신)을 뺀 모든 칸(원래 차례 · 11-20 사용자 «moa B») — 잘리면 머리 끝을 끌어 늘림 */
+/** 폰 표의 칸 = 꽁돈 칸(줄 금색 띠로 대신)을 뺀 모든 칸(원래 차례 · 11-20 사용자 B안) — 잘리면 머리 끝을 끌어 늘림 */
 function phCols(){const cs=S.v.columns,o=cs.filter(c=>c.kind!=='gold');return o.length?o:cs.slice(0,1)}
 /** 폰 칸 처음 너비 — 날짜 50 · 내 칸 56 · 글 칸 = 가장 긴 값(머리 포함) 어림 60~80 · 제목 = 남은 폭 */
 function phW0(c){if(c.kind==='date')return 50;if(c.kind==='mine')return 56;
@@ -202,8 +202,8 @@ function phCell(c,r){
   if(c.kind==='date'){const d=due(r);if(!d)return'<td class="d"><span>—</span></td>';const t=new Date(r['마감']+'T00:00:00');return`<td class="d"><b class="${d.cls}">${d.tag}</b><span>${t.getMonth()+1}/${t.getDate()}</span></td>`}
   if(c.id==='제목')return`<td class="t"><span class="tt">${esc(r[c.id])}</span></td>`;
   return cell(c,r).replace(/^<td class="x">([\s\S]*)<\/td>$/,'<td class="x"><span class="cl">$1</span></td>')}
-// 폰 칸 너비(11-20 사용자 «좁은 칸 때문에 잘릴 경우 내가 늘려서 볼 수 있게 · 컴퓨터에 이미 있는 동작») — PC 와 같은 손(머리 칸 오른쪽 끝 끌기 · 두 번 누르면 처음대로)
-// 다른 점 = 폰 너비는 폰에 둔다(끈 뒤 pcols 로 알림 → brain-server 가 이 기기에 파일별로 적고 열 때 pcols 로 돌려줌 · 11-20 사용자 «기억 B»)
+// 폰 칸 너비(11-20 사용자 요청 — 좁은 칸이 잘리면 늘려 보기 · 컴퓨터에 이미 있는 동작) — PC 와 같은 손(머리 칸 오른쪽 끝 끌기 · 두 번 누르면 처음대로)
+// 다른 점 = 폰 너비는 폰에 둔다(끈 뒤 pcols 로 알림 → brain-server 가 이 기기에 파일별로 적고 열 때 pcols 로 돌려줌 · 11-20 사용자 B안)
 // .moa «widths» 는 PC 너비라 읽지도 적지도 않음(폰 412 크기로 PC 너비를 덮지 않게) · 옛 brain-server 는 pcols 를 모른 채 버림(그 화면에만 남음)
 function phSaved(){if(S.pw||!S.pwk||!Object.keys(S.pwk).length)return;S.pw={};phCols().forEach(c=>{S.pw[c.id]=S.pwk[c.id]||(c.id==='제목'?160:phW0(c))})}
 const phSum=()=>phCols().reduce((a,c)=>a+(S.pw[c.id]||0),0);
@@ -212,7 +212,7 @@ function applyPW(){const t=$('#app table');if(!t)return;t.classList.add('pfx');t
 function freezeP(){if(S.pw)return false;S.pw={};const ths=document.querySelectorAll('#app thead th');phCols().forEach((c,i)=>{if(ths[i])S.pw[c.id]=Math.round(ths[i].getBoundingClientRect().width)});return true}
 // 칸 너비 — S.w = {칸 id: px}(없으면 브라우저가 나눔) · 처음 값 = .moa «widths»(자료로 옴) · 끈 뒤 brain-base 에 cols 로 알린다(받는 쪽이 파일에 적으면 다시 열어도 남음)
 const MINW=40;
-// 손가락 화면(탭)에서 저장된 너비 합이 화면보다 넓으면 그 너비를 안 쓰고 화면 폭에 맞춘 표로(11-20 사용자 «moa 화면에 맞추기. 한번에 보이도록» ·
+// 손가락 화면(탭)에서 저장된 너비 합이 화면보다 넓으면 그 너비를 안 쓰고 화면 폭에 맞춘 표로(11-20 사용자 요청 — 화면에 맞춰 한 번에 보이게 ·
 // 잼: 탭 800dp 에 PC 너비 1222px = 442px 넘침) — 파일의 너비는 그대로(PC 는 저장한 너비) · 끄는 동안은 지금 너비를 따름
 const rawSum=()=>S.v.columns.reduce((a,c)=>a+(S.w&&S.w[c.id]>0?S.w[c.id]:100),0);
 const fixed=()=>!!(S.w&&Object.keys(S.w).length)&&(!!S.drag||devOf()==='desktop'||rawSum()<=(($('#app')||{}).clientWidth||innerWidth));

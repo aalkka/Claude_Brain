@@ -5,7 +5,7 @@
   py -3 3_시스템/module_ship.py <모듈 id> <저장소 폴더> --check  # 쓰지 않고 저장소 폴더만 검사
 
 - 빼는 것 = 모듈 폴더의 .gitignore 줄(끝 / = 폴더 · fnmatch) + __pycache__ · *.pyc. 저장소에만 있는 파일은 지운다(.git 은 그대로).
-- 익명화 = 글 파일(.py .md .json .html .ps1 .css .js .mjs .txt .sh)에 «바꿈 짝»을 차례로 — 짝 파일은 git 밖
+- 익명화 = 글 파일(확장자 무관 · UTF-8 · dist-diff text_encoding 이 가름)에 «바꿈 짝»을 차례로 — 짝 파일은 git 밖
   3_시스템/_index/dist-sync/anon-pairs.txt(«찾을 글<TAB>바꿀 글» · 위에서부터 · 조사 붙은 꼴을 먼저 적는다). 이 대본에는 값을 적지 않는다.
 - 검사 = dist-diff 의 LEAK + 볼트 leak-patterns.txt + mobility-leak.txt(있으면) + 짝 파일의 «찾을 글» + 기계 치환 흔적(BROKEN).
   «세션 id 후보»는 오탐이 많아 경고로만 센다(걸림에 안 듦).
@@ -21,7 +21,6 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(HERE)
 LOCAL = os.path.join(HERE, "_index", "dist-sync")
-TEXT = (".py", ".md", ".json", ".html", ".ps1", ".css", ".js", ".mjs", ".txt", ".sh")
 ALWAYS_OUT = ("__pycache__/", "*.pyc")
 
 
@@ -88,6 +87,7 @@ def ship(mid, repo):
     if not os.path.isfile(os.path.join(src, "module.json")):
         raise SystemExit("모듈 아님: " + src)
     pairs = tab_file("anon-pairs.txt")
+    dd = dist_diff()
     files = walk(src, ignores(src))
     os.makedirs(repo, exist_ok=True)
     wrote = 0
@@ -96,7 +96,7 @@ def ship(mid, repo):
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         with open(full, "rb") as f:
             b = f.read()
-        if rel.endswith(TEXT):
+        if dd.text_encoding(full) == "utf-8-sig":     # 글 파일이면 다(확장자 무관 · 11-21 .html 주석 호칭 빈틈 · dist-diff 와 같은 가름)
             b = anon(b.decode("utf-8"), pairs).replace("\r\n", "\n").encode("utf-8")
         old = open(dst, "rb").read() if os.path.exists(dst) else None
         if old != b:

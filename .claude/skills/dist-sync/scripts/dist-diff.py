@@ -300,16 +300,40 @@ def walk(root):
     return out
 
 
+PROSE = re.compile(r"\.(md|py|ps1|psm1|json|sh|tsv|txt|ya?ml|toml|ini|cfg|bat|cmd)$", re.I)   # 세션 id 후보까지 셀 글(번들·마크업 밖)
+
+
+def text_encoding(path, head=65536):
+    """글 파일이면 읽을 인코딩, 아니면 None — 확장자를 안 본다(11-21 view.html 주석 호칭 4줄이 확장자 허용 목록 밖이라 빠짐).
+    UTF-16 BOM 이면 utf-16 · 앞 64KB 에 NUL 이 있으면 바이너리 · UTF-8 로 안 읽히면(끝에 잘린 글자 빼고) 바이너리."""
+    try:
+        with open(path, "rb") as f:
+            b = f.read(head)
+    except OSError:
+        return None
+    if b[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return "utf-16"
+    if b"\0" in b:
+        return None
+    try:
+        b.decode("utf-8")
+    except UnicodeDecodeError as e:
+        if e.start < len(b) - 3 or len(b) < head:
+            return None
+    return "utf-8-sig"
+
+
 def scan_leaks(files, rules=None):
     hits = []
     for rel, full in sorted(files.items()):
-        # css·js 도 본다 — brain-source styles.css 주석에 호칭이 7곳 있었다(2026-10-22).
-        # 압축된 js 는 16진 8자가 흔해 세션 id 후보는 거기서 세지 않는다.
-        code = re.search(r"\.(css|js|mjs)$", rel)
-        if not (code or re.search(r"\.(md|py|ps1|json|sh|tsv|txt)$", rel)):
+        # 글 파일이면 다 본다(확장자 무관) — css·js 주석(2026-10-22 styles.css 7곳) · html 주석(11-21 view.html 4곳).
+        # 번들·마크업(.js·.css·.html·.ts·.svg …)은 16진 8자가 흔해 세션 id 후보는 산문 꼴(PROSE)에서만 센다.
+        enc = text_encoding(full)
+        if not enc:
             continue
+        code = not PROSE.search(rel)
         try:
-            with open(full, encoding="utf-8", errors="replace") as f:
+            with open(full, encoding=enc, errors="replace") as f:
                 for i, line in enumerate(f, 1):
                     # 번들 js 는 한글을 \uXXXX 로 내보낸다 — 풀지 않으면 호칭·실명을 못 본다(2026-10-23 빈틈)
                     if code:
