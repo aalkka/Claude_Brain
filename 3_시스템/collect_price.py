@@ -10,11 +10,14 @@
 층: 조리법 = 3_시스템/collect/price/<id>.json(하위 폴더 = 웹 엔진의 collect/*.json 에 안 걸림 · 수집 창에 안 뜸)
     장부 = 3_시스템/_index/collect/price/<id>/ — 상태.json(지금 상태) · 가격줄.json(마지막으로 성공한 돌림의 줄 · 분류 어댑터 sort_price 가 읽음)
            호출.jsonl(망 요청 한 줄씩 · 상한 셈) · 장부.jsonl(돌림마다 날짜 쌍별 최저 · 가격선 다시맞춤 자료 — 지금은 쌓기만).
-진짜 수집에 안 잇는다(S2 준비): 예약·15분 확인·수집 창 어디서도 부르지 않는다. 조리법 «켬»이 false 면 --force 없이는 안 돈다.
+주기(11-20 잇기): 15분 확인(collect-tick.py price_tick)이 --tick 을 부른다 — 켬 true 조리법 중 «주기.시간»이 찬 것만 한 번 돌리고,
+  «됨»이면 collect-tick 이 그 label 을 보는 가격줄 체계를 분류한다(sort.py run --system …). 새 윈도 예약은 없다. 조리법 «켬»이 false 면 --force 없이는 안 돈다.
+  끄기 = 조리법 «켬»: false(체계 «켬»도 false 면 알림까지 멈춤).
 
   py -3 3_시스템/collect_price.py --plan <id>            # 물을 것만(망 요청 0 · 키를 안 읽음)
   py -3 3_시스템/collect_price.py --source <id> [--force] # 한 번 돌림(켬 · 키 · 상한을 지킴)
-  py -3 3_시스템/collect_price.py --status               # 출처별 지금 상태
+  py -3 3_시스템/collect_price.py --status               # 출처별 지금 상태(켬이면 «다음» = 다음 차례 시각)
+  py -3 3_시스템/collect_price.py --tick                 # 차례가 찬 출처만 한 번씩(15분 확인이 부름) — 돈 것이 없으면 출력 없음
 """
 import argparse
 import datetime as dt
@@ -72,7 +75,7 @@ def recipes():
 def secret(provider):
     """개인 층 키 — 없거나 비면 None(«키 없음»). 이 함수만 키 파일을 읽는다."""
     try:
-        d = json.load(open(SECRETS, encoding='utf-8'))
+        d = json.load(open(SECRETS, encoding='utf-8-sig'))
     except (OSError, ValueError):
         return None
     tok = ((d or {}).get(provider) or {}).get('token') if isinstance(d, dict) else None
@@ -111,13 +114,51 @@ def set_state(rid, state, **more):
     return d
 
 
+def read_state(rid):
+    try:
+        return json.load(open(os.path.join(sdir(rid), '상태.json'), encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'상태': '안 돎'}
+
+
+NET = ('됨', '오류', '한도', '키 틀림', '통화 다름')   # 망을 탄 상태 — 이 뒤로는 «주기»를 기다림(꺼짐·키 없음·안 돎 = 망 0 이라 곧 다시 봄)
+SLACK = dt.timedelta(minutes=10)                     # 15분 확인에 얹혀 돌므로 차례를 10분 먼저 봐 줌(안 그러면 돌 때마다 15분씩 밀림)
+
+
+def next_at(rid, rc):
+    """다음 차례(naive 현지 시각) — 마지막 망 돌림 + 주기.시간 · 주기가 없거나 망을 안 탄 상태면 None(= 지금)."""
+    hours = ((rc.get('주기') or {}).get('시간'))
+    st = read_state(rid)
+    if not isinstance(hours, (int, float)) or hours <= 0 or st.get('상태') not in NET:
+        return None
+    try:
+        return dt.datetime.fromisoformat(st['시각']) + dt.timedelta(hours=hours)
+    except (KeyError, ValueError):
+        return None
+
+
 def status():
     out = {}
-    for rid in recipes():
-        try:
-            out[rid] = json.load(open(os.path.join(sdir(rid), '상태.json'), encoding='utf-8'))
-        except (OSError, ValueError):
-            out[rid] = {'상태': '안 돎'}
+    for rid, rc in recipes().items():
+        out[rid] = read_state(rid)
+        if rc.get('켬') is True:
+            nx = next_at(rid, rc)
+            out[rid]['다음'] = nx.strftime('%Y-%m-%dT%H:%M') if nx else '지금(다음 15분 확인)'
+        else:
+            out[rid]['다음'] = '꺼짐'
+    return out
+
+
+def tick():
+    """켬 true 이고 차례가 찬 출처만 한 번씩 — 돌려줌 = {id: 상태 + label}(돈 것만)."""
+    out, t = {}, now().replace(tzinfo=None)
+    for rid, rc in recipes().items():
+        if rc.get('켬') is not True:
+            continue
+        nx = next_at(rid, rc)
+        if nx is not None and nx - SLACK > t:
+            continue
+        out[rid] = {**run(rid), 'label': rc.get('label')}
     return out
 
 
@@ -387,7 +428,13 @@ def main():
     ap.add_argument('--source')
     ap.add_argument('--force', action='store_true', help='조리법 켬이 false 여도 한 번')
     ap.add_argument('--status', action='store_true')
+    ap.add_argument('--tick', action='store_true', help='차례가 찬 출처만(15분 확인)')
     a = ap.parse_args()
+    if a.tick:
+        r = tick()
+        if r:
+            print(json.dumps(r, ensure_ascii=False))
+        return
     if a.plan:
         rc = recipes().get(a.plan) or sys.exit(f'조리법 없음: {a.plan}')
         for q in plan(rc):

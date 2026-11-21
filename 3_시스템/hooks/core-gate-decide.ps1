@@ -182,6 +182,7 @@ function GpOne([int]$at, [string]$val) {   # 플러그인 일치 하나가 볼�
         if ($tool -eq 'PowerShell' -and $tok -match '^/[A-Za-z]/') { return (GpOut ($gpV[0].Substring(0, 2) + $tok + $head) $tail) }
         return $true
     }
+    if (GcdOk $at $val) { return $true }                                                  # 3.6 볼트 밖 cd 뒤의 상대 경로
     # 다른 폴더 아래 같은 이름(test/vault-ci/.obsidian/… · 지금 규칙) — ./ ../ · .. · 끝 점(.../) · // · 변수·$(…) · ~ · : · 묶음·글롭은 코어.
     # 뿌리(/…)는 PowerShell·파일 도구에선 지금 드라이브 뿌리(\Claude_Brain\… = 볼트)라 코어, Git Bash 에선 Git 폴더 밑이라 지금처럼 둔다.
     ($tok.Length -ge 2 -and $tok.EndsWith('/') -and $tok -notmatch '^\.{1,2}/|^//|[$%`~:(){}*?\[\]!]|(^|/)\.\.(/|$)|[.\s]/' -and $tail -notmatch '(^|/)\.\.(/|$)' -and
@@ -198,13 +199,14 @@ function GpVerdicts {   # 이 명령의 플러그인 일치마다 «볼트 밖�
         if ($vr -and $vr -ne $v0) { $gpV += $vr }
         $ms = [regex]::Matches($gdn, '\.obsidian/plugins/[^\s",;|&''<>)]*')
         $pc = 0; foreach ($x in [regex]::Matches($p, $rxLoop)) { if ($x.Groups[1].Value.StartsWith('.obsidian/plugins/')) { $pc++ } }
-        $gsc = $null; $ok = $true
+        $gsc = $null; $gcs = $null; $ok = $true
         if ($tool -in 'Bash', 'PowerShell') {
             if ($gd -match '(?i)mklink|junction|symboliclink|hardlink|\bln\s|createsymboliclink|createhardlink|fsutil|\bsubst\b|new-psdrive|\bndr\b|\bnet\s+use\b|\bmount\b') { $ok = $false }
             else {
                 $gsc = GpScan $gd ($tool -eq 'PowerShell')
                 if ($gsc.Broken) { $ok = $false }
                 elseif ($gd -match $(if ($tool -eq 'PowerShell') { $gpBadP } else { $gpBadB })) { $gsc.Unsure = $true }
+                try { $gcs = GcdState } catch { $gcs = $null }
             }
         }
         foreach ($m in $ms) {
@@ -223,6 +225,118 @@ function GpVerdicts {   # 이 명령의 플러그인 일치마다 «볼트 밖�
     return ,$res
 }
 
+# ── 3.6 볼트 밖에 cd 한 뒤의 상대 경로는 볼트 밖임이 «확실»할 때만 코어에서 뺀다(11-20 · 사용자 A안).
+#   왜: 사본·배포판 자리로 cd 한 뒤 같은 이름 파일을 다룰 때마다 승인을 물었다(core-gate.log 11-19 22:42 publish
+#       `cd /c/Claude_Brain_dist && …; node -e "…('.obsidian/plugins/…')"` · 11-20 01:12 `cd /c/scratch/core && py -3 - <<'EOF' p='3_시스템/search.py' …`).
+#   확실 = Bash 만(PowerShell 은 .NET 이 Set-Location 을 안 따라 상대 경로가 프로세스 자리로 간다) ·
+#          지금 자리를 바꾸는 글(cd 낱말)이 모두 맨 윗단 «cd <글자 그대로 드라이브 절대 경로>» 한 문장이고 ·
+#          그 cd 가 조건 없이(처음 · ; · 줄바꿈) 돌고 폴더가 지금 있고 앞에서 지우기·옮기기가 없으면 뒤 문장 모두에,
+#          아니면(&& 뒤 · 없는 폴더 · 앞에 지우기) 그 && 사슬 안에서만 그 자리다 ·
+#          일치가 든 문장에 볼트 이름 · 변수 · ~ · 경로 잇기(join·resolve·Path) · 기준 바꾸기(-C · --git-dir …)가 없고 ·
+#          일치 낱말이 앞뒤 글과 이어 붙지 않으며 · cd 자리 + 상대 경로를 정규화하고 링크를 풀어도 볼트 밖 · 같은 드라이브.
+#   그 밖(변수 cd · cd - · pushd · 서브셸·if 안 cd · chdir·cwd · eval·source · 링크 만들기 · 깨진 따옴표)은 지금처럼 코어다.
+$gcdBad  = '(?i)mklink|junction|symboliclink|hardlink|\bln\s|fsutil|\bsubst\b|\bmount\b|chdir|set-location|push-location|pop-location|\bpushd\b|\bpopd\b|\bcwd\b|getcwd|workingdirectory|currentdirectory|GIT_WORK_TREE|GIT_DIR|core\.worktree|\bPWD\b|\bOLDPWD\b|\bCDPATH\b'
+$gcdBadB = '(?m)(^|[;&|(){}`]|\b(?:then|do|else|elif)\b)\s*(?:eval|source|\.|builtin|command|exec|alias|function|trap|shopt|enable)(?=\s)'
+$gcdHead = '^\s*(?:(?:then|do|else|elif|time|!)\s+|[A-Za-z_]\w*=[^\s"''$`\\]*\s+)*(\S*)'   # 문장의 명령 낱말(앞 대입·낱말 건너뜀)
+$gcdWord = '(?<![\w.\-/\\$])[\\"'']*c[\\"'']*d[\\"'']*(?=$|[\s;&|()<>])'           # cd 낱말(따옴표·\ 로 쪼갠 꼴 포함)
+$gcdCd   = '^\s*cd\s+(?:--\s+)?(?:"([^"$`\\!]*)"|''([^'']*)''|([^\s"''$`\\~*?\[\]{}!;&|<>()#]+))\s*$'
+$gcdDel  = '(?i)(?<![\w-])(?:rm|rmdir|mv|unlink|rd|del|erase|remove-item|move-item|rename-item|robocopy|rmtree|rmsync|rename|renamesync|replace|move|worktree|clean)(?![\w-])'
+$gcdStmt = '(?i)join|combine|resolve|pathlib|\bpath\s*\(|environ|getenv|\benv\b|%\w+%|[$~`]|abspath|realpath|__file__|dirname|\bsep\b|--git-dir|--work-tree|--prefix|--directory|--cwd|(?-i:(?<![\w-])-[A-Za-z]*C(?![\w-]))'
+function GcdState {   # 문장마다 확실한 지금 자리(드라이브 절대 경로) · 모르면 $null 칸 · 판정 못 하면 $null
+    if ($tool -ne 'Bash' -or $gd -match $gcdBad -or $gd -match $gcdBadB) { return $null }
+    $sc = GpScan $gd $false
+    if ($sc.Broken -or $sc.Unsure) { return $null }
+    $lv = [System.Collections.Generic.List[string]]::new()
+    foreach ($v in $gpV) { $lf = $v.Substring(3).Split('/')[-1]; if (-not $lf) { return $null }; $lv.Add([regex]::Escape($lf)) }
+    $occ = [regex]::Matches($gd, $gcdWord)
+    $n = $sc.Stmts.Count; $cw = [string[]]::new($n)
+    $cur = $null; $sure = $false; $oi = 0
+    for ($i = 0; $i -lt $n; $i++) {
+        $s = $sc.Stmts[$i]
+        if (-not $sure -and $s.Sep -notin '&&', '|', '|&') { $cur = $null }      # 확실하지 않은 cd = 그 && 사슬 안에서만
+        $hit = 0
+        while ($oi -lt $occ.Count -and $occ[$oi].Index -lt $s.E) { if ($occ[$oi].Index -ge $s.S) { $hit++ }; $oi++ }
+        $t = $gd.Substring($s.S, $s.E - $s.S)
+        # 명령 이름을 변수·따옴표·\ 로 만든 문장($X · $'\x63d' · c"d") = cd 일 수 있다 → 이 뒤 모름
+        if ($hit -eq 0 -and [regex]::Match($t, $gcdHead).Groups[1].Value -match '[$`\\"'']') { $cur = $null; $sure = $false; continue }
+        if ($hit -eq 0) { $cw[$i] = $cur; continue }
+        $mm = [regex]::Match($t, $gcdCd)
+        $d = $null
+        if ($hit -eq 1 -and $mm.Success -and $s.Top -and $s.Sep -in '^', ';', "`n", '&&' -and $s.After -in '&&', ';', "`n", '$') {
+            $d = GpLex ($mm.Groups[1].Value + $mm.Groups[2].Value + $mm.Groups[3].Value)
+        }
+        if (-not $d) { $cur = $null; $sure = $false; continue }               # 모르는 cd = 이 뒤 모름(다음 깨끗한 cd 까지)
+        $cur = $d
+        $sure = ($s.Sep -in '^', ';', "`n") -and [IO.Directory]::Exists($d) -and ($gd.Substring(0, $s.S) -notmatch $gcdDel)
+    }
+    [pscustomobject]@{ Sc = $sc; Cwd = $cw; Leaf = '(?i)(?<![\w.-])(?:' + ($lv -join '|') + ')(?![\w.-])' }
+}
+function GcdOk([int]$at, [string]$val) {   # 원문 $at 자리 코어 일치가 볼트 밖 cd 뒤의 상대 경로라 볼트 밖임이 확실한가
+    if (-not $gcs) { return $false }
+    $i = -1
+    for ($x = 0; $x -lt $gcs.Sc.Stmts.Count; $x++) { $s = $gcs.Sc.Stmts[$x]; if ($at -ge $s.S -and $at -lt $s.E) { $i = $x; break } }
+    if ($i -lt 0 -or -not $gcs.Cwd[$i]) { return $false }
+    $stx = $gdn.Substring($s.S, $s.E - $s.S)
+    if ($stx -match $gcdStmt -or $stx -match $gcs.Leaf) { return $false }
+    $tm = [regex]::Match($gdn.Substring(0, $at), '[^\s"''=(,;|&<>]*$', 'RightToLeft')
+    $tok = $tm.Value; $k = $tm.Index - 1
+    if ($tok -match '^[/-]|[$%`~*?\[\]{}!:]' -or $val -match '[$%`~*?\[\]{}!:]') { return $false }
+    if ($k -ge 0 -and ($gdn[$k] -eq [char]34 -or $gdn[$k] -eq [char]39)) {                # 따옴표 앞 글과 이어 붙음(abc'…' · x + '…' · p / '…') = 모름
+        $b = $k - 1; while ($b -ge 0 -and [char]::IsWhiteSpace($gdn[$b])) { $b-- }
+        if ($b -ge 0 -and [string]$gdn[$b] -match '[+/*%.~$`]') { return $false }
+        if ($b -eq $k - 1 -and $b -ge 0 -and [string]$gdn[$b] -notmatch '[=(,;|&<>\[{:]') { return $false }
+    }
+    $j = $at + $val.Length
+    if ($j + 1 -lt $gdn.Length -and ($gdn[$j] -eq [char]34 -or $gdn[$j] -eq [char]39) -and [string]$gdn[$j + 1] -notmatch '[\s;|&<>),\]}:]') { return $false }
+    $full = GpLex ($gcs.Cwd[$i] + '/' + $tok + $val)
+    if (-not $full -or $full[0] -ne $gpV[0][0]) { return $false }
+    foreach ($v in $gpV) { if (GpUnder $full $v) { return $false } }
+    $r = GpReal $full
+    if (-not $r -or $r[0] -ne $gpV[0][0]) { return $false }
+    foreach ($v in $gpV) { if (GpUnder $r $v) { return $false } }
+    $true
+}
+function GcdVerdicts {   # 플러그인 밖 코어 일치마다 3.6 판정 · 못 이으면 빈 목록(= 하나도 빼지 않음)
+    $ErrorActionPreference = 'Stop'
+    $res = [System.Collections.Generic.List[bool]]::new()
+    try {
+        $gd = [regex]::Unescape($probe); $gdn = $gd.Replace('\', '/')
+        $v0 = GpLex ($root -replace '\\', '/')
+        if (-not $v0) { return ,$res }
+        $gpV = @($v0); $vr = GpReal $v0
+        if ($vr -and $vr -ne $v0) { $gpV += $vr }
+        $gcs = GcdState
+        $pc = 0; foreach ($x in [regex]::Matches($p, $rxLoop)) { if (-not $x.Groups[1].Value.StartsWith('.obsidian/plugins/')) { $pc++ } }
+        foreach ($m in [regex]::Matches($gdn, $rxLoop)) {
+            $g = $m.Groups[1]
+            if ($g.Value.StartsWith('.obsidian/plugins/')) { continue }
+            $one = $false
+            try { $one = [bool]($m.Length -eq $g.Length -and (GcdOk $g.Index $g.Value)) } catch { $one = $false }
+            $res.Add($one)
+        }
+        if ($res.Count -ne $pc) {                                   # 3.5 와 같다 — 차례로 못 이으면 모두 밖일 때만 다 뺀다
+            $all = $res.Count -gt 0 -and -not $res.Contains($false)
+            $res.Clear()
+            if ($all) { for ($i = 0; $i -lt $pc; $i++) { $res.Add($true) } }
+        }
+    } catch { $res.Clear() }
+    return ,$res
+}
+function GcOutside([string]$a) {   # 글자 그대로의 드라이브 절대 경로가 볼트 밖임이 확실한가(정규화 · 링크 풀기) · 모르면 $false
+    try {
+        if ($a -match '^"([^"]*)"$|^''([^'']*)''$') { $a = $Matches[1] + $Matches[2] }       # 짝지은 따옴표만 벗긴다(깨진 따옴표 = 모름)
+        if ($a -match '[$%`~*?\[\]{}"''<>|]|(^|/)\.\.(/|$)') { return $false }               # 변수·글롭·.. = 모름(3.5 와 같이)
+        $n = GpLex $a; $v0 = GpLex ($root -replace '\\', '/')
+        if (-not $n -or -not $v0 -or $n[0] -ne $v0[0]) { return $false }
+        $vs = @($v0); $vr = GpReal $v0; if ($vr -and $vr -ne $v0) { $vs += $vr }
+        foreach ($v in $vs) { if (GpUnder $n $v) { return $false } }
+        $r = GpReal $n
+        if (-not $r -or $r[0] -ne $v0[0]) { return $false }
+        foreach ($v in $vs) { if (GpUnder $r $v) { return $false } }
+        $true
+    } catch { $false }
+}
+
 $target = $forced
 if ($forced) {
     # 설치 대본 — 다른 볼트(시험 볼트)에 까는 것은 코어가 아니다
@@ -232,7 +346,7 @@ if ($forced) {
     }
 } else {
     $rxLoop = '(?:(?:[A-Za-z]:|/[A-Za-z])/[^\s";,|&]*?)?(' + $core + ')'
-    $gpR = $null; $gpK = 0
+    $gpR = $null; $gpK = 0; $gcR = $null; $gcK = 0
     foreach ($m in [regex]::Matches($p, $rxLoop)) {
         if ($m.Groups[1].Value.StartsWith('.obsidian/plugins/')) {
             # 플러그인 자리 = 3.5절 판정(볼트 밖임이 확실하면 뺀다). 같은 차례의 판정을 쓴다.
@@ -242,11 +356,18 @@ if ($forced) {
             $target = $m.Groups[1].Value
             break
         }
+        $gcI = $gcK; $gcK++
         $abs = $m.Value -replace '^/([A-Za-z])/', '$1:/'
         if ($abs -match '^[A-Za-z]:/') {
+            # . · .. 가 낀 절대 경로는 풀어서 견준다(<볼트>_dist/../<볼트이름>/CLAUDE.md = 볼트 · 11-20) · 못 풀면 볼트로 본다
+            if ($abs -match '/\.{1,2}(/|$)') { $abs = GpLex $abs; if (-not $abs) { $abs = $vaultN + '/?' } }
             if (-not $abs.StartsWith($vaultN + '/', [StringComparison]::OrdinalIgnoreCase)) { continue }
         } elseif ($p.Substring(0, $m.Index) -match '(^|[\s"''=(,;|&<>])(?!\.\.?/)[^\s"''=(,;|&<>$%]+/$') {
             continue   # 다른 폴더 아래 같은 이름(시험 볼트 test/vault-ci/.obsidian/… · ~/.claude/settings.json) · 변수로 시작하는 경로·./·../ 는 코어로 본다
+        } elseif ($tool -eq 'Bash') {
+            # 3.6 볼트 밖 cd 뒤의 상대 경로 — 같은 차례의 판정을 쓴다
+            if ($null -eq $gcR) { $gcR = GcdVerdicts }
+            if ($gcI -lt $gcR.Count -and $gcR[$gcI]) { continue }
         }
         $target = $m.Groups[1].Value
         break
@@ -306,10 +427,59 @@ if ($tool -in 'Bash','PowerShell' -and -not $forced) {
         # 가 승인을 물었다(2026-08-22 실측 3건, 전부 볼트 검색). 그 자리가 아니면
         # (python3 -c "…" CLAUDE.md) 코드를 볼 수 없으므로 그대로 건다.
         $verbs ='>\s*&?[^\s;|&]*(' + $core + ')|sed\s+-i|tee\b|\bcp\b|\bmv\b|\brm\b|\btruncate\b|Set-Content|Add-Content|Out-File|New-Item|Remove-Item|Move-Item|Copy-Item|git\s+(checkout|restore|apply|reset)|WriteAll\w+|AppendAll\w+|\b(?:python\d?|node|perl)\b(?!\s+(?:-\S+\s+)*(?:' + $core + '))|\bpy\s+(-\d(\.\d+)?\s+)?-c\b|\bchmod\b|update-index'
+        # git 이 옵션(-C · --git-dir · --work-tree · -c · --no-pager …) 뒤에 덮어쓰기 동사 — 위 git\s+… 는 바로 뒤만 봐서 놓쳤다(11-20 잼 9/9).
+        $rxGit = '(?i)\bgit((?:\s+(?:-[Cc]\s+\S+|--(?:git-dir|work-tree|namespace|exec-path|config-env)(?:=\S+|\s+\S+)|-[-\w.=]+))+)\s+(?:checkout|restore|apply|reset)\b'
         foreach ($c in ($shell -split '(?:;|&&|\|\||\||\r?\n)')) {
             if ($c -notmatch ('(' + $core + ')')) { continue }
-            # cp 는 끝 인자가 대상이다 — 코어를 다른 데로 복사하는 것은 읽기(개정 7 · 격리 사본을 뜰 때마다 승인 창이 떴다)
-            if ($c -match '(^|\s)cp\s' -and $c -notmatch ('(' + $core + ')["'']?\s*$') -and ($c -replace '(^|\s)cp\s', ' ') -notmatch $verbs) { continue }
+            # -C · --work-tree 가 있고 그 값(--git-dir 포함)이 모두 볼트 밖 글자 그대로의 절대 경로면 다른 저장소 = 이 동사로는 안 건다
+            $gm = [regex]::Match($c, $rxGit)
+            if ($gm.Success) {
+                $go = $gm.Groups[1].Value
+                $gout = $go -cmatch '(?:^|\s)(?:-C\s|--work-tree)'
+                foreach ($b in [regex]::Matches($go, '(?:^|\s)(?:-C\s+|--(?:git-dir|work-tree)(?:=|\s+))(\S+)')) { if (-not (GcOutside $b.Groups[1].Value)) { $gout = $false } }
+                if (-not $gout) { $fire = $true; break }
+            }
+            # cp 는 끝 인자가 대상이다 — 코어를 다른 데로 복사하는 것은 읽기(개정 7 · 격리 사본을 뜰 때마다 승인 창이 떴다).
+            # 끝 인자가 코어 꼴이어도 볼트 밖 글자 그대로의 절대 경로면 읽기(11-20 · 사본 폴더 …/3_시스템/hooks/ 로 뜨기).
+            # -t · --target-directory 는 대상이 끝이 아니다 → 예외 없음(11-20 잼: 볼트 hooks 로 써도 안 물었다).
+            # 낱말로 나눈다(따옴표 묶음 = 하나) · 위치 인자 = 옵션(-x · /Y)과 넘김(> f · 2>/dev/null)을 뺀 것
+            $gk = [System.Collections.Generic.List[string]]::new()
+            foreach ($x in [regex]::Matches($c, '"[^"]*"|''[^'']*''|\S+')) { $gk.Add($x.Value) }
+            if ($gk.Count -and $gk[0] -eq '&') { $gk.RemoveAt(0) }
+            $gw = if ($gk.Count) { ($gk[0].Trim([char[]]'"''') -replace '^.*/', '' -replace '(?i)\.exe$', '').ToLower() } else { '' }
+            $gpos = [System.Collections.Generic.List[string]]::new()
+            for ($q = 1; $q -lt $gk.Count; $q++) {
+                $x = $gk[$q]
+                if ($x -match '^\d*(?:>>?|<)&?$') { $q++; continue }                 # > f · 2> f = 넘김 대상
+                if ($x -match '^\d*(?:>>?|<)' -or $x -match '^-' -or $x -match '^/[A-Za-z0-9?]+(?::\S*)?$') { continue }
+                $gpos.Add($x)
+            }
+            $gLast = if ($gpos.Count) { $gpos[$gpos.Count - 1] } else { '' }
+            if ($c -match '(^|\s)cp\s' -and $c -notmatch '(^|\s)(?:-[A-Za-z]*t[A-Za-z]*|--target-directory\S*)(\s|$)') {
+                # 대상 = 끝 위치 인자(끝 옵션 · 넘김을 건너뜀 — `cp x CLAUDE.md -f` · `… 2>/dev/null` 이 안 물었다 11-20)
+                $cpIn = ($gLast -match ('(' + $core + ')')) -and -not (GcOutside $gLast)
+                if (-not $cpIn -and ($c -replace '(^|\s)cp\s', ' ') -notmatch $verbs) { continue }
+            }
+            # 복사·풀기 도구(11-20 잼: 볼트 코어에 써도 13/13 안 물었다) — 대상이 볼트 밖임이 확실하거나 읽기면 안 건다
+            if ($gw -in 'install', 'rsync', 'xcopy') {
+                if ($gw -eq 'install' -and $c -match '(^|\s)(?:-[A-Za-z]*t[A-Za-z]*|--target-directory\S*)(\s|$)') { $fire = $true; break }
+                if ($gLast -match ('(' + $core + ')') -and -not (GcOutside $gLast)) { $fire = $true; break }
+            } elseif ($gw -eq 'robocopy') {
+                if ($gpos.Count -lt 2 -or -not (GcOutside $gpos[1])) { $fire = $true; break }   # robocopy 원본 대상 [파일…]
+            } elseif ($gw -eq 'tar') {
+                $tx = $gk.Count -gt 1 -and ($gk[1] -cmatch '^[A-Za-z]*x[A-Za-z]*$' -or $c -cmatch '(^|\s)-[A-Za-z]*x[A-Za-z]*(\s|$)' -or $c -match '(^|\s)--(?:extract|get)\b')
+                if ($tx) {
+                    $td = if ($c -cmatch '(?:^|\s)(?:-C\s+|--directory(?:=|\s+))(\S+)') { $Matches[1] } else { '' }
+                    if (-not $td -or -not (GcOutside $td)) { $fire = $true; break }
+                }
+            } elseif ($gw -eq 'unzip') {
+                if ($c -cnotmatch '(^|\s)-[A-Za-z]*[lvtZp][A-Za-z]*(\s|$)') {                       # -l · -v · -t · -Z · -p = 읽기
+                    $ud = if ($c -cmatch '(?:^|\s)-d\s+(\S+)') { $Matches[1] } else { '' }
+                    if (-not $ud -or -not (GcOutside $ud)) { $fire = $true; break }
+                }
+            } elseif ($gw -in 'copy', 'cpi', 'ni', 'sc', 'ac', 'mi', 'move', 'ri', 'del', 'erase', 'rd', 'rmdir') {
+                $fire = $true; break                                                           # PowerShell 별칭(Copy-Item · New-Item · Set-Content · Add-Content · Move-Item · Remove-Item)
+            }
             if ($c -match $verbs) { $fire = $true; break }
         }
     }

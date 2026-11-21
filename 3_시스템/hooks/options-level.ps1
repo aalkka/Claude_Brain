@@ -1,7 +1,7 @@
 ﻿# 기능 단계 읽기(PS 판) — 3_시스템/options.py 의 읽기 규칙과 같다. 훅이 파이썬을 새로 띄우지 않으려고 둔다.
 # 코어 표(options.registry.json)의 기능만 본다(모듈 기능은 파이썬으로). 배터리 규칙은 보지 않는다 —
 # 배터리 낮춤은 상옵 → 하옵이라 «사용 안 함» 판정을 바꾸지 않는다. 어떤 오류도 'high'(지금 동작).
-#   . (Join-Path $PSScriptRoot 'options-level.ps1'); Get-OptionLevel $vault 'search.semantic'
+#   . (Join-Path $PSScriptRoot 'options-level.ps1'); Get-OptionLevel $vault 'search.reindex'
 function Test-OptionSchema($x) {
     return (($x -is [int] -or $x -is [long] -or $x -is [double] -or $x -is [decimal]) -and $x -eq 1)
 }

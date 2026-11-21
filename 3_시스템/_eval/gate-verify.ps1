@@ -11,6 +11,7 @@
     <VB> = 볼트 루트, JSON 이스케이프 백슬래시 (예 "<VB>\\CLAUDE.md")
     <VS> = 볼트 루트, 슬래시                  (예 '<VS>/CLAUDE.md')
     <VG> = 볼트 루트, Git Bash 꼴             (예 /c/Claude_Brain/CLAUDE.md)
+    <VN> = 볼트 폴더 이름                    (예 <VG>_dist/../<VN>/… = 볼트로 돌아옴 · 볼트 이름을 박지 않음)
   `<VB>_dist` 처럼 접미를 붙이면 볼트 밖 경로가 되어 접두 경계 검사에 쓸 수 있다.
 #>
 param([string]$Hook, [string]$Baseline, [string]$Cases)
@@ -87,7 +88,7 @@ else           { "case                                      hook    want    log 
 foreach ($row in $rows) {
   $f = $row -split "`t", 5
   $want = $f[0].Trim(); $label = $f[1].Trim(); $logWant = $f[2].Trim(); $token = $f[3].Trim(); $payload = $f[4]
-  $payload = $payload.Replace('<VB>', $vaultRoot.Replace('\', '\\')).Replace('<VS>', $vaultRoot.Replace('\', '/')).Replace('<VG>', '/' + $vaultRoot.Substring(0,1).ToLower() + $vaultRoot.Substring(2).Replace('\', '/'))
+  $payload = $payload.Replace('<VB>', $vaultRoot.Replace('\', '\\')).Replace('<VS>', $vaultRoot.Replace('\', '/')).Replace('<VG>', '/' + $vaultRoot.Substring(0,1).ToLower() + $vaultRoot.Substring(2).Replace('\', '/')).Replace('<VN>', (Split-Path $vaultRoot -Leaf))
   $r = Invoke-Case $sandHook $payload $token
   $bad = @()
   if ($r.V -ne $want) { $bad += 'decision' }

@@ -6,7 +6,7 @@ root = tempfile.mkdtemp(prefix="wexp-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")
 os.makedirs(os.path.join(S, "collect"))
-for f in ("fileops.py", "roles.py", "roles.json", "web-collect.py"):
+for f in ("fileops.py", "roles.py", "collectlib.py", "roles.json", "web-collect.py"):
     shutil.copy2(os.path.join(REAL, f), os.path.join(S, f))
 R = json.load(open(os.path.join(S, "roles.json"), encoding="utf-8"))["roles"]
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8", FILEOPS_NO_OBSIDIAN="1")

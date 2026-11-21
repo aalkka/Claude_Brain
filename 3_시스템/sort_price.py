@@ -1,7 +1,7 @@
 """분류 어댑터 «가격줄» + 알림 사건 꼴(범용 도구 셋 S2 준비 · 2026-11-18 · 설계 §2 대상 어댑터 · §7 · §8.6).
 
 대상 = 가격 조회 가족(collect_price)이 마지막으로 성공한 돌림의 가격줄 — id · 사실(가격줄 그대로) · 자리(출처 label).
-분류 엔진에 잇는 길: sort.py ADAPTERS 에 '가격줄': 'sort_price' 한 줄. 지금은 안 잇는다(S2 준비 · sort.py 는 다른 일꾼 몫) —
+분류 엔진에 잇는 길: sort.py ADAPTERS 의 '가격줄': 'sort_price'(11-20 켬 · 15분 확인 price_tick 이 조회 «주기»마다 체계를 돌림) —
 시험은 sort.register_adapter('가격줄', sort_price) 로 끼운다.
 
 알림 도구(alert.py · S9 11-18)가 이 어댑터의 rank(갈래) · alert_key(대상) · alert_event(…)['폰'] 의 제목·글을 쓴다(때·중복·전달은 알림 도구 몫).

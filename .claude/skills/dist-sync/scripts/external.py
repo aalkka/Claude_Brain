@@ -222,7 +222,7 @@ def tracked(root):
 def scan(roots, items=None, layer=None):
     """코어가 볼트 밖을 건드리는데 덮는 항목이 없는 곳 [(파일, 종류, 줄)] · 항목 결함 [(id, 말)]."""
     items = items if items is not None else load()
-    gaps, seen = [], set()
+    gaps, seen, mods = [], set(), {}
     pats = {k: re.compile(v) for k, v in KINDS.items()}
     for root in roots:
         files = tracked(root)
@@ -241,6 +241,8 @@ def scan(roots, items=None, layer=None):
                 if n is None or (rel, kind) in seen:
                     continue
                 seen.add((rel, kind))
+                if kind in declared_kinds(root, rel, mods):
+                    continue      # 모듈 폴더 대본은 그 모듈 바깥 설정 칸(contributes.outside)이 덮는다 — scan --module 과 같은 기준(11-21 self_sleep 이 ④ 에 남음)
                 if not any(kind in it.get("종류", []) and hit(rel, it["쓰는 곳"]) for it in items):
                     gaps.append((rel, kind, n))
     bad = []
@@ -250,6 +252,29 @@ def scan(roots, items=None, layer=None):
         if not it.get("하기") and len(it.get("안내", [])) < 2 and not it.get("할 일 없음"):
             bad.append((it["id"], "Claude 명령도 사람 단계(2단계 이상)도 없음"))
     return gaps, bad
+
+
+def declared_kinds(root, rel, cache):
+    """rel 이 모듈 폴더(.claude/skills/<모듈>/) 안이면 그 모듈 바깥 설정 항목의 «종류» 모음 — 켬·끔과 상관없이 선언을 읽는다 · 시험 대본은 빈 모음."""
+    m = re.match(r"\.claude/skills/([^/]+)/", rel)
+    if not m:
+        return set()
+    base = rel.rsplit("/", 1)[-1]
+    if base.endswith("_check.py") or base.startswith("test_"):
+        return set(KINDS)          # 시험은 가짜 등록을 일부러 부른다(scan_module 과 같음)
+    key = (root, m.group(1))
+    if key not in cache:
+        kinds = set()
+        try:
+            with open(os.path.join(root, ".claude", "skills", m.group(1), "module.json"), encoding="utf-8") as f:
+                out = ((json.load(f).get("contributes") or {}).get("outside"))
+            if isinstance(out, str):
+                with open(os.path.join(root, *out.split("/")), encoding="utf-8") as f:
+                    kinds = {k for it in (json.load(f).get("항목") or []) for k in (it.get("종류") or [])}
+        except (OSError, ValueError, AttributeError):
+            pass
+        cache[key] = kinds
+    return cache[key]
 
 
 def scan_module(mid, root=VAULT):

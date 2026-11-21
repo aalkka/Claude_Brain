@@ -1,64 +1,137 @@
 {
   "schema": 1,
-  "note": "기능 단계 선언(코어) — 읽는 쪽 = 3_시스템/options.py · brain-base src/options.ts · hooks/options-level.ps1. 고른 값 = options.local.json(이 PC · git 밖). 모듈 기능은 module.json contributes.options. cells 글은 설정 화면이 누른 뒤 그대로 보인다 — 잰 값이 바뀌면 여기만 고친다.",
+  "note": "기능 단계 선언(코어) — 읽는 쪽 = 3_시스템/options.py · brain-base src/options.ts · hooks/options-level.ps1. 고른 값 = options.local.json(이 PC · git 밖). 모듈 기능은 module.json contributes.options. cells 글은 설정 화면이 누른 뒤 그대로 보인다 — 잰 값이 바뀌면 여기만 고친다. 동작 하나에 칸 하나(사용자 11-20 «각 기능별로 나눌 것») — 켬/끔 동작은 levels [high, off] + labels {high: 켬, off: 끔}. labels = 그 칸의 단계 이름(없으면 높음·낮음·끔). from = 옛 칸의 고른 값을 옮기는 표({옛 id: {옛 값: 새 값}} · options.py migrate 가 쓴다). default_why = 고른 값이 없을 때(=high) 그 값인 까닭.",
   "features": [
     {
-      "id": "search.semantic",
-      "name": "의미 찾기",
+      "id": "search.reindex",
+      "name": "재색인 빈도",
       "levels": ["high", "low", "off"],
+      "labels": {"high": "세션마다", "low": "6시간마다", "off": "안 함"},
       "applies": "now",
       "owner": ["3_시스템/search.py", "3_시스템/hooks/session-start.ps1", "3_시스템/hooks/session-end.ps1"],
       "params": {"low": {"every_hours": 6}},
-      "interacts": ["git.autocommit"],
+      "interacts": ["git.autocommit", "search.vector", "search.links"],
       "recommend": "search",
+      "from": {"search.semantic": {"high": "high", "low": "low", "off": "off"}},
+      "default_why": "새 노트가 다음 세션부터 뜻으로 잡힘 · 이 PC 한 번 ≤45초",
       "cells": {
         "high": {"값": "세션마다 재색인 · 하루 약 27번 · 한 번 ≤45초 · ≤677MB"},
         "low": {"늦어짐": "재색인 6시간에 한 번(전원 연결 때) · 새 노트는 그때까지 뜻으로 안 잡힘(낱말은 바로)", "아낌": "재색인 하루 약 27 → 4번 이하"},
-        "off": {"잃음": "낱말만 · 뜻 찾기 12 중 11 · 의미 링크 멈춤", "아낌": "재색인·질의 때 모델 적재 전부"}
+        "off": {"늦어짐": "색인이 그대로 — 새 노트·고친 노트는 뜻 찾기·의미 링크에 안 잡힘(낱말은 바로)", "아낌": "재색인 때 모델 적재 전부"}
+      }
+    },
+    {
+      "id": "search.vector",
+      "name": "뜻 찾기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/search.py"],
+      "interacts": ["search.reindex"],
+      "recommend": "search_on",
+      "from": {"search.semantic": {"high": "high", "low": "high", "off": "off"}},
+      "default_why": "찾기 12 중 11 이 뜻으로 잡힘 — 낱말만이면 놓침",
+      "cells": {
+        "high": {"값": "찾기 = 낱말 점수 + 뜻 점수(질의마다 모델 적재)"},
+        "off": {"잃음": "낱말만 · 뜻 찾기 12 중 11", "아낌": "질의 때 모델 적재"}
+      }
+    },
+    {
+      "id": "search.links",
+      "name": "의미 링크 쓰기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/search.py"],
+      "interacts": ["search.reindex"],
+      "recommend": "search_on",
+      "from": {"search.semantic": {"high": "high", "low": "high", "off": "off"}},
+      "default_why": "세션 끝 재색인 뒤 노트 끝 «관련» 블록을 맞춤 — 색인 값으로 써서 모델을 따로 안 띄움",
+      "cells": {
+        "high": {"값": "세션 끝 재색인을 한 뒤 노트 끝 관련 링크 블록을 고쳐 씀(재색인을 건너뛴 세션은 안 씀)"},
+        "off": {"잃음": "관련 링크 블록이 그대로 멈춤", "아낌": "세션 끝 링크 쓰기·그 커밋"}
       }
     },
     {
       "id": "git.autocommit",
       "name": "자동 커밋",
       "levels": ["high", "low"],
+      "labels": {"high": "턴마다", "low": "5분 몰아서"},
       "applies": "now",
       "owner": ["3_시스템/hooks/stop-check.py"],
       "params": {"low": {"min_gap_minutes": 5}},
-      "interacts": ["search.semantic"],
+      "interacts": ["search.reindex"],
       "recommend": "git",
+      "default_why": "턴마다 되돌릴 자리가 남음 · 커밋 턴 약 3.7초",
       "cells": {
         "high": {"값": "턴 끝마다 커밋 · 커밋 턴 약 3.7초"},
         "low": {"늦어짐": "마지막 커밋 뒤 5분이 지난 턴 끝 + 세션 끝에 몰아서", "낮아짐": "되돌리기 단위가 여러 턴", "아낌": "피한 커밋 하나 약 2.6초"}
       }
     },
     {
-      "id": "collect.wake",
-      "name": "로그인 출처 아침 받기",
-      "levels": ["high", "low"],
+      "id": "collect.wake_pc",
+      "name": "PC 깨우기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
       "applies": "reregister",
-      "owner": ["3_시스템/collect/browser"],
-      "recommend": "browser_wake",
+      "owner": ["3_시스템/collectlib.py"],
+      "recommend": "wake_pc",
+      "default_why": "수집 시각에 잠든 PC 를 깨워 받고 윈도가 다시 재움 · 배터리는 전원 구성표가 깨우기 타이머를 막아 가방 속에선 안 깸",
       "cells": {
-        "high": {"값": "06:55 PC 를 깨워 크롬을 띄우고 25분 붙듦 · 15분마다 반영"},
-        "low": {"늦어짐": "아침 반영이 크롬을 열 때까지 · 15분 반영은 그대로", "아낌": "아침 깨움 + 크롬 25분"}
+        "high": {"값": "모든 시각 수집(웹·로그인 출처) — 절전(S3)·최대 절전이면 그 시각에 깨워 받고, 받는 동안만 붙든 뒤 윈도가 2분 뒤 다시 재움 · 전원 구성표 «절전 모드 해제 타이머 허용»이 켜진 전원에서만 · 완전 종료는 못 깨움(켠 뒤 한 번)"},
+        "off": {"늦어짐": "잠든 동안의 수집은 PC 가 깬 뒤 한 번", "아낌": "깨우기(덮개 닫힌 채 깨는 열)"}
       }
     },
     {
-      "id": "ui.motion",
-      "name": "움직임",
-      "levels": ["high", "low"],
+      "id": "collect.chrome",
+      "name": "크롬 띄우기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "reregister",
+      "owner": ["3_시스템/collect/browser"],
+      "recommend": "browser_on",
+      "from": {"collect.wake": {"high": "high", "low": "off"}},
+      "default_why": "로그인 출처는 크롬 안 확장이 받음 — 시각에 크롬이 꺼져 있으면 안 받힘",
+      "cells": {
+        "high": {"값": "로그인 출처 시각(예 06:55)에 크롬이 꺼져 있으면 뒤에서 띄우고 반영까지 최대 25분 붙듦 · 15분마다 반영"},
+        "off": {"늦어짐": "로그인 출처 받기가 크롬을 열 때까지 · 15분 반영은 그대로", "아낌": "크롬 25분"}
+      }
+    },
+    {
+      "id": "ui.spin",
+      "name": "기다림 회전",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
       "applies": "now",
       "owner": [".obsidian/plugins/brain-base/main.js"],
-      "recommend": "motion",
+      "recommend": "motion_on",
+      "from": {"ui.motion": {"high": "high", "low": "off"}},
+      "default_why": "도는 동안만 GPU 초당 약 0.3 CPU초 — 기다리는 중인지 한눈에 보임",
       "cells": {
-        "high": {"값": "기다림 회전 · 반짝임"},
-        "low": {"낮아짐": "멈춘 표시(기다림은 보이되 돌지 않음)", "아낌": "회전이 도는 동안 GPU 초당 약 0.3 CPU초"}
+        "high": {"값": "기다림·도구 실행·다시 재기 표시가 돎"},
+        "off": {"낮아짐": "멈춘 표시(기다림은 보이되 돌지 않음)", "아낌": "회전이 도는 동안 GPU 초당 약 0.3 CPU초"}
+      }
+    },
+    {
+      "id": "ui.sparkle",
+      "name": "반짝임",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": [".obsidian/plugins/brain-base/main.js"],
+      "recommend": "motion_on",
+      "from": {"ui.motion": {"high": "high", "low": "off"}},
+      "default_why": "기다림 글이 살아 있음을 보임 · 회전과 같은 대가",
+      "cells": {
+        "high": {"값": "기다림 글에 빛이 흐름"},
+        "off": {"낮아짐": "기다림 글이 멈춘 색", "아낌": "빛이 흐르는 동안 그리기"}
       }
     },
     {
       "id": "sheet.engine",
       "name": "시트 보기",
       "levels": ["high", "low"],
+      "labels": {"high": "엔진", "low": "보기만"},
       "applies": "next-open",
       "ready": false,
       "owner": [".obsidian/plugins/brain-source/main.js"],
@@ -66,6 +139,122 @@
       "cells": {
         "high": {"값": "Univer 엔진으로 열고 편집 · 첫 열기 3.7초 · +160MB"},
         "low": {"늦어짐": "편집 단추를 누를 때 엔진", "낮아짐": "보기에서 수식 계산·서식 일부", "아낌": "보기만 할 때 엔진 값 전부"}
+      }
+    },
+    {
+      "id": "restart.auto",
+      "name": "자동 재시작",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/restart.py"],
+      "default_why": "절전으로 켜 둔 PC 를 끌 수 있을 때만 정한 시각(기본 05:00)에 다시 시작 — 사람·Claude·일하는 프로그램·저장 안 된 창이 있으면 미루고 마감을 넘기면 그날 건너뜀",
+      "cells": {
+        "high": {"값": "정한 시각부터 15분마다 끌 수 있나 잼(20초) · 되면 shutdown /g · 시각·마감·문턱 = restart.local.json · 예약 «외부뇌 자동 재시작»이 있을 때만 돎"},
+        "off": {"늦어짐": "재시작은 사람이 · 켜 둔 날이 길어지면 메모리·업데이트가 쌓임", "아낌": "아침 재시작 한 번(약 2~3분)"}
+      }
+    },
+    {
+      "id": "restart.relaunch",
+      "name": "재시작 뒤 다시 세팅",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/restart.py"],
+      "default_why": "자동 재시작 뒤 폰이 닿을 길(서버·RC·옵시디언·Tailscale)을 다시 띄우고 떴는지 잼",
+      "cells": {
+        "high": {"값": "로그인 1분 뒤 본체·모듈 선언(after_restart)대로 띄우고 잼 · 그때 떠 있던 것만 다시 띄우는 항목은 그때만"},
+        "off": {"늦어짐": "Windows·로그온 예약이 스스로 띄우는 것만 · 옵시디언·RC 서버는 사람이 켤 때까지 없음"}
+      }
+    },
+    {
+      "id": "restart.notify",
+      "name": "재시작 알림",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/restart.py"],
+      "default_why": "건너뛴 날·안 뜬 것을 폰으로 알림(모바일 연결이 있을 때) — 조용히 실패하면 폰이 PC 에 못 닿는 줄 모름",
+      "cells": {
+        "high": {"값": "그날 건너뜀(까닭 4개) · 재시작 실패 · 재시작 뒤 안 뜬 것 · 다 떴을 때는 notify_ok 일 때만"},
+        "off": {"낮아짐": "기록(_index/restart)만 · 못 닿을 때 까닭을 PC 앞에서 봐야 앎"}
+      }
+    },
+    {
+      "id": "proc.reclaim.owner",
+      "name": "주인 끝난 프로세스 끄기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/own.py"],
+      "recommend": "reclaim",
+      "default_why": "장부에 적고 띄운 것만 · 띄운 세션이 끝났거나 수명이 넘었을 때만 — 쓰는 중인 것은 안 건드림",
+      "cells": {
+        "high": {"값": "켬 · 볼트 일이 장부에 적고 띄운 것(own.py run)을 띄운 세션이 끝나거나 수명이 넘으면 자식째 끔 · 10분마다"},
+        "off": {"낮아짐": "끝난 세션이 띄운 것이 남아 메모리를 쥠 · 사람이 찾아 끔"}
+      }
+    },
+    {
+      "id": "proc.reclaim.test",
+      "name": "시험 프로세스 끄기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/own.py"],
+      "params": {"high": {"test_idle_hours": 2}},
+      "interacts": ["proc.reclaim.pressure"],
+      "recommend": "reclaim",
+      "default_why": "시험 창·에뮬레이터 하나에 수 GB — 띄운 세션이 2시간 쉬면 다시 띄우면 되는 것",
+      "cells": {
+        "high": {"값": "켬 · 격리 옵시디언·머리 없는 크롬·시험 AVD 에뮬레이터를 띄운 세션이 없거나 2시간 넘게 쉬면 끔(시험 잠금이 있으면 안 끔)"},
+        "off": {"낮아짐": "남은 시험 창·에뮬레이터(하나에 수 GB)는 건강 «고치기»로 사람이 끔"}
+      }
+    },
+    {
+      "id": "proc.reclaim.background",
+      "name": "배경 작업 과다 끄기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/own.py"],
+      "params": {"high": {"bg_idle_hours": 6, "bg_core": 0.5}},
+      "interacts": ["proc.reclaim.pressure"],
+      "recommend": "reclaim",
+      "default_why": "멈춘 배경 작업이 며칠 코어 하나를 먹은 일이 있었음(11-16~19) — 긴 계산은 own.py run --keep 으로 빠짐",
+      "cells": {
+        "high": {"값": "켬 · 세션이 6시간 넘게 일 없는데 그 밑 배경 작업이 코어 0.5개 넘게 계속 먹으면 끔 · 장부에 든 긴 계산(own.py run --keep)은 안 끔"},
+        "off": {"낮아짐": "멈춘 배경 작업이 며칠 CPU 를 먹을 수 있음 · 건강 줄에만 보임"}
+      }
+    },
+    {
+      "id": "proc.reclaim.session",
+      "name": "쉬는 세션 닫기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/own.py"],
+      "params": {"high": {"session_close_hours": 72}},
+      "recommend": "reclaim",
+      "default_why": "세션 하나 약 0.5GB · 3일 쉰 대화는 다시 열면 이어짐(캐시만 새로)",
+      "cells": {
+        "high": {"값": "켬 · 72시간 넘게 일 없는 Claude 세션을 닫음(세션 하나 약 0.5GB · 앞서 폰 알림 «닫음» · 다시 열면 이어짐 · 캐시는 새로)"},
+        "off": {"낮아짐": "쉬는 세션은 건강 줄 «쉬는 세션»에만 · 닫기는 사람"}
+      }
+    },
+    {
+      "id": "proc.reclaim.pressure",
+      "name": "메모리 압박 때 앞당기기",
+      "levels": ["high", "off"],
+      "labels": {"high": "켬", "off": "끔"},
+      "applies": "now",
+      "owner": ["3_시스템/own.py"],
+      "params": {"high": {"press_avail_gb": 1.5, "press_commit_ratio": 2.0, "press_idle_hours": 0.5}},
+      "interacts": ["proc.reclaim.test", "proc.reclaim.background"],
+      "recommend": "reclaim",
+      "default_why": "램이 바닥일 때만 문턱을 앞당김 — 평소에는 아무것도 안 바꿈",
+      "cells": {
+        "high": {"값": "켬 · 남은 램 1.5GB 아래거나 커밋이 램의 2배를 넘으면 시험 프로세스·배경 작업의 쉼 문턱을 30분으로"},
+        "off": {"낮아짐": "압박 때도 평소 문턱(2시간·6시간)"}
       }
     }
   ]

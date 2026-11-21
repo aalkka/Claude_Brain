@@ -48,14 +48,19 @@ $claudeMd = Join-Path $vault 'CLAUDE.md'
 $slotsLeft = (Get-Content $claudeMd -Raw) -match '\{\{[^}]'
 if (-not $slotsLeft -and (git remote)) { git push 2>$null | Out-Null }
 
+# 3.5 주인 장부(11-19) — 이 세션의 장부 항목·시험 프로세스(에뮬레이터·격리 옵시디언·머리 없는 크롬)를 끝낸다.
+#   왜: 세션이 끝나도 띄운 것이 남아 메모리를 쥐었다(에뮬레이터 이틀 · 11-15). 동기 0.5초 · 실패해도 계속 · 그 밖의 배경 작업은 예약 작업 tick 이 맡음.
+$ownPy = Join-Path $vault '3_시스템\own.py'
+if (Test-Path $ownPy) { & py -3 $ownPy end 2>$null | Out-Null }
+
 # 4. B1 의미링크 갱신 — 맨 끝 **디태치**(비대기). reindex→link-write 1프로세스(main()이 순차 지원).
 #    비핵심(인덱스=gitignore, 링크블록=멱등·1세션 지연 무해) → 셧다운이 죽여도 다음 시작 reindex가 커버.
 #    이 훅이 여기서 절대 블록되지 않게 하는 게 목적(타임아웃 무의미화).
-#    기능 단계 «의미 찾기»: 사용 안 함이면 띄우지 않는다 · 하옵이면 search.py 가 재색인을 6시간에 한 번으로 미루고 그때만 링크를 쓴다(session-start 와 같은 꼴).
+#    기능 «재색인 빈도»(search.reindex): «안 함»이면 띄우지 않는다 · «6시간마다»면 search.py 가 재색인을 6시간에 한 번으로 미루고 그때만 링크를 쓴다 · «의미 링크 쓰기» 끔이면 search.py 가 링크를 건너뜀(session-start 와 같은 꼴).
 $searchPy = Join-Path $vault '3_시스템\search.py'
 $semantic = 'high'
 $optPs = Join-Path $PSScriptRoot 'options-level.ps1'
-if (Test-Path $optPs) { . $optPs; $semantic = Get-OptionLevel $vault 'search.semantic' }
+if (Test-Path $optPs) { . $optPs; $semantic = Get-OptionLevel $vault 'search.reindex' }
 if ((Test-Path $searchPy) -and $semantic -ne 'off') {
     $env:BRAIN_AUTO = '1'
     Start-Process -FilePath 'py' -ArgumentList '-3', $searchPy, '--reindex', '--link-write' -WindowStyle Hidden -ErrorAction SilentlyContinue

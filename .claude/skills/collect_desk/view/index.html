@@ -312,7 +312,7 @@ const HINT={
 const hint=f=>HINT[f]?`<span class="hint" tabindex="0" role="button" aria-label="설명" data-hint="${f}">?<span class="tip" role="tooltip"><b>${HINT[f][0]}</b>${HINT[f][1]}</span></span>`:'<span></span>';
 function popHtml(){
   const my=D.sources.find(x=>lmsOf(x));
-  const G=[['moon','PC 깨우기','*','wake_pc',D.wakePc],...(my?[['web','크롬 열기',my.id,'wake',!!my.wakeOn]]:[]),['gauge','자동 판정','*','auto_judge',D.autoJudge],['power','전체','*','all_off',!D.allOff]];
+  const G=[['moon','PC 깨우기','*','wake_pc',D.wakePc],...(my?[['web','크롬 띄우기',my.id,'wake',!!my.wakeOn]]:[]),['gauge','자동 판정','*','auto_judge',D.autoJudge],['power','전체','*','all_off',!D.allOff]];
   return`<div class="pop">${G.map(([i,w,src,f,on])=>`${ic(i)}<span>${w}</span>${hint(f)}<button class="sw ${on?'on':''}" ${my&&src===my.id&&!my.on?'disabled':''} data-src="${src}" data-f="${f}" data-v="${f==='all_off'?String(on):String(!on)}" aria-label="${w}" data-tt="${w}"><i></i></button>`).join('')}</div>`;
 }
 // 시각 칩 + 더하기 칸(하루 4개) — 칩 × = 그 시각 빼기 · 다 빼면 웹 출처는 주기로 돌아감 · 로그인 출처는 크롬을 안 띄움

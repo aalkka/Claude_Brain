@@ -102,6 +102,29 @@ def switches(sys_dir=None, keys=SWITCH_KEYS):
     return {k: d[k] for k in keys if k in d} if isinstance(d, dict) else {}
 
 
+WAKE_PC = 'collect.wake_pc'     # 기능 «PC 깨우기»(options.registry.json · 모든 시각 수집 · 11-20 나눔)
+CHROME = 'collect.chrome'       # 기능 «크롬 띄우기»(로그인 출처 · 옛 collect.wake)
+
+
+def wake_pc(sys_dir=None):
+    """PC 깨우기 켬? — 기능 collect.wake_pc 의 고른 값(배터리 규칙 전 · 배터리로 잠깐 낮아진 값으로 예약을 바꾸지 않게).
+    고른 값이 없으면 옛 자리 collect.local.json wake_pc(false = 끔 · 11-12 수집 창 «잠든 PC») · 둘 다 없으면 켬. 어떤 오류도 옛 자리 규칙."""
+    d = sys_dir or SYS
+    try:
+        import sys
+        if d not in sys.path:
+            sys.path.insert(0, d)
+        import options
+        v = os.path.dirname(d)
+        local, st = options._load(options.local_path(v))
+        lv = local.get('levels') if st == 'ok' and isinstance(local, dict) else None
+        if isinstance(lv, dict) and WAKE_PC in lv:
+            return options.chosen(local, st, options.declarations(v, only=WAKE_PC)).get(WAKE_PC, 'high') == 'high'
+    except Exception:
+        pass
+    return switches(d).get('wake_pc') is not False
+
+
 def browser_recipes(sys_dir=None):
     """로그인 가족 조리법 — collect/browser/<id>.json(family browser · id = 파일 이름). 못 읽는 것은 건너뜀.
     수집 창·따라가기·홈·공지 필터·구조 이전이 출처 이름과 자리를 코드에 두지 않고 이것을 읽는다(S6)."""

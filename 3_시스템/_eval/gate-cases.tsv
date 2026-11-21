@@ -149,7 +149,7 @@ ASK	Y17 꼬리 .. 로 거슬러 오름	-	-	{"tool_name":"Bash","permission_mode"
 ASK	Y18 깨진 따옴표	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp a \"<VG>_dist/.obsidian/plugins/x/"}}
 ASK	Y19 상대 sub/../	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp a sub/../.obsidian/plugins/x/"}}
 ASK	Y20 홑따옴표 안 $S = 글자 그대로	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"S=<VG>_dist; cp a '$S/.obsidian/plugins/x/'"}}
-ASK	Y21 섞인 cp 볼트→밖	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp <VG>/.obsidian/plugins/x/main.js <VG>_dist/.obsidian/plugins/x/"}}
+NOFIRE	Y21 섞인 cp 볼트→밖 = 읽기(개정 10)	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp <VG>/.obsidian/plugins/x/main.js <VG>_dist/.obsidian/plugins/x/"}}
 ASK	Y22 끝 점(윈도가 뗌)	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"Copy-Item a <VB>.\\.obsidian\\plugins\\x\\ "}}
 ASK	Y23 ~/… = 코어로 봄	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp a ~/.obsidian/plugins/x/"}}
 ASK	Y24 상대 .../(끝 점)	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cp a .../.obsidian/plugins/x/"}}
@@ -158,3 +158,116 @@ ASK	Y26 꼬리 $f 뒤의 ..	-	-	{"tool_name":"Bash","permission_mode":"auto","to
 NOFIRE	Y28 bash 뿌리 경로 /sdcard/…(지금 규칙)	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"adb shell \"rm -rf /sdcard/Android/data/md.obsidian/files/m7/.obsidian/plugins/x/0.3.0\""}}
 NOFIRE	Y29 python r'…' 볼트 밖 쓰기	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"python -c \"open(r'<VS>_dist/.obsidian/plugins/x/data.json','w').write('1')\""}}
 ASK	Y27 뒤로 따옴표 이어 붙임	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"$f = '..\\..\\..\\Claude_Brain\\.obsid'; Copy-Item a <VB>_dist\\.obsidian\\plugins\\\"$f\"ian\\plugins\\x"}}
+
+# 개정 9(2026-11-20) — 볼트 밖 cd 뒤의 상대 경로: 볼트 밖임이 확실할 때만 뺀다(Bash 만)
+NOFIRE	G1 publish 꼴 cd 밖(있는 폴더) ; 뒤 node 상대 플러그인	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "py -3 -I \"C:/tmp/pub/fixjs.py\"; py -3 -I \"C:/tmp/pub/lk.py\" <VG>/../d/.obsidian/plugins/brain-source/main.js | wc -l; cd <VG>/.. && git diff --stat; node -e \"new Function(require('fs').readFileSync('.obsidian/plugins/brain-source/main.js','utf8'));console.log('parse ok')\" 2>&1 | tail -1"}}
+NOFIRE	G2 scratch 꼴 cd && heredoc · cd && for	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/scratch/core && py -3 - <<'EOF'\np='3_시스템/search.py'\nt=open(p,encoding='utf-8').read()\nassert t.count('a')==1\nt=t.replace('a','b')\nopen(p,'w',encoding='utf-8',newline='\\n').write(t)\nEOF\ncd /c/scratch && for f in 3_시스템/search.py 3_시스템/hooks/session-start.ps1; do diff -u --label \"a/$f\" --label \"b/$f\" \"<VG>/$f\" \"core/$f\"; done > search-split.diff; wc -l search-split.diff"}}
+NOFIRE	G3 cd 밖 && echo > CLAUDE.md	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && echo x > CLAUDE.md"}}
+NOFIRE	G4 cd 밖 && cp → hooks 상대	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && cp a 3_시스템/hooks/core-gate.ps1"}}
+NOFIRE	G5 cd <볼트>_dist && 상대 = 경계 밖	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG>_dist && echo x > CLAUDE.md"}}
+NOFIRE	G6 _dist 절대 경로 = 경계 밖	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "echo x > <VG>_dist/CLAUDE.md"}}
+NOFIRE	G7 cd 밖 && 상대 플러그인	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && cp a .obsidian/plugins/x/main.js"}}
+ASK	G8 cd 볼트 && 상대	Bash CLAUDE.md	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG> && echo x > CLAUDE.md"}}
+ASK	G9 cd 볼트 아래 && ../	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG>/sub && echo x > ../CLAUDE.md"}}
+ASK	G10 cd 볼트/x/.. 정규화	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG>/x/.. && echo x > CLAUDE.md"}}
+ASK	G11 cd 볼트 플러그인 상대	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG> && cp a .obsidian/plugins/x/main.js"}}
+ASK	G12 cd 밖 뒤 볼트 절대	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && echo x > <VG>/CLAUDE.md"}}
+ASK	G13 cd 변수	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "D=/c/x/out; cd $D && echo x > CLAUDE.md"}}
+ASK	G14 cd "$D"	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd \"$D\" && echo x > CLAUDE.md"}}
+ASK	G15 cd 상대 폴더	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd out && echo x > CLAUDE.md"}}
+ASK	G16 cd -	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && cd - && echo x > CLAUDE.md"}}
+ASK	G17 cd .. 뒤	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && cd .. && echo x > CLAUDE.md"}}
+ASK	G18 && 뒤 cd(조건) 다음 ;	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "mkdir -p /c/x/out && cd /c/x/out; echo x > CLAUDE.md"}}
+ASK	G19 없는 폴더 cd ; 뒤	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/gatefix-nonexist-zz; echo x > CLAUDE.md"}}
+ASK	G20 앞에 rm 있는 cd ; 뒤	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "rm -f /c/x.txt; cd <VG>/..; echo x > CLAUDE.md"}}
+ASK	G21 서브셸 cd 뒤 바깥	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "(cd /c/x/out && cp a b); echo x > CLAUDE.md"}}
+ASK	G22 if 안 cd	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "if true; then cd /c/x/out; fi; echo x > CLAUDE.md"}}
+ASK	G23 cd 밖 && git -C	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && git -C /d/v show HEAD:x > CLAUDE.md"}}
+ASK	G24 python join + environ	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && py -3 -c \"import os;open(os.path.join(os.environ['V'],'CLAUDE.md'),'w').write('x')\""}}
+ASK	G25 python 이어 붙임 V + '…'	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && python3 - <<'EOF'\nopen(V + 'CLAUDE.md','w').write('x')\nEOF"}}
+ASK	G26 PowerShell 도구 = 3.6 안 씀	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "cd C:\\x\\out; Set-Content CLAUDE.md x"}}
+ASK	G27 eval	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && eval \"cd <VG>\" && echo x > CLAUDE.md"}}
+ASK	G28 pushd	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && pushd <VG> && echo x > CLAUDE.md"}}
+ASK	G29 python chdir	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && python3 -c \"import os;os.chdir('..');open('CLAUDE.md','w')\""}}
+ASK	G30 ln 으로 링크 만듦	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && ln -s <VG>/3_시스템 3_시스템 && cp a 3_시스템/search.py"}}
+ASK	G31 쪼갠 "c"d 낱말	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG>/..; \"c\"d <VG>; echo x > CLAUDE.md"}}
+ASK	G32 cd 밖 && $X/…	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && cp a $X/CLAUDE.md"}}
+ASK	G33 cd ~/…	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd ~/x && echo x > CLAUDE.md"}}
+ASK	G34 cd || 뒤	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out || true; echo x > CLAUDE.md"}}
+ASK	G35 bash 안 powershell Set-Location	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && powershell -c \"Set-Location <VS>; Set-Content CLAUDE.md x\""}}
+ASK	G36 cd 밖 && cd 볼트	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && cd <VG> && echo x > CLAUDE.md"}}
+ASK	G37 cd 밖 ; cd 볼트 ;	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG>/..; cd <VG>; echo x > CLAUDE.md"}}
+ASK	G38 다른 드라이브 cd	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /d/x && echo x > CLAUDE.md"}}
+ASK	G39 섞임 밖 상대 + 볼트 절대	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && cp a CLAUDE.md && cp b <VG>/CLAUDE.md"}}
+ASK	G40 cd 밖 && pathlib /	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && python3 -c \"from pathlib import Path;(R / 'CLAUDE.md').write_text('x')\""}}
+ASK	G41 변수로 만든 명령 이름	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG>/..; X=cd; $X <VG>; echo x > CLAUDE.md"}}
+ASK	G42 $'…' 명령 이름	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd <VG>/..; $'\\x63d' <VG>; echo x > CLAUDE.md"}}
+NOFIRE	G43 인자 자리 $'…' 는 괜찮음	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cd /c/x/out && grep -c $'\\r' a && echo x > CLAUDE.md"}}
+# 개정 10(2026-11-20 · 2) — git 이 옵션(-C · --git-dir · --work-tree) 뒤에 덮어쓰기 · cp 의 볼트 밖 대상 · cp -t
+# 알려진 구멍(11-20 잼 · 고치지 않음): 다른 폴더 아래 같은 이름(jv/CLAUDE.md)의 그 폴더가 볼트 정션이면 안 물음 — 정션은 시험 파일로 못 만들어 이 PC 에서만 쟀다
+ASK	K1 git -C 볼트 checkout	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C <VG> checkout CLAUDE.md"}}
+ASK	K2 git -C 볼트 restore	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C <VG> restore 3_시스템/hooks/core-gate.ps1"}}
+ASK	K3 git --git-dir= --work-tree= checkout	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git --git-dir=<VG>/.git --work-tree=<VG> checkout -- CLAUDE.md"}}
+ASK	K4 git --work-tree 띄어 씀 restore	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git --work-tree <VG> restore --source HEAD CLAUDE.md"}}
+ASK	K5 git -C 변수 checkout	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C \"$V\" checkout CLAUDE.md"}}
+ASK	K6 git -c 설정 checkout(지금 자리)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -c core.autocrlf=false checkout CLAUDE.md"}}
+ASK	K7 git -C 볼트 --no-pager reset	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C <VG> --no-pager reset HEAD~1 -- CLAUDE.md"}}
+ASK	K8 git -C 밖 + --work-tree 볼트	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C <VG>_dist --work-tree=<VG> checkout CLAUDE.md"}}
+ASK	K9 git -C 상대 checkout	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C sub checkout CLAUDE.md"}}
+NOFIRE	K10 git -C 볼트 밖 checkout	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C <VG>_dist checkout CLAUDE.md"}}
+NOFIRE	K11 git -C 밖 log(읽기)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "git -C <VG> log -1 -- CLAUDE.md"}}
+NOFIRE	K12 cp 볼트 훅 → 밖 3_시스템/hooks/	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp <VG>/3_시스템/hooks/core-gate.ps1 <VG>_dist/3_시스템/hooks/"}}
+NOFIRE	K13 cp 여럿 → 밖 "…/hooks/"(따옴표)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp <VG>/3_시스템/hooks/a.ps1 <VG>/3_시스템/hooks/b.ps1 \"/c/scratch2/3_시스템/hooks/\""}}
+NOFIRE	K14 cp → 밖 같은 이름 파일	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp <VG>/CLAUDE.md <VG>_dist/CLAUDE.md"}}
+ASK	K15 cp 밖 → 볼트 코어	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp <VG>_dist/CLAUDE.md <VG>/CLAUDE.md"}}
+ASK	K16 cp → 상대 코어 꼴(지금 자리 모름)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp <VG>/3_시스템/hooks/a.ps1 3_시스템/hooks/"}}
+ASK	K17 cp -t 볼트 hooks	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp -t <VG>/3_시스템/hooks/ /tmp/x.ps1"}}
+ASK	K18 cp --target-directory= 볼트	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp --target-directory=<VG>/3_시스템/hooks/ /tmp/x.ps1"}}
+ASK	K19 cp → 밖 꼴이나 정규화하면 볼트	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp /tmp/x <VG>_dist/../<VN>/CLAUDE.md"}}
+ASK	K20 cp → 밖 변수 대상	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp <VG>/CLAUDE.md $D/CLAUDE.md"}}
+# 개정 11(2026-11-20 · 3) — 복사·풀기 도구(install · rsync · robocopy · xcopy · tar -x · unzip)와 PowerShell 쓰기 별칭
+ASK	M1 install → 볼트 hooks	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "install -m 644 x.ps1 <VG>/3_시스템/hooks/x.ps1"}}
+ASK	M2 install → 상대 코어	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "install x CLAUDE.md"}}
+ASK	M3 install -t 볼트 hooks	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "install -t <VG>/3_시스템/hooks/ x.ps1"}}
+ASK	M4 rsync → 볼트 hooks	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "rsync -a src/ <VG>/3_시스템/hooks/"}}
+ASK	M5 rsync → 상대 코어	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "rsync x CLAUDE.md"}}
+ASK	M6 robocopy → 볼트 hooks	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "robocopy C:\\src <VB>\\3_시스템\\hooks\\ x.ps1"}}
+ASK	M7 robocopy 볼트 뿌리 + 파일 이름 코어	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "robocopy C:\\src <VB> CLAUDE.md /Y"}}
+ASK	M8 xcopy → 볼트 코어 /Y	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "xcopy x <VB>\\CLAUDE.md /Y"}}
+ASK	M9 tar -x 코어 이름(지금 자리)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "tar -xf a.tar CLAUDE.md"}}
+ASK	M10 tar xf -C 볼트	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "tar xf a.tar -C <VG> CLAUDE.md"}}
+ASK	M11 tar --extract 훅	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "tar --extract -f a.tar 3_시스템/hooks/x.ps1"}}
+ASK	M12 unzip 코어 이름 -d 볼트	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "unzip -o a.zip CLAUDE.md -d <VG>"}}
+ASK	M13 unzip 코어 이름(지금 자리)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "unzip a.zip 3_시스템/hooks/x.ps1"}}
+ASK	M14 PS Copy-Item → 볼트 코어	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "Copy-Item x <VB>\\CLAUDE.md"}}
+ASK	M15 PS copy 별칭 → 볼트 코어	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "copy x <VB>\\CLAUDE.md"}}
+ASK	M16 PS cpi 별칭	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "cpi x <VB>\\CLAUDE.md"}}
+ASK	M17 PS New-Item -Force	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "New-Item -Force -Path <VB>\\CLAUDE.md -Value x"}}
+ASK	M18 PS ni 별칭	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "ni <VB>\\CLAUDE.md -Force -Value x"}}
+ASK	M19 PS Out-File	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "'x' | Out-File <VB>\\CLAUDE.md"}}
+ASK	M20 PS Set-Content	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "Set-Content <VB>\\CLAUDE.md x"}}
+ASK	M21 PS sc 별칭	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "sc <VB>\\CLAUDE.md x"}}
+ASK	M22 PS ac 별칭	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "ac <VB>\\CLAUDE.md x"}}
+ASK	M23 PS Copy-Item -Destination 볼트	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "Copy-Item -Path x -Destination <VB>\\CLAUDE.md"}}
+NOFIRE	M24 install 볼트 코어 → 밖	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "install <VG>/3_시스템/hooks/x.ps1 <VG>_dist/3_시스템/hooks/x.ps1"}}
+NOFIRE	M25 rsync 볼트 hooks → 밖	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "rsync -a <VG>/3_시스템/hooks/ <VG>_dist/3_시스템/hooks/"}}
+NOFIRE	M26 rsync 볼트 코어 → /tmp	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "rsync <VG>/CLAUDE.md /tmp/x"}}
+NOFIRE	M27 robocopy 볼트 hooks → 밖	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "robocopy <VB>\\3_시스템\\hooks\\ C:\\out x.ps1"}}
+NOFIRE	M28 xcopy 볼트 코어 → 밖 /Y	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "xcopy <VB>\\CLAUDE.md C:\\out\\ /Y"}}
+NOFIRE	M29 tar -c 로 묶기(읽기)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "tar -czf out.tgz CLAUDE.md 3_시스템/hooks/"}}
+NOFIRE	M30 tar -x -C 밖	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "tar -xf a.tar -C <VG>_dist CLAUDE.md"}}
+NOFIRE	M31 unzip -l 목록(읽기)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "unzip -l a.zip CLAUDE.md"}}
+NOFIRE	M32 unzip -d 밖	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "unzip -o a.zip CLAUDE.md -d <VG>_dist"}}
+NOFIRE	M33 npm install 과 코어 읽기 다른 절	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "npm install; py -3 3_시스템/search.py --q x"}}
+ASK	M34 PS Copy-Item 볼트 코어 → 밖 [기존 오탐 · 그대로]	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "Copy-Item <VB>\\CLAUDE.md C:\\out\\"}}
+NOFIRE	M35 PS Get-Content 코어(읽기)	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "Get-Content <VB>\\CLAUDE.md | Select-Object -First 3"}}
+ASK	M36 cp x 코어 -f(끝 옵션)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp x CLAUDE.md -f"}}
+ASK	M37 cp x 코어 2>/dev/null	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp x CLAUDE.md 2>/dev/null"}}
+ASK	M38 cp x 코어 > /dev/null	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp x CLAUDE.md > /dev/null"}}
+NOFIRE	M39 cp 볼트 코어 → /tmp -v(읽기)	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "cp <VG>/CLAUDE.md /tmp/x -v"}}
+ASK	M40 rsync x 코어 --progress	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "rsync x CLAUDE.md --progress"}}
+ASK	M41 PS & robocopy 볼트 뿌리 + 코어	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "& robocopy C:\\src <VB> CLAUDE.md"}}
+ASK	M42 PS del 별칭	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "del <VB>\\CLAUDE.md"}}
+ASK	M43 PS mi 별칭	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "mi x <VB>\\CLAUDE.md"}}
+ASK	M44 PS ri 별칭 훅	-	-	{"tool_name": "PowerShell", "permission_mode": "auto", "tool_input": {"command": "ri <VB>\\3_시스템\\hooks\\x.ps1"}}
+ASK	M45 /usr/bin/install 경로로 부름	-	-	{"tool_name": "Bash", "permission_mode": "auto", "tool_input": {"command": "/usr/bin/install x <VG>/CLAUDE.md"}}

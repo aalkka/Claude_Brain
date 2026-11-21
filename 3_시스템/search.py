@@ -4,7 +4,7 @@
 
 CLI:
   python search.py --reindex            증분 재인덱스(hash 변경분만)
-  python search.py --reindex --auto     훅이 부름 — 기능 단계 «의미 찾기»를 따른다(낮음 = 6시간에 한 번·전원 연결 때 · 끔 = 안 함)
+  python search.py --reindex --auto     훅이 부름 — 기능 «재색인 빈도»를 따른다(6시간마다 = 6시간에 한 번·전원 연결 때 · 안 함 = 안 함)
   python search.py --rebuild            전체 재인덱스
   python search.py --q "질의" --k 8     하이브리드 top-k → JSON lines (--mode lexical|vector|hybrid)
   python search.py --neighbors <path>   B1용 의미이웃 top-k(상대방식, 기본 k=3)
@@ -438,13 +438,13 @@ def _lock():
 
 
 def due(vault_level=None):
-    """자동 재색인을 지금 할지 — (할지, 까닭). high = 늘 · low = 마지막 뒤 every_hours 가 지났고 전원 연결 · off = 안 함."""
-    lvl = vault_level or options.level("search.semantic")
+    """자동 재색인을 지금 할지 — (할지, 까닭). 기능 «재색인 빈도»(search.reindex) high = 세션마다 · low = 마지막 뒤 every_hours 가 지났고 전원 연결 · off = 안 함."""
+    lvl = vault_level or options.level("search.reindex")
     if lvl == "off":
-        return False, "의미 찾기 끔"
+        return False, "재색인 빈도 «안 함»"
     if lvl != "low":
         return True, ""
-    hours = float(options.params("search.semantic", "low").get("every_hours") or 6)
+    hours = float(options.params("search.reindex", "low").get("every_hours") or 6)
     try:
         age = time.time() - float(open(LAST_PATH, encoding="ascii").read().split()[0])
     except (OSError, ValueError, IndexError):
@@ -641,7 +641,7 @@ BM25_K1, BM25_B = 1.2, 0.75
 
 
 def disk_notes():
-    """노트 목록을 디스크에서(색인이 아니라) — 의미 찾기가 낮음·끔이면 새 노트가 색인에 늦게 들어가도 낱말로는 바로 찾게."""
+    """노트 목록을 디스크에서(색인이 아니라) — 재색인 빈도가 세션마다가 아니면 새 노트가 색인에 늦게 들어가도 낱말로는 바로 찾게."""
     return [rel(ap) for ap in iter_files()]
 
 
@@ -909,7 +909,7 @@ def main():
     ap.add_argument("--eval")
     ap.add_argument("--link-dryrun", action="store_true", help="B1 위키링크 블록 미리보기(파일 수정 0)")
     ap.add_argument("--link-write", action="store_true", help="B1 위키링크 관리블록 실기입")
-    ap.add_argument("--auto", action="store_true", help="훅이 부름 — 기능 단계 «의미 찾기»를 따름(손으로 부르면 늘 돈다)")
+    ap.add_argument("--auto", action="store_true", help="훅이 부름 — 기능 «재색인 빈도»·«의미 링크 쓰기»를 따름(손으로 부르면 늘 돈다)")
     args = ap.parse_args()
     auto = args.auto or os.environ.get("BRAIN_AUTO") == "1"   # 훅은 환경 변수로 준다(옛 search.py 가 모르는 인자로 죽지 않게)
 
@@ -918,8 +918,10 @@ def main():
     elif args.reindex: ran = reindex(full=False, auto=auto)
 
     if args.link_write:
-        if auto and ran is None and options.level("search.semantic") != "high":
-            print("link-write: 건너뜀 — 이번에 재색인을 안 함(의미 찾기 낮음·끔)", file=sys.stderr)
+        if auto and options.level("search.links") == "off":
+            print("link-write: 건너뜀 — 의미 링크 쓰기 끔", file=sys.stderr)
+        elif auto and ran is None and options.level("search.reindex") != "high":
+            print("link-write: 건너뜀 — 이번에 재색인을 안 함(재색인 빈도 6시간마다·안 함)", file=sys.stderr)
         else:
             write_links(dry=False)
     elif args.link_dryrun:
@@ -930,10 +932,11 @@ def main():
         for cos, rp, g in neighbors(args.neighbors, k=args.k):
             print(json.dumps({"path": rp, "cosine": round(cos, 4), "gist": g}, ensure_ascii=False))
     elif args.q:
-        lvl = options.level("search.semantic")
-        mode = "lexical" if lvl == "off" else args.mode      # 끔 = 낱말만(모델을 안 띄운다)
+        vec_on = options.level("search.vector") != "off"
+        mode = args.mode if vec_on else "lexical"           # 뜻 찾기 끔 = 낱말만(모델을 안 띄운다)
         if mode != args.mode:
-            print("의미 찾기 끔 — 낱말 찾기만", file=sys.stderr)
+            print("뜻 찾기 끔 — 낱말 찾기만", file=sys.stderr)
+        lvl = options.level("search.reindex")               # 세션마다가 아니면 색인이 묵을 수 있어 낱말 점수는 디스크에서 읽는다
         model, model_name = (None, None)
         if mode != "lexical":
             model, model_name = load_query_model()

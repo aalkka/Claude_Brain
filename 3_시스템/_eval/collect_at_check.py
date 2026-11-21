@@ -75,9 +75,10 @@ def desk_cases(root):
     ok('[창] 보기 = 방법 web · 시각 꼴 · 다음 = 시각 · 줄 글 «09:00»', v['method'] == 'web' and v['mode'] == 'at' and v['at'] == ['09:00'] and v['hourWord'] == '09:00' and v['next'].endswith('09:00'), v)
     r = run('set', '*', 'wake_pc', 'false')
     sw = ccc.load(os.path.join(ts, 'collect.local.json')) or {}
-    ok('[창] 잠든 PC «깬 뒤» = collect.local.json wake_pc false · 예약 mylms·school-a 모두 깨우기 끔 · 보기 wakePc false',
-       r.returncode == 0 and sw.get('wake_pc') is False and '외부뇌-수집 mylms 등록(06:55 · 깨우기 끔)' in last() and '외부뇌-수집 school-a 등록(09:00 · 깨우기 끔)' in last()
-       and json.loads(run('view').stdout.strip().splitlines()[-1])['wakePc'] is False, (r.stderr[-200:], sw, last()))
+    pc = ((ccc.load(os.path.join(ts, 'options.local.json')) or {}).get('levels') or {}).get('collect.wake_pc')
+    ok('[창] PC 깨우기 끔 = 기능 collect.wake_pc off(옛 collect.local.json 칸 없음) · 예약 mylms·school-a 모두 깨우기 끔 · 보기 wakePc false',
+       r.returncode == 0 and pc == 'off' and 'wake_pc' not in sw and '외부뇌-수집 mylms 등록(06:55 · 깨우기 끔)' in last() and '외부뇌-수집 school-a 등록(09:00 · 깨우기 끔)' in last()
+       and json.loads(run('view').stdout.strip().splitlines()[-1])['wakePc'] is False, (r.stderr[-200:], sw, pc, last()))
     r = run('set', '*', 'wake_pc', 'true')
     ok('[창] 잠든 PC «깨움» = 모두 깨우기 켬', r.returncode == 0 and '외부뇌-수집 school-a 등록(09:00 · 깨우기 켬)' in last() and '외부뇌-수집 mylms 등록(06:55 · 깨우기 켬)' in last(), last())
     ccc.put(os.path.join(ts, 'collect.local.json'), None)

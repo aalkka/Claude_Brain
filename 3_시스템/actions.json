@@ -31,6 +31,8 @@
     {"id": "door.status", "name": "받는 문 등록 상태(즐겨찾기·단축키·첫 메뉴)", "risk": "read", "run": ["{py}", "3_시스템/door.py", "status"]},
     {"id": "outside.take", "name": "볼트 밖 후보를 받은함으로 옮기기", "risk": "write", "run": ["{py}", "3_시스템/outside.py", "take", "{key}", "--by", "{by}"], "args": [{"name": "key", "label": "후보 이름 또는 열쇠"}]},
     {"id": "outside.hide", "name": "볼트 밖 후보를 목록에서 빼기", "risk": "write", "run": ["{py}", "3_시스템/outside.py", "hide", "{key}"], "args": [{"name": "key", "label": "후보 이름 또는 열쇠"}]},
+    {"id": "proc.list", "name": "볼트가 띄운 프로세스(주인 세션 · 쉼 · 끌지 판정 · 끄지 않음)", "risk": "read", "run": ["{py}", "3_시스템/own.py", "list"]},
+    {"id": "proc.reclaim", "name": "되찾기 지금(주인 끝난·수명 넘은 것 끄기 · 예약 작업이 10분마다 하는 일)", "risk": "write", "run": ["{py}", "3_시스템/own.py", "tick"]},
     {"id": "follow.run", "name": "바깥 변화 따라가기(옵시디언 밖에서 옮기거나 지운 것 뒤처리)", "risk": "write", "run": ["{py}", "3_시스템/follow.py"], "empty": "^바뀐 것 없음"},
     {"id": "follow.accept", "name": "한꺼번에 사라진 것을 지움으로 받아들이기", "risk": "write", "run": ["{py}", "3_시스템/follow.py", "--accept"]},
     {"id": "follow.refetch", "name": "사라진 수집 원본 다음 수집 때 다시 받기", "risk": "write", "run": ["{py}", "3_시스템/follow.py", "refetch", "{path}"], "args": [{"name": "path", "label": "사라진 원본 경로"}]},

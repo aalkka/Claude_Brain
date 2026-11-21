@@ -96,6 +96,19 @@ def external_tests(A, E):
     print("%s 바깥 설정 추적 — 목록 없음 %d · 덮음 %d · 종류 다름 %d · 항목 결함 %d" % ("✓" if ok else "✗", len(gaps), len(gaps2), len(gaps3), len(bad4)))
     if not ok:
         FAIL.append("바깥 설정 추적")
+    # 모듈 폴더 대본은 그 모듈 바깥 설정 칸이 덮는다(11-21 self_sleep 이 코어 추적·④ 에 남던 것) — 칸이 없으면 잡힘
+    MD = ".claude/skills/demo-sl"
+    put(E, MD + "/scripts/setup.ps1", "Register-ScheduledTask -TaskName demo2\n")
+    put(E, MD + "/module.json", json.dumps({"schema": 1, "contributes": {}}))
+    run(E, "add", ".")
+    before = [g[:2] for g in ex.scan([E], items=[])[0]]
+    put(E, MD + "/module.json", json.dumps({"schema": 1, "contributes": {"outside": MD + "/outside.json"}}))
+    put(E, MD + "/outside.json", json.dumps({"이름": "데모", "항목": [{"id": "demo-sl.t", "이름": "예약", "종류": ["작업 스케줄러"], "재기": {"명령": "exit 0"}, "하기": "x"}]}, ensure_ascii=False))
+    after = [g[:2] for g in ex.scan([E], items=[])[0]]
+    ok = (MD + "/scripts/setup.ps1", "작업 스케줄러") in before and (MD + "/scripts/setup.ps1", "작업 스케줄러") not in after
+    print("%s 바깥 설정 추적 — 모듈 칸이 모듈 대본을 덮음 · 전 %s · 뒤 %s" % ("✓" if ok else "✗", before, after))
+    if not ok:
+        FAIL.append("모듈 칸이 덮음")
     # 확인 명령 — 진짜 목록의 git 두 칸을 «안 된» 저장소(훅 없음·가지 없음)에서
     items = {it["id"]: it for it in ex.load()}
     run(E, "commit", "-q", "-m", "x")
@@ -300,6 +313,38 @@ def ship_tests(root):
     return ok
 
 
+def blind_spot_tests(root):
+    """11-21 전수 점검이 찾은 빈틈 셋 — ⑴ 번들 CSS 주석의 호칭(\\uXXXX)을 «익명화할 곳»으로 셈(남의 고지 이메일은 안 셈)
+    ⑵ 배포판 손댐보다 먼저 고친 줄(익명화 줄 아님)을 잡고 익명화로 바꾼 줄은 안 잡음 ⑶ 배포판 py 의 같은 이름 정의 두 번."""
+    A, B = os.path.join(root, "vault"), os.path.join(root, "dist")
+    BUNDLE, NOTICE = ".obsidian/plugins/brain-source/main.js", ".obsidian/plugins/brain-source/THIRD_PARTY_NOTICES.md"
+    put(A, "3_시스템/_index/dist-sync/leak-patterns.txt", "홍길동\t시험 실명\n")  # mf:allow-path  (임시 볼트 안)
+    put(A, BUNDLE, 'var s=`.bar{display:none} /* \\uD64D\\uAE38\\uB3D9\\uB2D8 \\uADF8\\uB9BC 3 */`;\n')   # 번들이 낸 꼴 그대로(한글 = \\uXXXX)
+    put(A, NOTICE, "Copyright someone <dev" + "@example.org>\n")   # 이 줄 자신이 내장 이메일 꼴에 안 걸리게 나눠 씀
+    os.makedirs(B, exist_ok=True)
+    rows = [{"path": BUNDLE, "what": "고침"}, {"path": NOTICE, "what": "고침"}]
+    dc.annotate(A, B, rows, {}, [], {})
+    why = {x["path"]: x["why"] for x in rows}
+    ok1 = why[BUNDLE] == ["익명화할 곳 1"] and why[NOTICE] == []
+    rules = dc.leak_rules(A)
+    put(A, "v/lag.py", 'for f in ("a.py", "b.py", "c.py"):\n    pass\n')
+    put(B, "v/lag.py", 'for f in ("a.py", "c.py"):\n    pass\n')
+    put(A, "v/anon.md", "홍길동 안내 · 대운하\n")
+    put(B, "v/anon.md", "사용자 안내 · 과제\n")
+    ok2 = dc.hidden_edit(os.path.join(A, "v/lag.py"), os.path.join(B, "v/lag.py"), rules) \
+        and not dc.hidden_edit(os.path.join(A, "v/anon.md"), os.path.join(B, "v/anon.md"), rules)
+    run(B, "init")
+    put(B, PY, "def practice():\n    return 1\n\n\ndef practice():\n    return 1\n")
+    put(B, "3_시스템/ok.py", "def a():\n    pass\n\n\nclass B:\n    def a(self):\n        pass\n")  # mf:allow-path  (임시 사본 안)
+    run(B, "add", ".")
+    marks = dc.merge_marks(A, B, None, {})
+    ok3 = [(m["path"], m["what"]) for m in marks] == [(PY, "배포판 합치기 흔적(같은 이름 정의 두 번: practice)")]
+    ok = ok1 and ok2 and ok3
+    print("%s 빈틈 셋 — 번들 주석 호칭 %s · 먼저 고친 줄 %s · 합치기 흔적 %s" % ("✓" if ok else "✗", why, ok2, marks))
+    if not ok:
+        FAIL.append("빈틈 셋")
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -417,6 +462,7 @@ def main():
         if not ok:
             FAIL.append("안 보던 자리")
 
+        blind_spot_tests(os.path.join(tmp, "blind"))
         ship_tests(os.path.join(tmp, "ship"))
         contract_tests(os.path.join(tmp, "contract"))
         module_outside_tests(os.path.join(tmp, "outside"))

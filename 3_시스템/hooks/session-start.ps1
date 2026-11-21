@@ -85,12 +85,12 @@ if (Test-Path $followPy) { & py -3 $followPy --hook 2>$null }
 #    비핵심(인덱스=gitignore·검색 품질에만 영향)이고 save_index가 tmp→os.replace 원자교체라
 #    중도 kill·SessionEnd 디태치와 동시 실행에도 손상 없음(다음 reindex가 hash 불일치로 자기치유).
 #    ※ push(4)도 디태치(11-06 시스템 재기 §3-4). push 는 index 를 안 쓴다 — 07-19 경합은 SessionEnd 커밋 둘이었다.
-#    기능 단계 «의미 찾기»(options-level.ps1): 사용 안 함이면 띄우지 않는다 · 하옵(6시간·전원)은 search.py 가 BRAIN_AUTO 를 보고 가른다.
+#    기능 «재색인 빈도»(search.reindex · options-level.ps1): «안 함»이면 띄우지 않는다 · «6시간마다»(전원)는 search.py 가 BRAIN_AUTO 를 보고 가른다.
 #    BRAIN_AUTO 는 인자가 아니라 환경 변수 — 옛 search.py 가 남은 볼트(업데이트 충돌)에서도 모르는 인자로 죽지 않고 지금처럼 돈다.
 $searchPy = Join-Path $vault '3_시스템\search.py'
 $semantic = 'high'
 $optPs = Join-Path $PSScriptRoot 'options-level.ps1'
-if (Test-Path $optPs) { . $optPs; $semantic = Get-OptionLevel $vault 'search.semantic' }
+if (Test-Path $optPs) { . $optPs; $semantic = Get-OptionLevel $vault 'search.reindex' }
 if ((Test-Path $searchPy) -and $semantic -ne 'off') {
     $env:BRAIN_AUTO = '1'
     Start-Process -FilePath 'py' -ArgumentList '-3', $searchPy, '--reindex' -WindowStyle Hidden -ErrorAction SilentlyContinue
