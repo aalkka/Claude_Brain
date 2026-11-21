@@ -343,6 +343,22 @@ def blind_spot_tests(root):
     print("%s 빈틈 셋 — 번들 주석 호칭 %s · 먼저 고친 줄 %s · 합치기 흔적 %s" % ("✓" if ok else "✗", why, ok2, marks))
     if not ok:
         FAIL.append("빈틈 셋")
+    # ⑷ 글 파일이면 확장자 없이 다 봄(11-21 view.html 주석 호칭 4줄을 확장자 허용 목록이 놓침) · 바이너리는 안 봄 · UTF-16 도 읽음
+    samples = {"s/view.html": "<!-- 홍길동님 «그림 3» -->\n", "s/a.ts": "// 홍길동님 11-21\n", "s/i.svg": "<svg><!-- 홍길동 --></svg>\n",
+               "s/c.yml": "# 홍길동님 말\n", "s/noext": "홍길동\n"}
+    for rel, txt in samples.items():
+        put(A, rel, txt)
+    with open(os.path.join(A, "s", "b.bin"), "wb") as f:
+        f.write(b"\x00\x01PNG" + "홍길동".encode("utf-8"))
+    with open(os.path.join(A, "s", "u16.ps1"), "wb") as f:
+        f.write("# 홍길동\n".encode("utf-16"))
+    files = {r: os.path.join(A, *r.split("/")) for r in list(samples) + ["s/b.bin", "s/u16.ps1"]}
+    got = sorted({h[0] for h in dc.dd.scan_leaks(files, dc.dd.load_local_leaks(A))})
+    want = sorted(list(samples) + ["s/u16.ps1"])
+    ok4 = got == want
+    print("%s 글 파일이면 다 봄 — 잡음 %s%s" % ("✓" if ok4 else "✗", got, "" if ok4 else " (기대 %s)" % want))
+    if not ok4:
+        FAIL.append("글 파일이면 다 봄")
 
 
 def main():
