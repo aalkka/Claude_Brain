@@ -42,6 +42,7 @@ KNOWLEDGE = "2_지식"  # mf:allow-path  (뿌리의 씨앗·원본 목록만 보
 PERSONAL = [
     "1_수집/*", *_CONTENT, "3_시스템/_index/*", "3_시스템/door-app/*",  # mf:allow-path
     "3_시스템/_claude-memory/*", ".obsidian/*", ".git/*", "__pycache__/*",  # mf:allow-path
+    "3_시스템/hooks/approve/used/*",  # mf:allow-path  — 폰 명령 승인 쓴 기록(git 밖 · 실행 기록) · 11-21 새 기록마다 ⑤ 에 뜸
     # DoD 검증(2026-09-12)이 잡은 결함 — settings.local.json 은 개인 권한 설정이고
     # gitignore 대상인데 `.claude/skills/*` 형제라 코어로 분류됐다. 적용 단계였다면 유출.
     ".claude/settings.local.json", "_변환본/*",  # mf:allow-path
