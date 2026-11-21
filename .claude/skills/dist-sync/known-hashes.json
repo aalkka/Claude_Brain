@@ -139,6 +139,7 @@
 ".claude/skills/dist-sync/scripts/dist-check.py": {
 "67ddea63d070": "e141848f5268dd8a",
 "9db8a50c7d52": "2023c96ada05aaa9",
+"bea710c55cc3": "a0e058fa51bf1d42",
 "beb38bff815d": "1e22b65409f22bd0",
 "cdc89037c474": "1bf081afa96f9bdb",
 "d46144b0a06c": "2d2f889802ffe96b",
@@ -157,6 +158,7 @@
 "a582b89d3810": "e7d851bf03162fac",
 "c27c40f47307": "4c2b4565977b4fa6",
 "cfb58015c306": "c9aa0e503eab6c8c",
+"d03e6eb1bbac": "8b551c9e1e63d50e",
 "df39b0a50a57": "6c33d5b66177f232",
 "eea9c77f45cd": "3969e22f127d387b",
 "fa39f2997571": "9a3a1a13a8586a8d",
@@ -178,6 +180,7 @@
 "3f5124c086a1": "726d10de6e05912c",
 "76a46ecfce6e": "b0f87bdf060dde82",
 "b2507c5ca19e": "a24afa8868bb3b97",
+"c58da9823f4e": "f568ba62b044f419",
 "d84dafb8d9aa": "cefecc403de852f8"
 },
 ".claude/skills/dist-sync/ship.json": {
@@ -1010,6 +1013,7 @@
 "0f5c2d63be73": "b8468d554f01556c"
 },
 "3_시스템/gather/view.html": {
+"3b107783d447": "f1eab4ab89ed349d",
 "4d94868af1f0": "8513088ced1a93ad",
 "9c5316d44c24": "41b088df255a7d0d",
 "b3c25f024536": "812d902505dfa9fe"
@@ -1189,7 +1193,8 @@
 "5795de089e8e": "7807fee8d4945047"
 },
 "3_시스템/module_ship.py": {
-"6399171e54c4": "eb20f4baf8047ad7"
+"6399171e54c4": "eb20f4baf8047ad7",
+"a64cb7c56948": "9ce3c23175395fb9"
 },
 "3_시스템/notice-filter.py": {
 "62f90da0d73c": "54e22ab6fa90a336",
@@ -1600,6 +1605,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "0da3a1417f2b",
+"rev": "2fd35d53eabe",
 "schema": 1
 }
