@@ -39,6 +39,7 @@
 "2679ecd411cf": "2da29fb18fb4c145",
 "47eba9e0e411": "3dca320f3c0b37f5",
 "550df6050b16": "8dc80de98e4016f7",
+"6b5ede4e130c": "b58943a3caad401d",
 "70846a2ecd3c": "5acdecaa866bc431",
 "7bec513f5e4f": "a2fc85653b86552f",
 "85b1c05191a9": "fdfdd91d43316761",
@@ -63,6 +64,7 @@
 "3ae025ed600d": "cb456a970f7c3825",
 "5912284f32bf": "1f4cacd5d74c212e",
 "803533a53d09": "ed004971112472ac",
+"910485bb0765": "76b434d108cc2c8e",
 "dbdfc23355fe": "92e6f31e1b90dea3",
 "e137f145defb": "9fc12cce1a642d66",
 "e2aed39e6079": "3f4b230e7e7861db",
@@ -112,6 +114,7 @@
 ".claude/skills/dist-sync/external.json": {
 "20cd292dc761": "ea8f5cf6ad0a9bf9",
 "7dc86662f1a4": "a2099a62e0116e73",
+"ae54158f57bc": "c3ba73e538a60059",
 "f8ce870130ac": "5ac80b10514d3f78"
 },
 ".claude/skills/dist-sync/manual/설명서-dist-sync.md": {
@@ -136,6 +139,7 @@
 "9db8a50c7d52": "2023c96ada05aaa9",
 "beb38bff815d": "1e22b65409f22bd0",
 "cdc89037c474": "1bf081afa96f9bdb",
+"d46144b0a06c": "2d2f889802ffe96b",
 "fb408acda8bf": "c4e1b6b17ddac672",
 "ffa4bdeb3f36": "17c825d593f0f861"
 },
@@ -151,6 +155,7 @@
 "c27c40f47307": "4c2b4565977b4fa6",
 "cfb58015c306": "c9aa0e503eab6c8c",
 "df39b0a50a57": "6c33d5b66177f232",
+"eea9c77f45cd": "3969e22f127d387b",
 "fa39f2997571": "9a3a1a13a8586a8d",
 "fce4ab3c9346": "343e7e2f7f3ca3bd",
 "ff9d2fe90915": "26701f7f3fc09861"
@@ -161,16 +166,19 @@
 },
 ".claude/skills/dist-sync/scripts/external.py": {
 "588d5be321c7": "288d10e10fa1fade",
-"92cc8ee90a63": "bc0dcea1fa6a1498"
+"92cc8ee90a63": "bc0dcea1fa6a1498",
+"fa70db9bbb9a": "037325ab0cd6630f"
 },
 ".claude/skills/dist-sync/scripts/test_dist_check.py": {
 "33514b3f688d": "5e0a0b4d0b305a12",
 "3f5124c086a1": "726d10de6e05912c",
+"76a46ecfce6e": "b0f87bdf060dde82",
 "b2507c5ca19e": "a24afa8868bb3b97",
 "d84dafb8d9aa": "cefecc403de852f8"
 },
 ".claude/skills/dist-sync/ship.json": {
 "012744975a0c": "e4b808b59f35dfd6",
+"9d31409066bc": "a0cd0476b0ba6775",
 "a7f96d3235c2": "c1433ed91c2765d5",
 "c1646afcc03b": "0c4efbe01204a384"
 },
@@ -314,6 +322,7 @@
 "392953b5838c": "e46a63abadd7c182"
 },
 ".claude/skills/options/SKILL.md": {
+"8ba398bcb822": "f3af3fcd9d7e8a52",
 "904c2e3f4b27": "cc16b0738b155a85",
 "f8aa3fa39027": "d6b846a5a4a66557"
 },
@@ -331,6 +340,36 @@
 "85eb56032d12": "032093a439c89c5f",
 "b0de44aebf68": "959797c754fc1403",
 "e9e4d7deab3f": "f9ae1a3bd32d698f"
+},
+".claude/skills/self_sleep/.claude-plugin/plugin.json": {
+"4b2165dff318": "7516674478fbc5fe"
+},
+".claude/skills/self_sleep/module.json": {
+"dd8f4aa61064": "8e6f27e145574339"
+},
+".claude/skills/self_sleep/outside.json": {
+"b085b79fc735": "e5f18fa4c7389dac"
+},
+".claude/skills/self_sleep/scripts/dgpu.py": {
+"7abe9eda639b": "f7c1fddb5de8f55f"
+},
+".claude/skills/self_sleep/scripts/lights_lenovo.ps1": {
+"a58f99e999bd": "adbad1470334a86a"
+},
+".claude/skills/self_sleep/scripts/lights_setup.ps1": {
+"5d8a217df89b": "83b06d541a8e775c"
+},
+".claude/skills/self_sleep/scripts/media_pause.ps1": {
+"82e3d18e40fc": "ff0285d78e4396d6"
+},
+".claude/skills/self_sleep/scripts/self_sleep.py": {
+"c82d3f3c1ee0": "e5ea76d35eb76eae"
+},
+".claude/skills/self_sleep/scripts/setup.ps1": {
+"9229a5fdaee2": "ea1fa94da05f92e4"
+},
+".claude/skills/self_sleep/scripts/test_self_sleep.py": {
+"481658c6213a": "27739982ef68766b"
 },
 ".claude/skills/session-close/SKILL.md": {
 "0498ec8726b3": "629dc1f61b26c792",
@@ -421,6 +460,9 @@
 "3_시스템/_eval/chrome_pipe.mjs": {
 "e656277cd5ea": "a73b6571162904f2"
 },
+"3_시스템/_eval/claude_login_check.py": {
+"8015f8918e7f": "ae8d3ceced879d2e"
+},
 "3_시스템/_eval/collect_add_check.py": {
 "12f51332a236": "744dd8162bb96a63",
 "1ca0adfbe228": "286259f1d88cc155",
@@ -440,6 +482,7 @@
 },
 "3_시스템/_eval/collect_at_check.py": {
 "144c6cb5682b": "a3f5e2a7faf983f6",
+"1c4d98e9739f": "4ae0405605a99bee",
 "424fc61fb218": "124002ddbe44f2f4",
 "9f513b99e999": "9c39a71263343024",
 "e4fcc3031467": "4e2210f4c9dac445"
@@ -449,6 +492,7 @@
 },
 "3_시스템/_eval/collect_core_check.py": {
 "3ee517b301f0": "b72c2ad04bd4afec",
+"4fb89357731a": "10da8f43f6900619",
 "4ff8babaf204": "12042ee0f12b2c63",
 "93f89aa22c57": "67b9d7335b1379b8",
 "950610571d0d": "cc04c7376680cd0c",
@@ -505,6 +549,7 @@
 "3_시스템/_eval/gate-cases.tsv": {
 "8780af6fdc45": "ac810c32878d06bc",
 "89e093839df0": "6008587f2f3412a1",
+"aad8d28d884d": "a8c0703522f7ff6c",
 "ae259a67bf32": "1084823888ef3dcd",
 "b53771d0f806": "a0a8a501e4e620d6",
 "c34defac529f": "44a11f3f7330d5b8",
@@ -516,6 +561,7 @@
 "0873ad424764": "165093322b095b80",
 "56336cadedc9": "9670e6ed8a0070d0",
 "849fd2452004": "5e2f90e03439f5f4",
+"eed3180b0b93": "01d0bcfb93a3660e",
 "fca3daf38d68": "6104765bdd0735aa"
 },
 "3_시스템/_eval/hardpaths.py": {
@@ -545,6 +591,9 @@
 },
 "3_시스템/_eval/outside_check.py": {
 "76c59e2d9b67": "a337007a9811d9e5"
+},
+"3_시스템/_eval/own_check.py": {
+"ac98d509d937": "9fb2f42a0be0e4fd"
 },
 "3_시스템/_eval/precommit_sensitive_check.sh": {
 "2089cce62344": "4d79fe7f396f560b"
@@ -625,6 +674,7 @@
 "c36dd5c9fb39": "a769a8be7c76def0"
 },
 "3_시스템/_eval/web_expire_check.py": {
+"2afc2eb2e33f": "ada8a6ac73a92907",
 "a5e9160e65f3": "b55a8cfe32aac03e",
 "a7538c99d302": "790df654aa1eb592"
 },
@@ -734,6 +784,9 @@
 "3_시스템/_ref/incident-2026-11-16-배포판-잘못실림-자리면-기본싣기.md": {
 "004f839fce76": "d152233f3fd49fd3"
 },
+"3_시스템/_ref/incident-2026-11-20-무인깨어남-2분재잠-앱로그인만료-오전내내-클로드멈춤.md": {
+"bec4002ec004": "9b0501dc0b6708d5"
+},
 "3_시스템/_ref/measure-module-toggle.md": {
 "40026e81a7d8": "c3fd4f83d5e6cecd"
 },
@@ -756,6 +809,7 @@
 "0de9a4f6ccd0": "6e60b53de55cf672",
 "36917469dc0d": "fc0c39a3ee2cf8f1",
 "55f1fb41398c": "e2ec56021102acc1",
+"6541fee60400": "c2edf29c10b4d8d5",
 "7c7fb8a761fb": "ce671497eef6d498",
 "c7c6ec1fbaf8": "72108c4c6d09238d"
 },
@@ -780,6 +834,9 @@
 "5f742f8aa240": "c4d00eb58e13cc78",
 "9424530e1016": "f9e61d41c32b3986"
 },
+"3_시스템/claude_login.py": {
+"dd55fc49c513": "1d7dd344ec4250cd"
+},
 "3_시스템/cleanup.py": {
 "32884733e0e1": "f5386524f3126a02",
 "43dd1fdaf9bc": "b3e047870a2136fe",
@@ -794,10 +851,12 @@
 "215a2ea13a14": "df0e61fe9caea167"
 },
 "3_시스템/collect-browser.py": {
+"bcf3aa50577a": "6988c4d5173590d7",
 "c5d64012fc5e": "e761afefd7180c66"
 },
 "3_시스템/collect-examples/browser.json": {
-"8f93f1caeac5": "1c12ec231de0c96e"
+"8f93f1caeac5": "1c12ec231de0c96e",
+"e569b31938cd": "b60671ec9b619662"
 },
 "3_시스템/collect-examples/candidates.json": {
 "9877f8a29389": "7e0071665a4397d7"
@@ -845,16 +904,20 @@
 "cbd654c36112": "31e08456dd6c327a"
 },
 "3_시스템/collect-schedule.py": {
+"4916e4dba0f9": "4b730d027acf3f9e",
 "72affb8c524f": "a8379f8f8632b8c9"
 },
 "3_시스템/collect-tick.py": {
+"1bb7e8fa244b": "edb2d45ebed9c973",
 "b78b73b89621": "9432b610f18d181f"
 },
 "3_시스템/collect_price.py": {
+"d88c76abccdc": "dcd6d3d52b37a45c",
 "d8e132d9797a": "54a2f811b5a5278b"
 },
 "3_시스템/collectlib.py": {
-"22fd71bc60c0": "68935dc34c1b2fad"
+"22fd71bc60c0": "68935dc34c1b2fad",
+"59bc0b873005": "12447abf6a0216e2"
 },
 "3_시스템/conventions.md": {
 "09402ad75132": "e744ee664c93e53c",
@@ -897,6 +960,7 @@
 "0d2125789af7": "3fa5d9a16bdc03e5",
 "3021cce6a750": "19abbdbdccb7a6f6",
 "50fb8c941fd1": "746231363aaf1cb4",
+"70dc49bf7051": "02a2205b80295b71",
 "7c59d28451e6": "355f2e1eb09f44e7",
 "7fa6f53ad52a": "f86ddaacae849244",
 "974b679fca90": "44a29db818a07216",
@@ -926,6 +990,7 @@
 "6e409a099207": "203e2c0537c913cc",
 "827f9e125975": "364b829c28a8485b",
 "8abf2cd95712": "e4f94878cfe44efd",
+"af00860ebfac": "a7468785412bbf9f",
 "afae703946e0": "3b375c277d43347e"
 },
 "3_시스템/gather/gather.py": {
@@ -933,7 +998,8 @@
 },
 "3_시스템/gather/view.html": {
 "4d94868af1f0": "8513088ced1a93ad",
-"9c5316d44c24": "41b088df255a7d0d"
+"9c5316d44c24": "41b088df255a7d0d",
+"b3c25f024536": "812d902505dfa9fe"
 },
 "3_시스템/graph_topics.py": {
 "29a7115eb25c": "84b01d5d066af720"
@@ -953,6 +1019,7 @@
 "4bbc4ae677a5": "f096bde92fe2cf4f",
 "75720769a805": "003e3870466c99d2",
 "8f7b4e57a24d": "91f370d65154c5cf",
+"bf0e4c096305": "21c432372f50ec48",
 "d7de5597ea2a": "8dc24478371e9ffb"
 },
 "3_시스템/hooks/core-gate-front.py": {
@@ -985,6 +1052,7 @@
 "1dcdd48cbae2": "5472b1f7da1ddd95"
 },
 "3_시스템/hooks/options-level.ps1": {
+"362880b0be75": "9828cd7aad28ef6f",
 "50ee834fe034": "79967b1151e09d13"
 },
 "3_시스템/hooks/permission-probe.ps1": {
@@ -1014,6 +1082,7 @@
 "039c5748f526": "294da032967ad0fb"
 },
 "3_시스템/hooks/session-end.ps1": {
+"20dac019e40a": "643cdf791bbc0567",
 "2a10b5e55718": "81e341272ebe3eca",
 "3a0e250c2691": "5b5b3bd4c173c400",
 "3be841dcf084": "3b0ff1c07131ff9f",
@@ -1045,6 +1114,7 @@
 "78aefa50978b": "0c647c712f64c6a3",
 "8157e1903934": "ad47232557277981",
 "97edda90f438": "6b63e5bd46326409",
+"9b4c8c61caee": "d80afa14bdd45518",
 "b27c3e861f94": "1a8772d57dee7c29",
 "b646d21df04b": "350699dc353d80ba",
 "d806a5de0b43": "8c519a9dfc048782",
@@ -1118,18 +1188,23 @@
 "ae04e8f3b725": "63c2f89f2290536e"
 },
 "3_시스템/options.py": {
+"228d8781892e": "4c56f3667b409729",
 "3fb8e8c2d5e1": "b17bfd646781d58f",
 "76125615b076": "7ecf427859798bc3",
 "b9a3c27d9ccb": "1f69ff3bc1a6f521"
 },
 "3_시스템/options.registry.json": {
 "30b24d535795": "a960c3659eb0dc3e",
+"b0150dc9ee9f": "5996963c91f2a2ab",
 "e6e617543da0": "84d0d8066901676c"
 },
 "3_시스템/outside.py": {
 "4e68ea105290": "e41209a6e70a167f",
 "674b7cd456b6": "053973e4df4da7da",
 "b7b8f5a2aeef": "08a372341d0b2c83"
+},
+"3_시스템/own.py": {
+"9be4adb209e5": "0189167dc23066b7"
 },
 "3_시스템/props-sync.py": {
 "b46be639a4c8": "920206095fc17196"
@@ -1186,6 +1261,7 @@
 "abd2c462b195": "d1204c81e2485e43",
 "c02f6b2a614f": "7778467ff5d41d6c",
 "c53afe68998a": "a69ceda8e0910886",
+"d0c1c9e0bc78": "94cd17f64d39ef6a",
 "eeb86caac9f5": "17e7695c526a53d8"
 },
 "3_시스템/sendto-inbox.ps1": {
@@ -1267,7 +1343,8 @@
 "54453defb4ff": "c24c69a69cfc800d"
 },
 "3_시스템/sort_price.py": {
-"1c7340f8366e": "445dc14e3ac13e0d"
+"1c7340f8366e": "445dc14e3ac13e0d",
+"fd211f109e9e": "4350e7ae7fcb5c3d"
 },
 "3_시스템/speed.py": {
 "db507822ba91": "d57f57916aca03b1"
@@ -1411,6 +1488,7 @@
 "711e1cb14fe5": "31f8c2f7a9d2b088",
 "ad7209985f35": "065d928d0cebabfd",
 "c423ec4cf2f4": "89a5ab76a95f4325",
+"d27ebf45f6b8": "138ab1702e337d85",
 "f2fc54b111a7": "70633d029a65fb1e"
 },
 "3_시스템/설명서/설명서-분류와-알림.md": {
@@ -1423,6 +1501,7 @@
 },
 "3_시스템/설명서/설명서-설정과-표.md": {
 "33e99739e52e": "6caf5287217db0c6",
+"b2158ff97c1c": "002375efb2b2f26c",
 "e5e7b7323a3e": "a11af08f242ab483",
 "feaab68ab50e": "06889b1637916d46"
 },
@@ -1430,6 +1509,7 @@
 "0873053fc67c": "9e1de50091b4eadb",
 "1cf87a9a8b21": "94e723d670883be3",
 "381b60dc6f1f": "817a99eef1192ebb",
+"62410a0d0aff": "a22efc49a8534f72",
 "74cc6e8b6f21": "26111448aeeb0b99",
 "9afc41f4cbb4": "af70173fb15d67d0",
 "c62870617da2": "6a2172d33d809b6d",
@@ -1498,6 +1578,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "3b2fbdd3ffc8",
+"rev": "17152e8b5dec",
 "schema": 1
 }
