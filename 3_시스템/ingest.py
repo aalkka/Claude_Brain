@@ -766,7 +766,7 @@ def _picture_image(shape):
 def md_converter():
     """markitdown 변환기(하나만 만든다). pptx 그림 한 장이 슬라이드 전부를 없애지 않게 Picture.image 를 바꿔 둔다:
     python-pptx 는 형식을 모르는 그림(image/unknown · EMF)에서 예외를 내고 markitdown 은 그것을 잡지 않아 문서 전체가 «추출 실패» 가 된다
-    (11-05 과목D 10주차 = 슬라이드 56장이 image18.bin 하나에 — 속은 멀쩡한 PNG)."""
+    (11-05 한 과목 10주차 = 슬라이드 56장이 image18.bin 하나에 — 속은 멀쩡한 PNG)."""
     global _MD
     if _MD is None:
         import markitdown

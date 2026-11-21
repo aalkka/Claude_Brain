@@ -11,4 +11,4 @@ description: 원본 파일(PDF·docx·pptx·xlsx·hwp·html·txt)을 볼트 지�
 4. 이후 질문 = `search.py` 경유 → 색인의 해당 쪽만 Read(`offset/limit`) → 그림·수식·표가 필요하면 원본 PDF 그 쪽만 Read(`pages`).
 5. 정리노트는 사용자가 원할 때만 만들고 색인·원본 링크를 단다. 필기·판서 사진도 같은 길이다(2-1 손글씨 전사).
 
-주의: 색인은 git 제외(원본에서 재생성). `3_시스템/_index/pdf-cache/` 는 원본이 볼트에 없는 옛 정제본만 남았다(과목A) — 새로 만들지 않는다. 색인과 겹친 옛 정제본은 `pdf-cache-retired/` 에 있다(검색 대상 아님).
+주의: 색인은 git 제외(원본에서 재생성). `3_시스템/_index/pdf-cache/` 는 원본이 볼트에 없는 옛 정제본만 남았다 — 새로 만들지 않는다. 색인과 겹친 옛 정제본은 `pdf-cache-retired/` 에 있다(검색 대상 아님).

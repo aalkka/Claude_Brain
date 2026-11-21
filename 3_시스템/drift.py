@@ -390,7 +390,7 @@ def machine():
 
 def heavy_locked():
     """빅보스 시험 잠금(무거운 자원을 쓰는 중) — 있으면 시험 프로세스는 쓰는 중이다. HEAVY_H 시간 넘은 잠금은 묵은 것(풀기를 잊음)이라 안 센다
-    (11-18 잼: 작업세션/heavy.lock 0바이트 11-14 04:07 가 나흘째 남아 있었다 — 세면 이 줄이 영영 안 뜬다)"""
+    (11-18 잼: <run>/heavy.lock 0바이트 11-14 04:07 가 나흘째 남아 있었다 — 세면 이 줄이 영영 안 뜬다)"""
     now = time.time()
     return any(now - os.path.getmtime(p) < HEAVY_H * 3600 for p in glob.glob(os.path.join(HERE, "_index", "bigboss", "*", "heavy.lock")))
 

@@ -115,7 +115,7 @@ def variants(name: str):
 
 
 def find_download(dl_dir, since, names, size=None, taken=set()):
-    # Canvas 파일명은 NFD(맥에서 올린 한글)일 수 있고 디스크는 NFC — 둘 다 NFC 로 비교(10-25 과목D 9개 누락)
+    # Canvas 파일명은 NFD(맥에서 올린 한글)일 수 있고 디스크는 NFC — 둘 다 NFC 로 비교(10-25 한 과목 9개 누락)
     pats = [variants(n) for n in names if n]
     for p in sorted(glob.glob(os.path.join(dl_dir, "*")), key=os.path.getmtime):
         if p in taken or not os.path.isfile(p) or os.path.getmtime(p) < since or p.endswith((".crdownload", ".tmp")):

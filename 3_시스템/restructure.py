@@ -150,7 +150,7 @@ def work_groups(folder):
     heads = {}
     for f in files:
         stem = os.path.splitext(f)[0]
-        for n in pre:                                      # «과목E_중간과제» → «중간과제»
+        for n in pre:                                      # «과목B_중간과제» → «중간과제»
             if stem.lower().startswith(n.lower()) and len(stem) > len(n) and stem[len(n)] in "-_ ":
                 stem = stem[len(n) + 1:]
                 break

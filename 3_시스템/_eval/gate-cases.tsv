@@ -111,7 +111,7 @@ DENY	O19 obsidian eval = 금지	OBS-EVAL-DENY Bash	-	{"tool_name":"Bash","permis
 DENY	O20 obsidian move = fileops 로	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian move path=\"2_지식/notes/a.md\" to=\"2_지식/notes/b.md\""}}
 DENY	O21 obsidian delete = fileops 로	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"obsidian delete path=0_작업/x.docx"}}
 DENY	O22 경로로 부른 Obsidian.com eval	-	-	{"tool_name":"PowerShell","permission_mode":"auto","tool_input":{"command":"& \"C:\\Users\\u\\AppData\\Local\\Programs\\Obsidian\\Obsidian.com\" eval code=1"}}
-NOFIRE	O23 obsidian search	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian search query=실험과목"}}
+NOFIRE	O23 obsidian search	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian search query=실험"}}
 NOFIRE	O24 obsidian command id	-	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"obsidian command id=brain-source:build-index"}}
 # 개정 7(2026-11-03) — 설치 대본 · 경로 귀속 · cp 원본 자리
 ASK	Z1 node install.mjs 본 볼트 [자동]	Bash .obsidian/plugins/(install.mjs)	-	{"tool_name":"Bash","permission_mode":"auto","tool_input":{"command":"cd /c/brain-base && node install.mjs \"<VS>\" 2>&1 | tail -2"}}
