@@ -11,7 +11,7 @@ block: ①'_'접두(로더 스킵) ②모듈명↔코어스킬 동명 ③노트 
        ⑤예약훅(I2) ⑥모듈간 touches 동일경로 ⑦deps 순환·미존재 ⑧코어 config 키 선언(I3)
        ⑨스크립트의 1_수집 접근·코어파일 참조(I1) · reads 선언의 1_수집·코어파일 ⑩산출물 폴더 규약(notes/ 금지·타모듈 침범)
        ⑪contributes 행위·건강 선언(id 접두 '<모듈>.'·겹침·risk·builtin·대본 없음·모르는 자리표 — ADR-019)
-         · update_check(코어 업데이트 때 돌릴 시험 명령줄) · outside(바깥 설정 목록 꼴) · setup(조리법 꼴) · notes(설정 노트 선언)
+         · update_check(코어 업데이트 때 돌릴 시험 명령줄) · outside(바깥 설정 목록 꼴) · setup(조리법 꼴) · notes(설정 노트 선언) · speed(속도 줄 명령)
        ⑫contributes 튜토리얼·설명서 선언(모듈 밖·대본 꼴·설명서 이름 규칙·겹침·코어 글이 모듈 장으로 링크 — ADR-035)
        ⑬uses_core 코어 계약(11-17 mobility 범용화) — 모듈이 부르는 코어 이름을 코어 파일에서 ast 로 잰다(불러오지 않음).
          없는 파일·없는 이름 = block · 밑줄 이름 = warn(코어 내부라 예고 없이 바뀐다)
@@ -83,7 +83,7 @@ OUTSIDE_MEASURES = ("명령", "파일", "레지스트리", "앱", "화면")
 OUTSIDE_DEVICES = ("pc", "폰")
 SETUP_ASK = ("늘", "못 잴 때만", "여럿일 때", "안 물음")
 # 코어 계약(⑬)이 아는 contributes 칸 — 그 밖은 «아직 읽는 곳 없음» info
-KNOWN_CONTRIB = {"actions", "doctor", "record", "view", "tutorial", "manual", "update_check", "outside", "setup", "notes", "phone"}
+KNOWN_CONTRIB = {"actions", "doctor", "record", "view", "tutorial", "manual", "update_check", "outside", "setup", "notes", "phone", "after_restart", "speed", "options"}  # after_restart = restart.py · speed = speed.py(11-21)
 # contributes.phone(11-18 · 폰 앱 모듈 · 제작자 설계 노트 §4) — mobility server.py 가 ping «modules» 로 읽는다.
 # app = 이 볼트 모듈이 켜질 때 켜는 앱 모듈 id(앱에 이미 든 것 · 낱말 · 소문자·숫자·-) · alerts·tiles = 뒤 판 몫(꼴만 잰다).
 PHONE_APP_ID = re.compile(r"^[a-z][a-z0-9-]*$")
@@ -678,6 +678,8 @@ def check(module, mods, core):
         argv_problems("contributes.doctor", con["doctor"], set())
     if "record" in con:
         argv_problems("contributes.record", con["record"], set())
+    if "speed" in con:      # 속도 줄(3_시스템/speed.py · 출력 JSON 목록 · 11-21)
+        argv_problems("contributes.speed", con["speed"], {"days"})
     if "view" in con:
         v = con["view"] if isinstance(con["view"], dict) else {}
         argv_problems("contributes.view.data", v.get("data"), {"reason"})

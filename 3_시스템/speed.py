@@ -8,10 +8,11 @@
   - Stop 훅(턴 끝 기다림)·SessionStart 훅: 대화 기록(~/.claude/projects/<볼트>/*.jsonl)에 앱이 남긴 durationMs
     (문서에 없는 형식 — 앱 판이 바뀌어 0건이면 «기록 없음»으로 알린다)
   - 커밋 턴 비율: Stop 이 도는 동안 자동 커밋(session:)이 났는가 — 높으면 턴 끝이 커밋을 기다린다
-  - 폰 홈: _index/server/server.log 의 GET /v1/home 서버 안 시간
+  - 모듈 줄: 켜진 모듈 module.json 의 contributes.speed(명령 · {py} {days}) — 출력 = JSON 목록
+    [{name, median_ms, p90_ms, n, limit_ms}] · 못 돌거나 빈 목록이면 줄 없음(예: mobility «폰 홈»)
   - 찾기 한 번(search.py --q) · 홈(brain.py home): 지금 한 번 돌려 잰다(--no-run 이면 뺌)
 한계를 넘으면 느린 자리를 부품별로 다시 잴 때다(훅 안 · 찾기 색인 · 홈 계산 · git 정리).
-근거 = 11-16 실측(Stop 중앙 3초 · 찾기 5초 · 홈 2초 · 폰 홈 3초) · session-notice 3초(11-07 1.5초 → 11-16 2.3초).
+근거 = 11-16 실측(Stop 중앙 3초 · 찾기 5초 · 홈 2초) · session-notice 3초(11-07 1.5초 → 11-16 2.3초).
 """
 import glob
 import json
@@ -26,7 +27,7 @@ import datetime as dt
 HERE = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(HERE)
 # 한계(밀리초) — 중앙값 기준 · 넘으면 △, 두 배면 ✗
-LIMIT = {"stop": 3000, "start": 3000, "search": 5000, "home": 2000, "phone_home": 3000, "commit_turn": 0.6}
+LIMIT = {"stop": 3000, "start": 3000, "search": 5000, "home": 2000, "commit_turn": 0.6}
 
 try:
     import psutil
@@ -94,22 +95,32 @@ def commit_share(stop, days):
     return hit / len(stop)
 
 
-def phone_home(days):
-    p = os.path.join(HERE, "_index", "server", "server.log")
-    if not os.path.exists(p):
-        return None
-    since = (dt.datetime.now() - dt.timedelta(days=days)).strftime("%Y-%m-%d")
-    v = []
-    # 큰 파일 — 끝 8MB 만 본다
-    with open(p, "rb") as fh:
-        fh.seek(max(0, os.path.getsize(p) - 8 * 2**20))
-        for ln in fh:
-            if b"/v1/home" not in ln:
+def module_rows(days):
+    """켜진 모듈이 낸 속도 줄(contributes.speed) — [(이름, 중앙, p90, 번, 한계)] · 모듈 없음·실패는 조용히 뺌(11-21 «폰 홈» 줄을 mobility 로 옮김)"""
+    out = []
+    try:
+        sys.path.insert(0, HERE)
+        import roles
+        mods = roles.modules(on_only=True, vault=VAULT)
+    except Exception:  # noqa: BLE001
+        return out
+    for m in mods:
+        cmd = ((m.get("json") or {}).get("contributes") or {}).get("speed") if isinstance((m.get("json") or {}).get("contributes"), dict) else None
+        if not isinstance(cmd, list) or not cmd:
+            continue
+        argv = [sys.executable if t == "{py}" else ("%g" % days if t == "{days}" else (os.path.join(VAULT, t) if t.endswith(".py") and not os.path.isabs(t) else t)) for t in cmd]
+        try:
+            r = subprocess.run(argv, capture_output=True, timeout=30, cwd=VAULT,
+                               creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            got = json.loads(r.stdout.decode("utf-8", "replace") or "[]") if r.returncode == 0 else []
+        except Exception:  # noqa: BLE001
+            continue
+        for it in got if isinstance(got, list) else []:
+            try:
+                out.append((str(it["name"]), float(it["median_ms"]), float(it["p90_ms"]), int(it["n"]), float(it["limit_ms"])))
+            except (KeyError, TypeError, ValueError):
                 continue
-            m = re.match(rb"(\d{4}-\d\d-\d\d) [\d:]+ GET /v1/home\S* 200 (\d+)ms", ln)
-            if m and m.group(1).decode() >= since:
-                v.append(int(m.group(2)))
-    return v
+    return out
 
 
 def timed(args, timeout):
@@ -151,10 +162,8 @@ def main(argv):
     if start:
         md = st.median(start)
         rows.append((mark(md, LIMIT["start"]), "세션 시작(session-notice)", "중앙 %s · p90 %s · %d번" % (sec(md), sec(q(start, .9)), len(start)), sec(LIMIT["start"])))
-    ph = phone_home(days)
-    if ph:
-        md = st.median(ph)
-        rows.append((mark(md, LIMIT["phone_home"]), "폰 홈(/v1/home)", "중앙 %s · p90 %s · %d번" % (sec(md), sec(q(ph, .9)), len(ph)), sec(LIMIT["phone_home"])))
+    for name, md, p90, n, lim in module_rows(days):
+        rows.append((mark(md, lim), name, "중앙 %s · p90 %s · %d번" % (sec(md), sec(p90), n), sec(lim)))
     if "--no-run" not in argv:
         ms = timed([sys.executable, os.path.join(HERE, "brain.py"), "home"], 60)
         rows.append((mark(ms, LIMIT["home"]), "홈(brain.py home)", sec(ms) if ms else "실패", sec(LIMIT["home"])))
