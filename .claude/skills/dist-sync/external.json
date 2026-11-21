@@ -160,12 +160,12 @@
   {
    "id": "restart-tasks",
    "이름": "자동 재시작 예약(«외부뇌 자동 재시작» · «외부뇌 재시작 뒤»)",
-   "종류": ["작업 스케줄러"],
+   "종류": ["작업 스케줄러", "전원"],
    "쓰는 곳": ["3_시스템/restart.py"],
    "필수": false,
-   "까닭": "오래 켜 둔 PC 를 정한 시각에 «끌 수 있을 때만»(사람·Claude·프로그램이 쉼) 다시 시작하고, 로그인 뒤 볼트가 띄우던 것(본체 after_restart.json · 켜진 모듈 선언)을 다시 띄운다. 예약이 있어도 restart.local.json 의 \"on\" 이 true 일 때만 끈다(기본 끔). 관리자 권한 없음.",
+   "까닭": "오래 켜 둔 PC 를 정한 시각에 «끌 수 있을 때만»(사람·Claude·프로그램이 쉼) 다시 시작하고, 로그인 뒤 볼트가 띄우던 것(본체 after_restart.json · 켜진 모듈 선언)을 다시 띄운다. 예약이 없으면 아무 일도 없다(기본 = 안 씀) — 예약을 넣는 것이 켜는 것이고, 넣은 뒤 멈추려면 기능 단계 «자동 재시작»을 끔. 관리자 권한 없음.",
    "확인": "if ((@(Get-ScheduledTask -TaskName '외부뇌 자동 재시작','외부뇌 재시작 뒤' -ErrorAction SilentlyContinue)).Count -eq 2) { exit 0 } else { exit 1 }",
-   "하기": "py -3 3_시스템/restart.py install (사람 승인 뒤 · 끄기 = restart.py remove · 켜기 = restart.local.json 에 {\"on\": true})",
+   "하기": "py -3 3_시스템/restart.py install (사람 승인 뒤 · 지우기 = restart.py remove · 잠시 멈춤 = 기능 단계 «자동 재시작» 끔 · 시각·마감 = restart.local.json)",
    "안내": ["Claude 에게 «자동 재시작 켜 줘» 라고 하면 예약 둘을 넣고 켤지 묻는다 — 자동 모드에서 막히면 하기 명령을 직접 친다.", "확인: «작업 스케줄러 라이브러리» 에 «외부뇌 자동 재시작»·«외부뇌 재시작 뒤» 둘이 «준비» 로 보이면 된다 · 지금 상태 = py -3 3_시스템/restart.py status."]
   },
   {

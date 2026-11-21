@@ -1,0 +1,18 @@
+{
+  "설명": "자동 재시작 뒤 본체가 다시 띄우고 재는 것(restart.py after). 모듈은 module.json contributes.after_restart 에 같은 꼴 파일을 둔다. 칸: id · name · when(always | was_running = 재시작 전에 떠 있었을 때만) · was(그때 떠 있었나 = proc 꼴) · check(proc {name,cmd,not_cmd,min} | task 이름 | cmd [...] 종료 0) · grace_s(Windows·로그온 예약이 스스로 띄울 때까지 기다림) · run(띄우기) · hidden(콘솔 창 없이) · minimized(초점 안 뺏음) · wait_s · module(그 모듈이 켜져 있을 때만). 값 {py} {vault} {localappdata} {claude}.",
+  "항목": [
+    {"id": "core.autocommit", "name": "예약 «외부뇌 기록 보존»", "when": "always", "check": {"task": "외부뇌 기록 보존"}},
+    {"id": "core.reclaim", "name": "예약 «외부뇌 되찾기»", "when": "always", "check": {"task": "외부뇌 되찾기"}},
+    {"id": "core.chrome", "name": "크롬(수집 확장)", "when": "was_running",
+     "was": {"name": "chrome.exe", "not_cmd": "--type=|--headless|ms-playwright"},
+     "check": {"proc": {"name": "chrome.exe", "not_cmd": "--type=|--headless|ms-playwright"}},
+     "grace_s": 120, "run": ["C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe", "--no-startup-window"], "wait_s": 60},
+    {"id": "core.obsidian", "name": "옵시디언", "when": "was_running",
+     "was": {"name": "obsidian.exe", "not_cmd": "--type=|--user-data-dir="},
+     "check": {"proc": {"name": "obsidian.exe", "not_cmd": "--type=|--user-data-dir="}},
+     "run": ["{localappdata}\\Programs\\Obsidian\\Obsidian.exe"], "minimized": true, "wait_s": 60},
+    {"id": "gpu_guard.run", "name": "절전 지킴이", "when": "always", "module": "gpu_guard",
+     "check": {"proc": {"cmd": "gpu_guard\\.py\"?\\s+run"}},
+     "grace_s": 90, "run": ["schtasks", "/run", "/tn", "외부뇌 절전 지킴이"], "hidden": true, "wait_s": 60}
+  ]
+}
