@@ -115,6 +115,7 @@
 "20cd292dc761": "ea8f5cf6ad0a9bf9",
 "7dc86662f1a4": "a2099a62e0116e73",
 "ae54158f57bc": "c3ba73e538a60059",
+"f20c0d46df62": "bf2d377d40367d18",
 "f8ce870130ac": "5ac80b10514d3f78"
 },
 ".claude/skills/dist-sync/manual/설명서-dist-sync.md": {
@@ -1578,6 +1579,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "17152e8b5dec",
+"rev": "af8654b1c382",
 "schema": 1
 }
