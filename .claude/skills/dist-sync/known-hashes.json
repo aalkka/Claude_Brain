@@ -114,6 +114,7 @@
 ".claude/skills/dist-sync/external.json": {
 "20cd292dc761": "ea8f5cf6ad0a9bf9",
 "7dc86662f1a4": "a2099a62e0116e73",
+"9cfed26a59c0": "1685d0f6f09b25b2",
 "ae54158f57bc": "c3ba73e538a60059",
 "f20c0d46df62": "bf2d377d40367d18",
 "f8ce870130ac": "5ac80b10514d3f78"
@@ -148,6 +149,7 @@
 "18421fabb136": "3d665993529d05a1",
 "5354177f4ee7": "785d1723d014c665",
 "612b056fb18e": "b6dc0634027b35a8",
+"66da44a7f7eb": "306cb4435ff48132",
 "74dbd489f0dc": "870569cba7ac07cd",
 "80300757f0b1": "46cebe33a82e961b",
 "8f7e97c07dd7": "42c92e0d9a946a27",
@@ -181,6 +183,7 @@
 "012744975a0c": "e4b808b59f35dfd6",
 "9d31409066bc": "a0cd0476b0ba6775",
 "a7f96d3235c2": "c1433ed91c2765d5",
+"bdd10f759839": "884248407e2ad13d",
 "c1646afcc03b": "0c4efbe01204a384"
 },
 ".claude/skills/dist-sync/skills/outside/SKILL.md": {
@@ -267,6 +270,7 @@
 ".claude/skills/module-forge/scripts/check.py": {
 "577205f6c65f": "24b1c8cefe263a7b",
 "65c4902b7506": "a9fe91c3a6d140ac",
+"97029742a3eb": "9d0c8898d990a992",
 "c9f5dcc127bd": "0b7cdfd12947582a",
 "e81fe45b4681": "c1d672e4f8eb403b"
 },
@@ -414,6 +418,7 @@
 "5e5e0589233d": "4db024240ee30caa",
 "63aee8bc756c": "b4240b622a68ae50",
 "8c3af7c500f6": "b6b417511642c9c7",
+"9d48a43eb04d": "a8630758c84599d4",
 "abc7a724bb07": "be4b801c9286f3d4",
 "b06c0fd81dd6": "f481387188de2d0f",
 "bb6aa0b85088": "2899845c991b8230",
@@ -610,6 +615,9 @@
 },
 "3_시스템/_eval/r9_inbox_check.py": {
 "8adada5cf9e1": "069c300a6adcaae7"
+},
+"3_시스템/_eval/restart_check.py": {
+"dcb02bfb6896": "cc60c63a6dab4ed3"
 },
 "3_시스템/_eval/results-b1-neighbors.md": {
 "1872677961db": "2f5b4a7359f45af4",
@@ -813,6 +821,9 @@
 "6541fee60400": "c2edf29c10b4d8d5",
 "7c7fb8a761fb": "ce671497eef6d498",
 "c7c6ec1fbaf8": "72108c4c6d09238d"
+},
+"3_시스템/after_restart.json": {
+"d2bbc4020fd2": "7269c1f34c10bcb4"
 },
 "3_시스템/alarms.py": {
 "3835c974594f": "5a5b5f4bb05b1a43",
@@ -1176,6 +1187,9 @@
 "3_시스템/moc.py": {
 "5795de089e8e": "7807fee8d4945047"
 },
+"3_시스템/module_ship.py": {
+"6399171e54c4": "eb20f4baf8047ad7"
+},
 "3_시스템/notice-filter.py": {
 "62f90da0d73c": "54e22ab6fa90a336",
 "645ca237d1f5": "732ccfd11965fd9c",
@@ -1219,6 +1233,9 @@
 "3_시스템/record.py": {
 "53ca95b5ef19": "8acfed53fafbb701",
 "64286b13752c": "998bbba3d867b82f"
+},
+"3_시스템/restart.py": {
+"a2c832443ed6": "2e59bcf00874a236"
 },
 "3_시스템/restructure.py": {
 "24faac601950": "a36efc61fd17c2eb",
@@ -1348,6 +1365,7 @@
 "fd211f109e9e": "4350e7ae7fcb5c3d"
 },
 "3_시스템/speed.py": {
+"887d6b8fe4b3": "d227fc0c9fbae7b3",
 "db507822ba91": "d57f57916aca03b1"
 },
 "3_시스템/tag.py": {
@@ -1579,6 +1597,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "af8654b1c382",
+"rev": "98b6a87eb2ce",
 "schema": 1
 }
