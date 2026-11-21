@@ -145,6 +145,7 @@
       "id": "restart.auto",
       "name": "자동 재시작",
       "levels": ["high", "off"],
+      "default": "off",
       "labels": {"high": "켬", "off": "끔"},
       "applies": "now",
       "owner": ["3_시스템/restart.py"],

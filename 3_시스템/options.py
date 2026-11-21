@@ -193,6 +193,13 @@ def declarations(vault=None, only=None, problems=None, all_devices=False):
 
 
 # ── 읽기 규칙 ─────────────────────────────────────────────────────────
+def default_of(f):
+    """안 고른 칸의 단계 — 선언 default(그 칸 levels 안의 값)가 있으면 그것 · 없으면 high(지금 동작).
+    11-21: 자동 재시작처럼 «켜면 PC 를 끄는» 칸은 새 볼트에서 끔이어야 화면(«켬»)과 동작이 같다 — 칸마다 선언한다(brain-base options.ts 와 같은 규칙)."""
+    d = f.get("default")
+    return d if isinstance(d, str) and d in f.get("levels", []) and d in LEVELS else "high"
+
+
 def chosen(local, state, feats, problems=None):
     """고른 값(배터리 규칙 전) → {id: 단계}. 규칙 1~8."""
     if feats is None:
@@ -209,7 +216,7 @@ def chosen(local, state, feats, problems=None):
         good = f["ready"] and isinstance(v, str) and v in f["levels"] and v in LEVELS
         if v is not None and not good and f["ready"] and problems is not None:
             problems.append("%s 값 %r 은 고를 수 없음 — %s" % (f["id"], v, NAMES["high"]))
-        out[f["id"]] = v if good else "high"
+        out[f["id"]] = v if good else default_of(f)
     if problems is not None and ok:
         known = {f["id"] for f in feats}
         for k in lv:
@@ -234,9 +241,7 @@ def level(fid, vault=None):
     """그 기능의 지금 단계 — 어떤 오류도 "high"(지금 동작)."""
     try:
         local, st = _load(local_path(vault))
-        if st == "missing":
-            return "high"
-        feats = declarations(vault, only=fid)
+        feats = declarations(vault, only=fid)        # 고른 값 파일이 없어도 선언 default 를 따른다(없으면 high)
         return resolve(local, st, feats, on_battery).get(fid, "high")
     except Exception:
         return "high"
@@ -897,7 +902,7 @@ def decide(m, feats):
     for f in feats:
         rule = RULES.get(f.get("recommend") or "")
         if f.get("recommend") == "default":       # 재서 가를 것이 없는 칸(예 자체 절전 · 장치 유무는 needs 가 이미 거름) — 선언 기본값(high)과 그 까닭
-            rule = lambda _m, f=f: ("high", f.get("default_why") or "기본값")  # noqa: E731
+            rule = lambda _m, f=f: (default_of(f), f.get("default_why") or "기본값")  # noqa: E731
         if not f["ready"] or not rule:
             continue
         x, w = rule(m)
@@ -1014,6 +1019,8 @@ def check(vault=None):
         return {"ok": False, "bad": problems, "good": []}
     ids = {f["id"] for f in feats}
     for f in feats:
+        if "default" in f and default_of(f) != f.get("default"):
+            bad.append("%s: default %r 는 그 칸 levels 에 없음 — high 로 읽음" % (f["id"], f.get("default")))
         if not f["ready"]:
             ok.append("%s: ready false — 대조 안 함" % f["id"])
             continue
