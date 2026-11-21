@@ -31,7 +31,9 @@
 배포판 worktree = 볼트 저장소의 worktree 가운데 `dist-sync` 가지 · 없으면(제작자 볼트가 아니면) 잴 것이 없다.
 """
 import argparse
+import ast
 import collections
+import difflib
 import datetime
 import fnmatch
 import hashlib
@@ -267,10 +269,15 @@ def annotate(A, B, rows, texts, gaps, ack):
     """① 항목마다 가를 까닭(기계) — 필요(배포판 코어가 부름) · 익명화할 곳 · 안내 없는 바깥 설정.
     안 싣기로 적었는데 배포판 코어가 부르는 것(배포판에 없는 것만)도 ① 에 다시 올린다."""
     rules = [r for r in dd.LEAK if not r[1].startswith("세션 id")] + (dd.load_local_leaks(A) or [])
-    # 익명화할 곳은 통째로 실릴 층만 — 씨앗(항목)·옵시디언 설정은 늘 개인 값이 들어 있어 셀 뜻이 없다
+    # 익명화할 곳은 통째로 실릴 층만 — 씨앗(항목)·옵시디언 설정은 늘 개인 값이 들어 있어 셀 뜻이 없다.
+    # 동봉 플러그인 번들은 센다 — 소스의 CSS 주석이 번들 문자열에 \uXXXX 로 남는다(11-21 brain-source 0.36.30 main.js 호칭 2곳을 못 셈)
     files = {x["path"]: os.path.join(A, *x["path"].split("/")) for x in rows
-             if dd.layer(x["path"]) in ("코어", dd.L_CLAUDE, "미분류") and not x["path"].startswith(OBS + "/")}
-    leaks = collections.Counter(h[0] for h in dd.scan_leaks({k: v for k, v in files.items() if os.path.isfile(v)}, rules))
+             if dd.layer(x["path"]) in ("코어", dd.L_CLAUDE, "미분류")
+             and (not x["path"].startswith(OBS + "/") or any(x["path"].startswith(d) for d in dd.DIST_PLUGINS))}
+    plug = {k for k in files if k.startswith(OBS + "/")}      # 번들은 볼트 전용 패턴만 — 내장 이메일 꼴은 남의 라이선스 고지에 수백 개
+    leaks = collections.Counter(h[0] for h in dd.scan_leaks({k: v for k, v in files.items() if os.path.isfile(v) and k not in plug}, rules))
+    if plug and dd.load_local_leaks(A):
+        leaks.update(h[0] for h in dd.scan_leaks({k: files[k] for k in plug if os.path.isfile(files[k])}, dd.load_local_leaks(A)))
     outside = collections.Counter(rel for rel, _, _ in gaps)
 
     def first(need):
@@ -340,7 +347,7 @@ def unsynced(A, B, ship=None, undecided=None):
     fa, fb = dd.walk(A), dd.walk(B)
     T, top = last_touch(B)
     ack = load_ack(A)
-    revs = None
+    revs = rules = None
     out = []
     for rel, p in sorted(fa.items()):
         lay = dd.layer(rel)
@@ -355,14 +362,22 @@ def unsynced(A, B, ship=None, undecided=None):
         if acked(ack, rel, mine):
             continue
         m = os.path.getmtime(p)
+        early = False
         if rel in fb:      # 시각 비교는 고친 파일에만 — 새 파일은 ack 로만 빠진다
             t = T.get(rel, top)
             if t is None or m <= t:
-                continue
+                # 배포판이 이 파일을 다른 까닭(익명화 등)으로 고친 커밋이 볼트의 앞선 고침을 빼먹으면 시각으로는 영영 안 뜬다
+                # (11-21 web_expire_check.py — 볼트 10:17 고침을 배포판 12:22 «개인 값 빼기» 커밋이 옛 판으로 덮음)
+                rules = leak_rules(A) if rules is None else rules
+                if t is None or not hidden_edit(p, fb[rel], rules):
+                    continue
+                early = True
             revs = vault_revs(A) if revs is None else revs
-            if same_as_before(A, rel, t, mine, revs):
+            if not early and same_as_before(A, rel, t, mine, revs):
                 continue
         what = "층 미정 새 파일" if lay == "미분류" else ("새 파일" if rel not in fb else "고침")
+        if early:
+            what = "고침(배포판 손댐보다 먼저 고친 줄 · 익명화 줄 아님)"
         row = {"path": rel, "what": what, "vault": stamp(m), "dist": stamp(t if rel in fb else None)}
         if not listed:
             if undecided is not None:
@@ -383,7 +398,58 @@ def unsynced(A, B, ship=None, undecided=None):
             g = gone.get(rel)
             if g and g > T.get(rel, 0) and not acked(ack, rel, "지움"):
                 out.append({"path": rel, "what": "볼트에서 지움", "vault": stamp(g), "dist": stamp(T.get(rel))})
-    return out + blind(A, B, ack, T), top
+    return out + blind(A, B, ack, T) + merge_marks(A, B, ship, ack), top
+
+
+def leak_rules(A):
+    """익명화 줄을 가르는 패턴 — 내장(이메일·홈 경로 등 · 세션 id 빼고) + 볼트 전용(leak-patterns.txt)."""
+    return [re.compile(rx) for rx, label in dd.LEAK + (dd.load_local_leaks(A) or []) if not label.startswith("세션 id")]
+
+
+ANON_WORDS = re.compile(r"사용자|제작자|배포판|개인|\[\[|%%")    # 배포판 쪽에 이 말이 있으면 익명화로 바꾼 줄로 본다
+
+
+def hidden_edit(pa, pb, rules):
+    """볼트 판과 배포판 판의 다른 덩어리 가운데 «익명화 줄이 아닌 것»이 있나 — 어느 쪽에도 개인 패턴이 없고,
+    익명화 말(사용자·제작자·배포판·개인·링크 꼬리)도 없고, 빈 줄만도 아닌 덩어리. 익명화로 늘 다른 파일은 안 잡는다."""
+    try:
+        with open(pa, encoding="utf-8", errors="replace") as f:
+            a = f.read().replace("\r\n", "\n").split("\n")
+        with open(pb, encoding="utf-8", errors="replace") as f:
+            b = f.read().replace("\r\n", "\n").split("\n")
+    except OSError:
+        return False
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, b, a, autojunk=False).get_opcodes():
+        if tag == "equal":
+            continue
+        chunk = b[i1:i2] + a[j1:j2]
+        if not "".join(chunk).strip():
+            continue
+        if any(r.search(ln) for ln in chunk for r in rules) or any(ANON_WORDS.search(ln) for ln in chunk):
+            continue
+        return True
+    return False
+
+
+def merge_marks(A, B, ship, ack):
+    """배포판 py 에 같은 이름 최상위 정의가 두 번 — 합치기 흔적(11-21 follow.py practice() 두 번 · «익명화 판» ack 가 숨김).
+    ack 와 상관없이 센다(ack 는 볼트 판을 적은 것이라 배포판 쪽 흔적을 못 가린다) · 일부러면 --ack <경로> --why 대신 고친다."""
+    out = []
+    for rel in tracked(B):
+        if not rel.endswith(".py") or (ship is not None and dd.layer(rel) in ("코어", "미분류") and dd.shipped(ship, rel) is None):
+            continue
+        p = os.path.join(B, *rel.split("/"))
+        try:
+            with open(p, encoding="utf-8") as f:
+                tree = ast.parse(f.read())
+        except (OSError, SyntaxError, ValueError, UnicodeDecodeError):
+            continue
+        names = collections.Counter(n.name for n in tree.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)))
+        dup = sorted(k for k, v in names.items() if v > 1)
+        if dup:
+            out.append({"path": rel, "what": "배포판 합치기 흔적(같은 이름 정의 두 번: %s)" % ", ".join(dup),
+                        "vault": "?", "dist": stamp(os.path.getmtime(p))})
+    return out
 
 
 def commits(B, rng):

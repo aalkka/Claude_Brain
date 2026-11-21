@@ -1,20 +1,21 @@
 ---
 name: options
-description: 기능 단계(높음·낮음·끔)를 이 PC 에 맞게 재서 추천하고, 사람이 고친 뒤 확정한다. "옵션 추천 다시"·"단계 다시 재"·"저사양 옵션"·"옵션 바꿔"에 발동. 처음 설치(setup-interview 8)·대규모 업데이트(dist-sync:update 4 뒤)도 이 절차를 쓴다.
+description: 기능 단계(줄마다 켬·끔 또는 높음·낮음·끔 같은 단계)를 이 PC 에 맞게 재서 추천하고, 사람이 고친 뒤 확정한다. "옵션 추천 다시"·"단계 다시 재"·"저사양 옵션"·"옵션 바꿔"에 발동. 처음 설치(setup-interview 8)·대규모 업데이트(dist-sync:update 4 뒤)도 이 절차를 쓴다.
 ---
 # 기능 단계 추천
 
 없애는 일: PC 사양에 맞는 단계를 기능마다 사람이 따져 고르는 것.
 
-자리: `3_시스템/options.py`(읽기·쓰기·추천) · 선언 = `3_시스템/options.registry.json` + 모듈 `contributes.options` · 고른 값 = `3_시스템/options.local.json`(이 PC · git 밖 · 없으면 모두 높음). 화면 = 옵시디언 «외부뇌 단계»(설정 탭 맨 위에도).
+자리: `3_시스템/options.py`(읽기·쓰기·추천) · 선언 = `3_시스템/options.registry.json` + 모듈 `contributes.options` · 고른 값 = `3_시스템/options.local.json`(이 PC · git 밖 · 없으면 모두 첫 단계 = high).
+동작 하나에 줄 하나(사용자 11-20 «각 기능별로 나눌 것») — 새 기능을 선언할 때 여러 동작을 한 단계에 묶지 않는다. 켬/끔 동작 = `levels [high, off]` + `labels {high: 켬, off: 끔}` · 단계 이름은 선언 `labels`(없으면 높음·낮음·끔) · 옛 칸을 나누면 `from` 에 옮길 표를 두고 `options.py migrate`(쓰는 명령이 먼저 부름). 화면 = 옵시디언 «외부뇌 단계»(설정 탭 맨 위에도).
 
 ## 절차
 
 1. **재기**: `py -3 3_시스템/options.py recommend`(60~90초 · 창 없음 · 볼트 안에는 안 씀). 업데이트에서 고른 값 파일이 이미 있으면 `--new-only`(이번 판에 새로 선언된 기능만 · 없으면 재지 않고 끝).
 2. **보이기**: 대본이 낸 표를 그대로 보인다(지금과 다른 줄이 앞 · 까닭 한 줄). 숫자를 바꾸거나 덧붙이지 않는다. «무효»(배터리로 잼 · 잠듦)면 전원을 꽂고 다시 잰다.
 3. **묻기**: AskUserQuestion 하나 — «추천대로 바꾸시겠습니까?» · 추천대로 / 고쳐서 / 그대로 둠. «고쳐서»면 고칠 기능과 단계를 묻는다.
-4. **확정한 뒤에만 쓴다**: `py -3 3_시스템/options.py apply --via <setup-interview|dist-sync:update|chat> [--set <id>=<high|low|off> …] [--battery lower|same] [--new-only]`. «그대로 둠»이면 쓰지 않는다(추천 기록은 `_index/options/` 에만).
-5. **알리기**: 바로 먹는 것 · 다시 해야 먹는 것을 한 줄씩. 학교 LMS 모듈이 있으면 LMS 아침 받기는 예약을 다시 등록해야 깨우기까지 멈춘다(`lms-tasks.ps1` · 지속 설정이라 사람이 돌린다).
+4. **확정한 뒤에만 쓴다**: `py -3 3_시스템/options.py apply --via <setup-interview|dist-sync:update|chat> [--set <id>=<high|low|off> …](켬 = high · 끔 = off) [--battery lower|same] [--new-only]`. «그대로 둠»이면 쓰지 않는다(추천 기록은 `_index/options/` 에만).
+5. **알리기**: 바로 먹는 것 · 다시 해야 먹는 것을 한 줄씩. «PC 깨우기»·«크롬 띄우기»는 예약을 다시 맞춰야 먹는다 — 단계 탭·수집 창에서 바꾸면 그 자리에서 맞추고, `apply`·`preset` 으로 바꿨으면 `py -3 3_시스템/collect-schedule.py --sync`.
 
 ## 하지 않는 것
 

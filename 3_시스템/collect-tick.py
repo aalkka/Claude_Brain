@@ -3,6 +3,7 @@
 한 번에: 잠금 → 로그인 가족 출처마다 요약 들이기(collect-browser.py) → known.json → 웹 수집(받을 차례만 · web-collect.py)
   → 제출 기록(새 요약이 들어온 출처만) → 판정 한 줄(notice-filter judge) → 침묵 감시 → 보고(report.txt · 1시간에 한 번)
   → 분류 배우기 틱(sort_learn.py tick · py -3 · 그림자만 · 실패해도 수집 그대로 · 11-18)
+  → 가격 조회 틱(collect_price.py --tick · 조리법 «주기» 차례만 · «됨»이면 그 label 의 가격줄 체계를 sort.py run · 11-20 잇기)
   → 분류 동작 틱(태그 tag.py · 알림 = mobility alert.py(켜졌을 때만) · 넘김 장부의 새 줄 · 이 파이썬 안 · 실패해도 수집 그대로 · 11-18 S8·S9).
 마지막 줄 = «받은 것: <출처 이름> 요약 N · 웹 새 글 M» — brain.py 가 «받은 것 없음»이면 장부에 짧게만 적는다(actions.json 의 empty).
 잠금·로그 자리 = 예약 엔진(collect-schedule.py)과 같음(수집 창·로드맵이 그 로그를 읽는다).
@@ -12,6 +13,7 @@
 """
 import argparse
 import importlib.util
+import json
 import os
 import re
 import subprocess
@@ -83,6 +85,48 @@ def learn_tick():
         log(f'sort_learn tick 예외 {e!r}'[:300])
 
 
+def price_systems(labels):
+    """켬 true 인 가격줄 체계 중 대상.출처.label 이 labels 에 드는 것(label 칸이 없으면 모든 가격줄)."""
+    out, d = [], os.path.join(SYS, 'sort')
+    for f in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        if not f.endswith('.json'):
+            continue
+        try:
+            s = json.load(open(os.path.join(d, f), encoding='utf-8'))
+        except (OSError, ValueError):
+            continue
+        tgt = (s.get('대상') or {}) if isinstance(s, dict) else {}
+        lab = (tgt.get('출처') or {}).get('label')
+        if s.get('켬') is True and tgt.get('종류') == '가격줄' and (lab is None or lab in labels):
+            out.append(s.get('id') or f[:-5])
+    return out
+
+
+def price_tick():
+    """가격 조회 틱(11-20 잇기) — collect_price.py --tick(켬 조리법 중 «주기.시간»이 찬 것만 · 망 GET · LLM 0) → «됨»인 출처의 label 을 보는
+    가격줄 체계를 sort.py run --system …(알림 동작은 분류가 그 자리에서 알림 도구로 · sort.alert_now). 따로 감쌈 · 실패해도 수집 그대로 ·
+    차례가 아니면 출력도 로그도 없다. 끄기 = 조리법 «켬» false."""
+    p = os.path.join(SYS, 'collect_price.py')
+    if not os.path.isfile(p):
+        return
+    try:
+        rc, out = sh([PY, p, '--tick'])
+        out = out.strip()
+        if not rc and not out:
+            return
+        try:
+            ran = json.loads(out.splitlines()[-1])
+        except (ValueError, IndexError):
+            ran = {}
+        log(f'price tick rc={rc} ' + (' · '.join(f'{k} {v.get("상태")} 조회 {v.get("조회", 0)} 줄 {v.get("줄", 0)}' for k, v in ran.items()) or out[-300:]))
+        systems = price_systems({v.get('label') for v in ran.values() if v.get('상태') == '됨'})
+        if systems:
+            rc2, out2 = sh([PY, os.path.join(SYS, 'sort.py'), 'run'] + [a for s in systems for a in ('--system', s)])
+            log(f'sort run {"·".join(systems)} rc={rc2} ' + out2.strip()[-300:])
+    except Exception as e:
+        log(f'price tick 예외 {e!r}'[:300])
+
+
 ALERT_TOOL = os.path.join(os.path.dirname(SYS), '.claude', 'skills', 'mobility', 'scripts', 'alert.py')     # 알림 도구 = mobility 모듈(11-18)
 
 
@@ -99,7 +143,7 @@ def mobility_on():
 def act_tick():
     """분류 동작 틱(범용 도구 셋 S8·S9 · 11-18) — 넘김 장부의 새 줄을 태그 도구(tag.py sync · «노트에 쓰기» 켠 체계만 파일을 씀)와
     알림 도구(alert.py run · 알림 동작이 있는 체계만 폰·수집 창)가 맞춘다. LLM 0 · 둘 다 순수 파이썬이라 이 파이썬(py -3.11)으로 · 숨은 창(sh).
-    11-18 지금은 둘 다 할 일 0 — 노트 쓰기 켠 체계 0 · 알림 동작 체계 = 꿀티켓-삿포로(켬 false) → 커서만 앞으로.
+    노트 쓰기 켠 체계 0 · 알림 동작 체계 = 꿀티켓-삿포로(11-20 켬 · 분류 run 이 이미 알림 도구를 불렀으면 여기는 그물).
     따로 감쌈 · 실패해도 수집 그대로 · 한 일이 없으면 출력도 로그도 없다."""
     for f, p in (('tag.py', os.path.join(SYS, 'tag.py')), ('alert.py', ALERT_TOOL)):
         if not os.path.isfile(p):                              # 이 도구가 없는 볼트(시험 사본 · 옛 배포판 · mobility 없음)
@@ -155,6 +199,7 @@ def tick(dry=False):
             for s in srcs:
                 s.write_report()
             learn_tick()
+            price_tick()
             act_tick()
         return got_line(srcs, got, web_new, ' (마른 실행)' if dry else '')
     finally:

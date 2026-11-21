@@ -17,12 +17,17 @@
   py -3 3_시스템/options.py apply [--file F] [--set id=단계 ...] [--battery same|lower] [--new-only] [--via 곳]   추천을 확정해 씀
   py -3 3_시스템/options.py reset [--via 곳]                    깨진 고른 값 파일을 옆으로 치우고 새로(모두 high)
   py -3 3_시스템/options.py check [--json]                      선언 ↔ 코드 대조 · 안전 파일이 옵션을 안 읽는지
+  py -3 3_시스템/options.py migrate [--via 곳]                  옛 칸 값을 나뉜 칸으로(선언 from) · 쓰는 명령이 먼저 부른다
+
+단계 이름 = 선언 labels(켬/끔 동작은 levels [high, off] + labels 켬·끔 · 사용자 11-20 «각 기능별로 나눌 것») · 없으면 NAMES. 내부 값은 그대로 high·low·off.
 
 읽기 규칙(모든 읽는 쪽이 같음 — brain-base src/options.ts · hooks/options-level.ps1):
   1 파일 없음 → high  2 깨짐·객체 아님·schema 모름 → high(파일은 고치지도 지우지도 않음)  3 levels 에 없는 기능 → high
   4 선언 단계 밖 값 → high(한 단계 내리지 않음)  5 선언에 없는 id → 무시(지우지 않음)  6 선언 파일 없음·깨짐 → high
   7 이 판이 모르는 단계 → high  8 preset 은 읽지 않음  9 battery "lower" + 지금 배터리 → high 인 것 중 low 가 있는 것만 low
-  ready false 인 기능은 high. 안전 기능(코어 게이트·민감 검사)은 이 파일을 읽지 않는다(check 가 지킨다).
+  ready false 인 기능은 high. needs(장치 이름 목록)에 이 기기 device.json caps 가 거짓인 것이 있으면 그 기능은 없음(칸 안 보임 · 모르면 있음).
+  level_needs·labels_without(단계별 장치 조건 · _norm) · battery_keep true = 배터리 낮춤에서 뺌.
+  안전 기능(코어 게이트·민감 검사)은 이 파일을 읽지 않는다(check 가 지킨다).
 """
 import json
 import os
@@ -60,6 +65,11 @@ def out_dir(vault=None):
     return os.path.join(_v(vault), "3_시스템", "_index", "options")
 
 
+def device_path(vault=None):
+    """이 기기에 있는 장치(caps) — 모듈 probe 가 재서 씀 · git 밖(_index) · 선언 needs 가 읽는다."""
+    return os.path.join(_v(vault), "3_시스템", "_index", "device.json")
+
+
 def schema_ok(x):
     """판 번호 1 — 숫자 1(1.0 도) · 참/거짓·글자는 아님(TS·PS 판과 같게)."""
     return isinstance(x, (int, float)) and not isinstance(x, bool) and x == SCHEMA
@@ -94,9 +104,42 @@ def _installed(f, vault):
     return not own or any(os.path.exists(os.path.join(_v(vault), o)) for o in own)
 
 
-def _norm(f, source):
+def caps(vault=None):
+    """이 기기 장치 표 {이름: 참/거짓} — 파일이 없거나 깨지면 {}(= 모름 → 칸을 숨기지 않음)."""
+    d, st = _load(device_path(vault))
+    c = d.get("caps") if st == "ok" and isinstance(d, dict) else None
+    return c if isinstance(c, dict) else {}
+
+
+def capable(f, cs):
+    """선언 needs(장치 이름 목록)가 이 기기에 있나 — 잰 값이 거짓인 것이 하나라도 있으면 그 칸은 없음(11-20 자체 절전 범용화:
+    덮개 없는 데스크톱·외장 그래픽 없는 노트북에 그 줄을 안 보임). 모르는 장치(아직 안 잼)는 있는 것으로 — 숨겨서 못 쓰는 것보다 낫다."""
+    nd = f.get("needs") if isinstance(f, dict) else None
+    if not isinstance(nd, list):
+        return True
+    return not any(isinstance(n, str) and cs.get(n) is False for n in nd)
+
+
+def label(f, lvl):
+    """그 기능의 단계 이름 — 선언 labels(예 켬·끔 · 세션마다·6시간마다) · 없으면 높음·낮음·끔(NAMES)."""
+    lb = f.get("labels") if isinstance(f, dict) else None
+    v = lb.get(lvl) if isinstance(lb, dict) else None
+    return v if isinstance(v, str) and v.strip() else NAMES.get(lvl, lvl)
+
+
+def _norm(f, source, cs=None):
+    """선언 다듬기 — cs(이 기기 장치 표)가 있으면 단계별 장치 조건을 건다(11-20 자체 절전 «재우는 꼴» 셋 중 하나):
+    level_needs {단계: [장치]} = 그 장치가 «없음»이면 그 단계를 고를 수 없음(high 는 빼지 않음 — 기본값이라서) ·
+    labels_without {장치: {단계: 이름}} = 그 장치가 «없음»이면 그 단계 이름을 바꿈(예 최대 절전이 없으면 high 이름 = 절전)."""
     g = dict(f)
     g["levels"] = [x for x in f["levels"] if isinstance(x, str)]
+    cs = cs or {}
+    ln = f.get("level_needs") if isinstance(f.get("level_needs"), dict) else {}
+    g["levels"] = [x for x in g["levels"] if x == "high" or not (isinstance(ln.get(x), list) and any(isinstance(n, str) and cs.get(n) is False for n in ln[x]))]
+    lw = f.get("labels_without") if isinstance(f.get("labels_without"), dict) else {}
+    for cap, names in lw.items():
+        if cs.get(cap) is False and isinstance(names, dict):
+            g["labels"] = {**(g.get("labels") if isinstance(g.get("labels"), dict) else {}), **{k: v for k, v in names.items() if isinstance(v, str)}}
     g["name"] = f.get("name") if isinstance(f.get("name"), str) else f["id"]
     g["ready"] = f.get("ready", True) is not False
     g["source"] = source
@@ -121,7 +164,7 @@ def _modules(vault):
     return out
 
 
-def declarations(vault=None, only=None, problems=None):
+def declarations(vault=None, only=None, problems=None, all_devices=False):
     """선언 목록 — 코어 표 + 켜진 모듈. 선언 파일이 없거나 깨지면 None(→ 모두 high).
     only = 이 id 하나만 찾음(코어 표에 있으면 모듈을 훑지 않는다 — 훅이 턴마다 부름)."""
     reg, st = _load(registry_path(vault))
@@ -130,6 +173,7 @@ def declarations(vault=None, only=None, problems=None):
             problems.append("선언 파일 " + {"missing": "없음", "broken": "깨짐"}.get(st, "모르는 판") + " — 모든 기능 " + NAMES["high"])
         return None
     feats, seen = [], set()
+    cs = {} if all_devices else caps(vault)    # check 는 기기와 상관없이 모든 선언을 대조한다
     for src, f in [("core", f) for f in reg["features"]] + ([] if only and any(isinstance(x, dict) and x.get("id") == only for x in reg["features"]) else _modules(vault)):
         if not _valid(f):
             if problems is not None:
@@ -142,7 +186,9 @@ def declarations(vault=None, only=None, problems=None):
         seen.add(f["id"])
         if src == "core" and not _installed(f, vault):
             continue
-        feats.append(_norm(f, src))
+        if not capable(f, cs):
+            continue
+        feats.append(_norm(f, src, cs))
     return [f for f in feats if f["id"] == only] if only else feats
 
 
@@ -179,7 +225,7 @@ def resolve(local, state, feats, battery_now, problems=None):
     if ok and local.get("battery") == "lower" and any(v == "high" for v in out.values()):
         if battery_now():
             for f in feats or []:
-                if out.get(f["id"]) == "high" and f["ready"] and "low" in f["levels"]:
+                if out.get(f["id"]) == "high" and f["ready"] and "low" in f["levels"] and f.get("battery_keep") is not True:   # battery_keep = 배터리에서만 뜻이 있는 칸(낮추면 뜻이 바뀜)
                     out[f["id"]] = "low"
     return out
 
@@ -302,14 +348,16 @@ def _save(vault, via, op, mutate):
     before = json.loads(json.dumps(d))
     mutate(d)
     d["schema"] = SCHEMA
-    d["decided"] = {"at": _now(), "via": via}
+    if op != "migrate" or not isinstance(d.get("decided"), dict):      # 옮기기는 사람이 고른 것이 아니다 — 고른 때·곳을 그대로 둔다
+        d["decided"] = {"at": _now(), "via": via}
     tmp = p + ".%d.tmp" % os.getpid()
     with open(tmp, "w", encoding="utf-8", newline="\n") as f:
         json.dump(d, f, ensure_ascii=False, indent=2)
         f.write("\n")
     os.replace(tmp, p)
     ch = {k: [before["levels"].get(k), v] for k, v in d["levels"].items() if before["levels"].get(k) != v}
-    rec = {"at": d["decided"]["at"], "via": via, "op": op, "levels": ch}
+    ch.update({k: [v, None] for k, v in before["levels"].items() if k not in d["levels"]})   # 옮기기(migrate)가 걷은 옛 id
+    rec = {"at": _now() if op == "migrate" else d["decided"]["at"], "via": via, "op": op, "levels": ch}
     if before.get("battery") != d.get("battery"):
         rec["battery"] = [before.get("battery"), d.get("battery")]
     if d.get("preset") != before.get("preset"):
@@ -331,7 +379,7 @@ def set_level(fid, lvl, via="cli", vault=None):
     if not f or not f["ready"]:
         raise OptErr("고를 수 있는 기능이 아님: %s" % fid)
     if lvl not in f["levels"] or lvl not in LEVELS:
-        raise OptErr("%s 는 %s 만 고를 수 있음" % (f["name"], "·".join(NAMES.get(x, x) for x in f["levels"])))
+        raise OptErr("%s 는 %s 만 고를 수 있음" % (f["name"], "·".join("%s(%s)" % (label(f, x), x) for x in f["levels"])))
 
     def m(d):
         d["levels"][fid] = lvl
@@ -382,6 +430,40 @@ def preset(name, via="cli", vault=None):
         d["levels"].update(lv)
         d["preset"] = name
     return _save(vault, via, "preset", m)
+
+
+def migrate(via="migrate", vault=None):
+    """옛 칸의 고른 값을 나뉜 칸으로 옮긴다 — 선언 from {옛 id: {옛 값: 새 값}}(사용자 11-20 «각 기능별로 나눌 것»).
+    새 칸에 이미 값이 있으면 그대로 · 옮긴 옛 id 가 선언에 없으면 걷는다(장부에 [옛 값, null]) · 고른 값 파일이 없거나 깨졌으면 안 씀.
+    돌려줌 = {새 id: 새 값} (옮길 것이 없으면 {} 이고 파일을 안 건드림). 쓰는 명령(set·preset·apply·battery·recommend)이 먼저 부른다."""
+    feats = declarations(vault)
+    cur, st = _load(local_path(vault))
+    if not feats or st != "ok" or not (isinstance(cur, dict) and schema_ok(cur.get("schema"))) or not isinstance(cur.get("levels"), dict):
+        return {}
+    have = cur["levels"]
+    ids = {f["id"] for f in feats}
+    put, used = {}, set()
+    for f in feats:
+        fr = f.get("from")
+        if not isinstance(fr, dict):
+            continue
+        for old, mp in fr.items():
+            if old in ids or old not in have or not isinstance(mp, dict):
+                continue
+            used.add(old)
+            new = mp.get(have[old])
+            if f["id"] not in have and isinstance(new, str) and new in f["levels"] and new in LEVELS:
+                put[f["id"]] = new
+    if not used:
+        return {}
+
+    def m(d):
+        for k in used:
+            d["levels"].pop(k, None)
+        for k, v in put.items():
+            d["levels"].setdefault(k, v)
+    _save(vault, via, "migrate", m)
+    return put
 
 
 def reset(via="cli", vault=None):
@@ -766,15 +848,56 @@ def _r_sheet(m):
     return ("high" if m["ram_gb"] >= 12 and s >= 0.5 else "low"), why
 
 
-RULES = {"search": _r_search, "git": _r_git, "sessions": _r_sessions, "browser_wake": _r_browser_wake, "motion": _r_motion, "sheet": _r_sheet}
+def _on(rule):
+    """켬/끔 칸(levels high·off)의 규칙 — 옛 단계 규칙이 «낮음»이면 «끔»(옛 낮음 = 그 동작을 안 함 · 11-20 나눔)."""
+    def r(m):
+        x, w = rule(m)
+        return ("high" if x == "high" else "off"), w
+    return r
+
+
+def wake_timers():
+    """전원 구성표 «절전 모드 해제 타이머 허용»(RTCWAKE) — (전원 연결, 배터리) 색인 0 사용 안 함 · 1 사용 · 2 중요만 · 못 읽으면 (None, None)."""
+    import subprocess
+    try:
+        r = subprocess.run(["powercfg", "/q", "SCHEME_CURRENT", "SUB_SLEEP", "RTCWAKE"], capture_output=True, timeout=10, creationflags=NOWIN)
+        v = re.findall(rb"0x([0-9a-fA-F]{8})\s*$", r.stdout, re.M)[-2:]
+        return tuple(int(x, 16) for x in v) if len(v) == 2 else (None, None)
+    except Exception:
+        return None, None
+
+
+def _r_wake_pc(m):
+    """PC 깨우기 — 켜 두어도 전원 구성표가 막으면 윈도가 안 깨운다(해가 없음) · 까닭에 지금 허용을 적는다."""
+    ac, dc = m["wake_timers"] if "wake_timers" in m else wake_timers()
+    w = {0: "사용 안 함", 1: "사용", 2: "중요만"}
+    return "high", "깨우기 타이머 전원 연결 %s · 배터리 %s" % (w.get(ac, "못 잼"), w.get(dc, "못 잼"))
+
+
+def _r_search_on(m):
+    """뜻 찾기·의미 링크 — 모델·램·디스크로 돌 수 없을 때만 끔(재색인이 느린 것은 «재색인 빈도» 몫)."""
+    x, w = _r_search(m)
+    return ("off" if x == "off" else "high"), w
+
+
+def _r_reclaim(m):
+    # 되찾기 규칙(proc.reclaim.*)은 남은 프로세스를 끄는 일이라 사양이 낮을수록 더 필요하다 — 늘 켬을 추천(끄기는 사람 몫)
+    return "high", "램 %.0fGB · 남은 시험·배경 프로세스를 10분마다 치움" % m["ram_gb"]
+
+
+RULES = {"search": _r_search, "search_on": _r_search_on, "git": _r_git, "sessions": _r_sessions, "browser_wake": _r_browser_wake,
+         "browser_on": _on(_r_browser_wake), "wake_pc": _r_wake_pc, "motion": _r_motion, "motion_on": _on(_r_motion), "sheet": _r_sheet, "reclaim": _r_reclaim}
 
 
 def decide(m, feats):
-    """재 값 → 기능마다 (단계, 까닭). 추천은 «끔»(off)을 스스로 고르지 않는다 — 돌 수 없을 때(램·디스크·모델)만."""
+    """재 값 → 기능마다 (단계, 까닭). 높음·낮음·끔 칸에서 추천은 «끔»(off)을 스스로 고르지 않는다 — 돌 수 없을 때(램·디스크·모델)만.
+    켬/끔 칸(levels high·off)은 «끔»이 옛 «낮음» 자리다(규칙 이름 *_on)."""
     lv, why = {}, {}
     empty = m.get("notes", 0) < 50
     for f in feats:
         rule = RULES.get(f.get("recommend") or "")
+        if f.get("recommend") == "default":       # 재서 가를 것이 없는 칸(예 자체 절전 · 장치 유무는 needs 가 이미 거름) — 선언 기본값(high)과 그 까닭
+            rule = lambda _m, f=f: ("high", f.get("default_why") or "기본값")  # noqa: E731
         if not f["ready"] or not rule:
             continue
         x, w = rule(m)
@@ -786,7 +909,37 @@ def decide(m, feats):
     return lv, why
 
 
+def probe_modules(vault=None, log=None):
+    """켜진 모듈의 contributes.probe(이 기기 장치 재기 · device.json 을 씀)를 돌린다 — 추천이 이 기기 기준으로 칸을 거르게.
+    명령 꼴 = ["{py}", "<볼트 상대 .py>", 인자...] 만(그 밖은 건너뜀) · 하나 60초 · 실패는 건너뜀(그 장치는 «모름» = 칸을 숨기지 않음)."""
+    import subprocess
+    try:
+        if SYS not in sys.path:
+            sys.path.insert(0, SYS)
+        import roles
+        mods = roles.modules(on_only=True, vault=_v(vault))
+    except Exception:
+        return []
+    done = []
+    for m in mods:
+        con = (m.get("json") or {}).get("contributes") if isinstance(m.get("json"), dict) else None
+        cmd = con.get("probe") if isinstance(con, dict) else None
+        if not (isinstance(cmd, list) and len(cmd) >= 2 and cmd[0] == "{py}" and all(isinstance(x, str) for x in cmd)
+                and cmd[1].endswith(".py") and not os.path.isabs(cmd[1]) and ".." not in cmd[1].replace("\\", "/").split("/")):
+            continue
+        if log:
+            log("이 기기 재기: %s" % m["id"])
+        try:
+            r = subprocess.run([sys.executable, os.path.join(_v(vault), cmd[1])] + cmd[2:], capture_output=True, timeout=60,
+                               creationflags=NOWIN, cwd=_v(vault))
+            done.append((m["id"], r.returncode))
+        except Exception:
+            done.append((m["id"], None))
+    return done
+
+
 def recommend(vault=None, new_only=False, log=None):
+    probe_modules(vault, log)
     feats = [f for f in (declarations(vault) or []) if f["ready"]]
     local, st = _load(local_path(vault))
     have = set((local.get("levels") or {}).keys()) | set(((local.get("recommended") or {}).get("levels") or {}).keys()) \
@@ -832,7 +985,9 @@ def table(rec, vault=None):
     rows = []
     for k, v in rec["levels"].items():
         cur = s["chosen"].get(k, "high")
-        rows.append((cur == v, feats.get(k, {}).get("name", k), NAMES[cur], NAMES[v], rec["why"].get(k, "")))
+        if k not in feats:              # 옛 추천 파일의 옛 id(나뉘기 전) — 표에 안 올림
+            continue
+        rows.append((cur == v, feats[k].get("name", k), label(feats[k], cur), label(feats[k], v), rec["why"].get(k, "")))
     rows.sort(key=lambda r: r[0])
     out = [head, pc, "", "| 기능 | 지금 | 추천 | 까닭 |", "|---|---|---|---|"]
     out += ["| %s | %s | %s | %s |" % r[1:] for r in rows]
@@ -854,7 +1009,7 @@ def check(vault=None):
     v = _v(vault)
     bad, ok = [], []
     problems = []
-    feats = declarations(vault, problems=problems)
+    feats = declarations(vault, problems=problems, all_devices=True)
     if feats is None:
         return {"ok": False, "bad": problems, "good": []}
     ids = {f["id"] for f in feats}
@@ -865,7 +1020,11 @@ def check(vault=None):
         for o in f.get("owner") or []:
             p = os.path.join(v, o)
             try:
-                t = open(p, encoding="utf-8", errors="replace").read()
+                if os.path.isdir(p):        # 주인이 폴더(조리법 묶음) — 그 안 파일 중 하나라도 id 를 적으면 읽는 쪽
+                    t = "\n".join(open(os.path.join(p, x), encoding="utf-8", errors="replace").read()
+                                  for x in sorted(os.listdir(p)) if os.path.isfile(os.path.join(p, x)))
+                else:
+                    t = open(p, encoding="utf-8", errors="replace").read()
             except OSError:
                 bad.append("%s: owner 없음 %s" % (f["id"], o))
                 continue
@@ -928,14 +1087,22 @@ def main(argv=None):
     a2.add_argument("--json", action="store_true")
     c = sub.add_parser("check")
     c.add_argument("--json", action="store_true")
+    mg = sub.add_parser("migrate")
+    mg.add_argument("--via", default="migrate")
+    mg.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     try:
-        if a.cmd == "get":
+        if a.cmd in ("set", "battery", "preset", "apply", "recommend"):
+            migrate(via="migrate:" + getattr(a, "via", a.cmd))    # 나뉜 칸으로 옛 값을 먼저 옮긴다(새 칸을 «새 기능»으로 재거나 덮지 않게)
+        if a.cmd == "migrate":
+            put = migrate(via=a.via)
+            print(json.dumps({"ok": True, "moved": put}, ensure_ascii=False) if a.json else ("옮김: " + " · ".join("%s=%s" % kv for kv in put.items()) if put else "옮길 옛 값 없음"))
+        elif a.cmd == "get":
             print(level(a.id))
         elif a.cmd == "show":
             s = show()
             print(json.dumps(s, ensure_ascii=False) if a.json else "\n".join(
-                ["%s: %s%s" % (f["name"], NAMES[s["now"].get(f["id"], "high")], "" if f["ready"] else " (아직 없음)") for f in s["features"]]
+                ["%s: %s%s" % (f["name"], label(f, s["now"].get(f["id"], "high")), "" if f["ready"] else " (아직 없음)") for f in s["features"]]
                 + ["배터리 규칙: %s" % s["battery"]] + ["⚠ " + p for p in s["problems"]]))
         elif a.cmd in ("set", "battery", "preset", "reset"):
             d = {"set": lambda: set_level(a.id, a.level, a.via), "battery": lambda: set_battery(a.rule, a.via),

@@ -1,0 +1,488 @@
+{
+  "schema": 1,
+  "touches": [
+    "3_시스템/_index/self_sleep/",
+    "3_시스템/_index/device.json"
+  ],
+  "forbids": [
+    "1_수집/**"
+  ],
+  "writes_config": [],
+  "invocation": "none",
+  "surfaces": {
+    "skills": [],
+    "hooks": [],
+    "mcp": []
+  },
+  "contributes": {
+    "outside": ".claude/skills/self_sleep/outside.json",
+    "probe": [
+      "{py}",
+      ".claude/skills/self_sleep/scripts/self_sleep.py",
+      "probe",
+      "--json"
+    ],
+    "actions": [
+      {
+        "id": "self_sleep.status",
+        "name": "자체 절전 상태",
+        "risk": "read",
+        "run": [
+          "{py}",
+          ".claude/skills/self_sleep/scripts/self_sleep.py",
+          "status"
+        ]
+      },
+      {
+        "id": "self_sleep.report",
+        "name": "자체 절전 기록(3일)",
+        "risk": "read",
+        "run": [
+          "{py}",
+          ".claude/skills/self_sleep/scripts/self_sleep.py",
+          "report"
+        ]
+      },
+      {
+        "id": "self_sleep.now",
+        "name": "덮개·화면·전원 지금 값",
+        "risk": "read",
+        "run": [
+          "{py}",
+          ".claude/skills/self_sleep/scripts/self_sleep.py",
+          "now"
+        ]
+      },
+      {
+        "id": "self_sleep.probe",
+        "name": "이 기기 다시 재기(자체 절전)",
+        "risk": "write",
+        "run": [
+          "{py}",
+          ".claude/skills/self_sleep/scripts/self_sleep.py",
+          "probe"
+        ]
+      },
+      {
+        "id": "self_sleep.measure",
+        "name": "전력·CPU 재기",
+        "risk": "read",
+        "run": [
+          "{py}",
+          ".claude/skills/self_sleep/scripts/self_sleep.py",
+          "measure",
+          "--secs",
+          "30"
+        ]
+      }
+    ],
+    "options": [
+      {
+        "id": "power.awake_ac",
+        "name": "전원 연결 때 깨어 있음",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "recommend": "default",
+        "default_why": "전원 연결 PC 는 폰 환경(서버·Tailscale·RC)과 밤 일꾼을 위해 늘 깨어 있음 — 화면은 꺼짐 · 사람이 고른 절전(시작 메뉴·전원 단추)은 막지 않음",
+        "cells": {
+          "high": {
+            "값": "자체 절전 감시가 «시스템 필요»를 쥐어 윈도 유휴 절전·무인 절전이 PC 를 재우지 않음 · 배터리면 놓음"
+          },
+          "off": {
+            "잃음": "윈도 전원 설정대로 잠 · 한 번 잠들면 예약 작업이 깨워도 2분 뒤 다시 잠(11-20 사고)"
+          }
+        }
+      },
+      {
+        "id": "power.resume_awake",
+        "name": "저절로 깬 뒤 깨어 있음",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "recommend": "default",
+        "default_why": "타이머·수집 예약이 PC 를 깨우면 윈도는 입력이 없을 때 2분 뒤 다시 재운다 — 사람이 올 때까지 깨어 있게 함(전원 연결 때만)",
+        "cells": {
+          "high": {
+            "값": "잠든 PC 가 저절로 깨면(전원 연결) 바로 «시스템 필요»를 쥐고, 사람이 만지면 보통 규칙으로 돌아감"
+          },
+          "off": {
+            "잃음": "저절로 깬 PC 가 2분 뒤 다시 잠 — «전원 연결 때 깨어 있음»이 꺼져 있으면 사람이 올 때까지 잠든 채"
+          }
+        }
+      },
+      {
+        "id": "power.lid_ac",
+        "name": "덮개 닫힘 · 전원 연결",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "자체 절전",
+          "off": "안 함"
+        },
+        "applies": "now",
+        "needs": [
+          "lid"
+        ],
+        "recommend": "default",
+        "default_why": "덮개 닫고 서버로 둘 때 — 폰 환경(서버·Tailscale·RC)은 그대로 두고 아래 «하는 일»만",
+        "cells": {
+          "high": {
+            "값": "덮개를 닫고 화면이 꺼지면 들어감 · 덮개를 열면 나옴(바깥 모니터로 쓰는 중이면 화면이 켜져 있어 안 들어감)"
+          },
+          "off": {
+            "잃음": "전원 연결 때 덮개를 닫아도 아래 일을 안 함"
+          }
+        }
+      },
+      {
+        "id": "power.lid_dc",
+        "name": "덮개 닫힘 · 배터리",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "자체 절전",
+          "off": "안 함"
+        },
+        "applies": "now",
+        "needs": [
+          "lid",
+          "battery"
+        ],
+        "recommend": "default",
+        "default_why": "가방에 넣기 전 잠깐도 외장 그래픽·미디어를 줄임 — 오래 닫아 두면 아래 «배터리로 닫아 둔 뒤»가 재움",
+        "cells": {
+          "high": {
+            "값": "배터리로 덮개를 닫고 화면이 꺼지면 들어감"
+          },
+          "off": {
+            "잃음": "배터리로 덮개를 닫아도 아래 일을 안 함(윈도 덮개 설정만)"
+          }
+        }
+      },
+      {
+        "id": "power.lid_dc_then",
+        "name": "배터리로 덮개를 닫아 둔 뒤",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "10분 뒤 재움",
+          "off": "그대로"
+        },
+        "applies": "now",
+        "needs": [
+          "lid",
+          "battery"
+        ],
+        "params": {
+          "high": {
+            "after_min": 10
+          }
+        },
+        "recommend": "default",
+        "default_why": "가방 속 열·배터리 — 깨어 있으면 계속 먹는다 · 충전기 꽂으려 잠깐 닫는 것(10분 안 · 열거나 꽂으면 처음부터)은 그대로",
+        "cells": {
+          "high": {
+            "값": "배터리 + 덮개 닫힘(화면 꺼짐)이 10분 이어지면 «재우는 꼴»대로 · 사이에 덮개 열림·전원 연결·사람 입력이 오면 처음부터 다시 셈"
+          },
+          "off": {
+            "잃음": "닫아 둔 내내 깨어 있음 — 가방 속 열·배터리"
+          }
+        }
+      },
+      {
+        "id": "power.lid_dc_how",
+        "name": "재우는 꼴",
+        "levels": [
+          "high",
+          "low",
+          "off"
+        ],
+        "labels": {
+          "high": "최대 절전",
+          "low": "절전",
+          "off": "서버만 남김"
+        },
+        "applies": "now",
+        "needs": [
+          "lid",
+          "battery"
+        ],
+        "level_needs": {
+          "low": [
+            "s4"
+          ],
+          "off": [
+            "phone_server"
+          ]
+        },
+        "labels_without": {
+          "s4": {
+            "high": "절전"
+          }
+        },
+        "battery_keep": true,
+        "recommend": "default",
+        "default_why": "최대 절전 = 0W(가방 속 열 없음) · 서버만 남김은 폰이 닿지만 조금씩 먹음(안전장치가 끝내 최대 절전) · 절전은 빨리 켜지되 하룻밤 몇 %",
+        "cells": {
+          "high": {
+            "값": "«10분 뒤 재움»이 최대 절전(디스크에 저장하고 끔 · 0W · 폰 환경 끊김)"
+          },
+          "low": {
+            "달라짐": "절전(램 유지 · 켜기 빠름 · 하룻밤 몇 % · 폰 환경 끊김)"
+          },
+          "off": {
+            "달라짐": "서버만 남김 — 윈도는 깨어 있고 폰 서버·Tailscale·와이파이만 남기고 나머지를 줄임(아래 «서버만 남길 때» 칸들) · 안전장치가 배터리·시간을 넘으면 최대 절전"
+          }
+        }
+      },
+      {
+        "id": "power.serve_rc",
+        "name": "서버만 남길 때: Claude 원격·쉬는 세션 닫음",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "needs": [
+          "lid",
+          "battery",
+          "phone_server"
+        ],
+        "battery_keep": true,
+        "recommend": "default",
+        "default_why": "Claude 원격(RC)·쉬는 Claude 세션이 덮개 속에서 램·CPU 를 먹음 — 닫아도 다시 열면 이어짐(사용자 «클로드 원격은 거부»)",
+        "cells": {
+          "high": {
+            "값": "원격 제어(RC)와 일 없는 Claude 세션을 닫음 · 나올 때 RC 를 다시 켬(세션은 열면 이어짐) · 일하는 세션은 안 닫음"
+          },
+          "off": {
+            "잃음": "RC·쉬는 세션이 그대로 돎"
+          }
+        }
+      },
+      {
+        "id": "power.serve_defer",
+        "name": "서버만 남길 때: 무거운 배경 일 멈춤",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "needs": [
+          "lid",
+          "battery",
+          "phone_server"
+        ],
+        "battery_keep": true,
+        "recommend": "default",
+        "default_why": "주인 세션이 쉬는데 CPU 를 먹는 배경 일(시험·남은 작업)이 배터리를 씀 — 멈췄다가 나올 때 이어 돌림",
+        "cells": {
+          "high": {
+            "값": "CPU 를 잇달아 많이 먹는 배경 프로세스를 잠시 멈춤(일하는 Claude 세션 아래 것·보호 목록은 안 멈춤) · 나올 때 다시 돌림"
+          },
+          "off": {
+            "잃음": "배경 일이 그대로 돎"
+          }
+        }
+      },
+      {
+        "id": "power.serve_cpu",
+        "name": "서버만 남길 때: 프로세서 최대 상태 낮춤",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "needs": [
+          "lid",
+          "battery",
+          "phone_server"
+        ],
+        "battery_keep": true,
+        "recommend": "default",
+        "default_why": "서버 답에는 CPU 가 조금만 듦 — 배터리 프로세서 최대 상태를 낮췄다가 나올 때 원래 값으로",
+        "cells": {
+          "high": {
+            "값": "배터리(DC) 프로세서 최대 상태를 50%로 · 나올 때 원래 값 · 윈도 전원 설정을 바꿨다 되돌림(감시가 죽으면 다음 시작에 되돌림)"
+          },
+          "off": {
+            "잃음": "프로세서 상한 그대로"
+          }
+        },
+        "params": {
+          "high": {
+            "pct": 50
+          }
+        }
+      },
+      {
+        "id": "power.serve_guard",
+        "name": "서버만 남길 때: 안전장치",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "needs": [
+          "lid",
+          "battery",
+          "phone_server"
+        ],
+        "battery_keep": true,
+        "recommend": "default",
+        "default_why": "가방 속에 오래 두면 결국 배터리가 닳음 — 배터리 25% 또는 3시간이면 진짜 최대 절전",
+        "cells": {
+          "high": {
+            "값": "배터리 25% 이하이거나 서버만 남김이 3시간 이어지면 최대 절전(최대 절전이 없으면 절전)"
+          },
+          "off": {
+            "잃음": "배터리가 다 닳을 때까지 서버만 남김(윈도 «배터리 위험» 동작만)"
+          }
+        },
+        "params": {
+          "high": {
+            "pct": 25,
+            "hours": 3
+          }
+        }
+      },
+      {
+        "id": "power.screen_off",
+        "name": "입력 없어 화면이 꺼짐",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "자체 절전",
+          "off": "안 함"
+        },
+        "applies": "now",
+        "recommend": "default",
+        "default_why": "윈도가 화면을 끈 때만 — 동영상을 보는 중이면 윈도가 화면을 안 끄니 멈추지 않음",
+        "cells": {
+          "high": {
+            "값": "덮개가 열린 채 입력이 없어 윈도가 화면을 끄면 들어감 · 화면이 켜지면 나옴(윈도 «화면 끄기» 시간을 따름)"
+          },
+          "off": {
+            "잃음": "덮개를 닫을 때만 들어감"
+          }
+        }
+      },
+      {
+        "id": "power.dgpu_apps",
+        "name": "외장 그래픽 깨우는 앱",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "끔",
+          "off": "안 봄"
+        },
+        "applies": "now",
+        "needs": [
+          "dgpu_nvidia"
+        ],
+        "recommend": "default",
+        "default_why": "외장 그래픽이 깨어 있으면 바닥 6W → 10~25W(11-12 배터리 방전 실측) · 그래픽 일·받는 중·보호 목록은 안 끔",
+        "cells": {
+          "high": {
+            "값": "자체 절전 중 외장 그래픽을 깨우기만 하는 앱을 끔 · 시작 프로그램에 있던 앱은 나올 때 다시 켬 · 그래픽 일·받는 중·보호 목록은 안 끔"
+          },
+          "off": {
+            "잃음": "외장 그래픽을 깨우는 앱을 안 봄"
+          }
+        }
+      },
+      {
+        "id": "power.media",
+        "name": "미디어 멈춤",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "needs": [
+          "media"
+        ],
+        "recommend": "default",
+        "default_why": "업데이트 재시작 뒤 되살아난 탭이 닫힌 덮개 속에서 재생됐다(11-13 사고)",
+        "cells": {
+          "high": {
+            "값": "자체 절전 중 재생되는 미디어를 3초마다 멈춤 · 나와도 다시 재생하지 않음"
+          },
+          "off": {
+            "잃음": "닫힌 덮개 속 재생을 그대로 둠"
+          }
+        }
+      },
+      {
+        "id": "power.logo_light",
+        "name": "로고 조명 끔",
+        "levels": [
+          "high",
+          "off"
+        ],
+        "labels": {
+          "high": "켬",
+          "off": "끔"
+        },
+        "applies": "now",
+        "needs": [
+          "logo_light"
+        ],
+        "recommend": "default",
+        "default_why": "덮개를 닫아도 로고가 빛남 — 관리자 설치 조명 작업이 있는 기기만 칸이 보임",
+        "cells": {
+          "high": {
+            "값": "자체 절전 중 덮개 로고 조명을 끄고 나올 때 되돌림"
+          },
+          "off": {
+            "잃음": "로고 조명을 그대로 둠"
+          }
+        }
+      }
+    ]
+  },
+  "note": "자체 절전 — 전원 연결이면 «시스템 필요»를 쥐어 깨어 있고(무인으로 깨도 2분 뒤 다시 안 잠 · 11-20 사고), 윈도를 재우지 않고(폰 환경 유지) 아무도 안 볼 때(덮개 닫힘·화면 꺼짐) 외장 그래픽 깨우는 앱 끄기·미디어 멈춤·로고 조명 끔, 배터리로 오래 닫아 두면 최대 절전. 들어가는 때·하는 일이 칸마다 따로(contributes.options · needs = 이 기기에 그 장치가 있을 때만 칸이 보임 · 3_시스템/_index/device.json caps · probe 가 잼). 감시 = scripts/self_sleep.py run(로그온 예약 작업 · 등록은 승인 뒤). 옛 gpu_guard 가 떠 있으면 겹치는 일(앱 끄기·미디어·조명)은 그쪽에 맡긴다. 기기 고유 값은 git 밖 _index. 설계·실측 = 2_지식/일/외부뇌/자체절전-설계."
+}

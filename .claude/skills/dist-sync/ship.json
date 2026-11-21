@@ -12,7 +12,9 @@
    {"이름": "기능 단계 고른 값", "자리": ["3_시스템/options.local.json"], "길": "스킬 options(옵션 추천)"},
    {"이름": "분류 체계·태그 사전", "자리": ["3_시스템/sort/*.json", "3_시스템/sort/태그/*.json"], "길": "스킬 sort(«~면 태그 붙여»·«~면 ~로 보내» · 사람 태그 «이거 꽁돈»)", "예시": "3_시스템/sort-examples/항공권-티어.json"},
    {"이름": "가격 조회 조리법", "자리": ["3_시스템/collect/price/*.json"], "길": "스킬 sort(새 감시 의뢰 · 가격) — 칸 = collect_price.py 머리말"},
-   {"이름": "가격 조회 키", "자리": ["3_시스템/collect-price.local.json"], "길": "collect_price.py 머리말대로 무료 키를 적음(없으면 조용히 «키 없음»)"}
+   {"이름": "가격 조회 키", "자리": ["3_시스템/collect-price.local.json"], "길": "collect_price.py 머리말대로 무료 키를 적음(없으면 조용히 «키 없음»)"},
+   {"이름": "되찾기 이 PC 값(시험 AVD·시험 잠금)", "자리": ["3_시스템/own.local.json"], "길": "py -3 3_시스템/own.py local (없으면 시험 AVD 없음·기본 잠금으로 돎)"},
+   {"이름": "자동 재시작 설정", "자리": ["3_시스템/restart.local.json"], "길": "restart.py 머리말 DEFAULTS 의 바꿀 칸만 적음(없으면 기본 · \"on\" 기본 끔) · 바깥 설정 «자동 재시작 예약»"}
   ]
  },
  "기능": {
@@ -124,6 +126,7 @@
    "3_시스템/설명서/설명서-활용법.md"
   ],
   "본체 · 진단 기록": [
+   "3_시스템/_ref/incident-2026-11-20-무인깨어남-2분재잠-앱로그인만료-오전내내-클로드멈춤.md",
    "3_시스템/_ref/.gitkeep",
    "3_시스템/_ref/2026-07-11-규약단계-침묵생략.md",
    "3_시스템/_ref/incident-2026-07-03-스펙-실측-괴리.md",
@@ -157,6 +160,8 @@
    "3_시스템/_ref/코어수정-준수사항-체크리스트.md"
   ],
   "본체 · 시험": [
+   "3_시스템/_eval/own_check.py",
+   "3_시스템/_eval/claude_login_check.py",
    "3_시스템/_eval/.gitkeep",
    "3_시스템/_eval/autocommit_check.py",
    "3_시스템/_eval/mem_check.py",
@@ -182,6 +187,8 @@
    "3_시스템/migrations/"
   ],
   "본체 · 볼트 대본": [
+   "3_시스템/own.py",
+   "3_시스템/claude_login.py",
    "3_시스템/actions.json",
    "3_시스템/brain.py",
    "3_시스템/claude_bin.py",
@@ -247,6 +254,9 @@
    "3_시스템/sort_learn.py",
    "3_시스템/sort_price.py",
    "3_시스템/설명서/설명서-분류와-알림.md"
+  ],
+  "모듈 · self_sleep": [
+   ".claude/skills/self_sleep/"
   ],
   "모듈 · dist-sync": [
    ".claude/skills/dist-sync/"

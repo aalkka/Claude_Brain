@@ -49,7 +49,8 @@ ITEMS = 40
 LATE_MIN_H = 24            # 하루 안 늦음은 PC 가 잠든 것일 수 있어 늦음으로 안 친다
 BROWSER_LATE_H = 48        # 로그인 출처 — 전 단위 20시간(신호 안 되면 12시간)의 두 배 넘게
 BROWSER_QUEUE = r'\d{8}-\d{4}|courses|signals|extension|orphan|tasks'   # 로그인 가족이 대기열에 쓰는 이름(+ 조리법 run_prefix) 만 그 출처 칸에 «실패»로 붙인다 — 막을 이름을 적던 옛 방식은 새 대본이 대기열에 쓸 때마다(11-11 filter-learn · 11-13 자격카드) 그 칸을 빨갛게 했다
-WAKE_LEVEL = 'collect.wake'   # 기능 단계 «로그인 출처 아침 받기»(options.registry.json)
+WAKE_LEVEL = cl.CHROME       # 기능 «크롬 띄우기»(options.registry.json collect.chrome · 옛 collect.wake «로그인 출처 아침 받기» · 11-20 나눔)
+WAKE_PC = cl.WAKE_PC         # 기능 «PC 깨우기»(collect.wake_pc · 모든 시각 수집 · 옛 collect.local.json wake_pc)
 BUSY_STALE = 30 * 60       # 받기·판정이 죽어 남은 표시를 이 뒤로는 안 믿는다(초)
 NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 # 거절 창의 낱말 단추 — 제목 낱말 중 고르면 공지 거의 다를 막는 말·날짜는 안 띄운다(고른 낱말은 전 출처 제외어가 된다 · filter-learn)
@@ -832,12 +833,18 @@ def reflect_known(sid=None):
 
 
 def set_desk(sid, field, value, sync=True):
-    if sid == '*' and field in ('all_off', 'auto_judge', 'wake_pc'):   # 전체 스위치 = collect.local.json(auto_judge 기본 끔 · wake_pc 기본 깨움) — 엔진이 다음 돌림부터 읽는다
+    if sid == '*' and field == 'wake_pc':                       # PC 깨우기 = 기능 «PC 깨우기» 값 하나(단계 탭과 같은 값 · 11-20 나눔) — 켬 high · 끔 off · 옛 자리 칸은 걷는다
+        set_option(WAKE_PC, as_bool(value))
+        sw = load(SWITCH, default={})
+        if isinstance(sw, dict) and 'wake_pc' in sw:
+            sw.pop('wake_pc')
+            save_json(SWITCH, sw)
+    elif sid == '*' and field in ('all_off', 'auto_judge'):    # 전체 스위치 = collect.local.json(auto_judge 기본 끔) — 엔진이 다음 돌림부터 읽는다
         sw = load(SWITCH, default={})
         sw = sw if isinstance(sw, dict) else {}
         sw[field] = as_bool(value)
         save_json(SWITCH, sw)
-    elif field == 'wake' and (sid == '*' or browser(sid)):    # 깨우기 = 기능 단계 «로그인 출처 아침 받기» 값 하나(11-07 사용자 «두 스위치 통일») — 켬 high · 끔 low
+    elif field == 'wake' and (sid == '*' or browser(sid)):    # 크롬 띄우기 = 기능 «크롬 띄우기» 값 하나(11-07 사용자 «두 스위치 통일») — 켬 high · 끔 off
         set_wake_level(as_bool(value), browser(sid))
     else:
         rc = browser(sid)
@@ -859,16 +866,22 @@ def set_desk(sid, field, value, sync=True):
         sync_wake()
 
 
-def set_wake_level(on, rc=None):
-    """기능 단계 «로그인 출처 아침 받기»를 바꾼다(단계 탭과 같은 값 · 장부는 options 가) · settings 의 옛 wake 칸은 걷는다(이제 안 읽음)."""
+def set_option(fid, on):
+    """켬/끔 기능 하나를 바꾼다(단계 탭과 같은 값 · 장부는 options 가 · 옛 칸 값은 먼저 옮김)."""
     sys.path.insert(0, SYS)
     try:
         import options
-        options.set_level(WAKE_LEVEL, 'high' if on else 'low', via='collect_desk')
+        options.migrate(via='migrate:collect_desk')
+        options.set_level(fid, 'high' if on else 'off', via='collect_desk')
     except ImportError:
         raise Refuse('기능 단계 대본(options.py)이 없음')
     except Exception as e:      # options.OptErr — 선언 없음·고른 값 파일 깨짐
         raise Refuse(f'기능 단계를 못 바꿈: {e}')
+
+
+def set_wake_level(on, rc=None):
+    """기능 «크롬 띄우기»를 바꾼다 · settings 의 옛 wake 칸은 걷는다(이제 안 읽음)."""
+    set_option(WAKE_LEVEL, on)
     for r in ([rc] if rc else browsers()):
         old = bsettings(r)
         if 'wake' in old and r.get('settings'):
@@ -877,7 +890,7 @@ def set_wake_level(on, rc=None):
 
 
 def wake_chosen():
-    """깨우기 값 = 기능 단계 «로그인 출처 아침 받기»의 고른 값(배터리 규칙 전 · collect-browser.Source.wake_level 과 같은 규칙) — 못 읽으면 'high'."""
+    """크롬 띄우기 값 = 기능 «크롬 띄우기»의 고른 값(배터리 규칙 전 · collect-browser.Source.wake_level 과 같은 규칙) — 못 읽으면 'high'."""
     try:
         sys.path.insert(0, SYS)
         import options
@@ -885,6 +898,11 @@ def wake_chosen():
         return options.chosen(local, st, options.declarations(None, only=WAKE_LEVEL)).get(WAKE_LEVEL, 'high')
     except Exception:
         return 'high'
+
+
+def wake_pc_on():
+    """PC 깨우기 값 — 기능 «PC 깨우기»(없으면 옛 collect.local.json wake_pc · 엔진 collectlib.wake_pc 와 같은 규칙)."""
+    return cl.wake_pc(SYS)
 
 
 def sync_wake():
@@ -1444,7 +1462,7 @@ def fix_source(did):
     print(f'고침: {", ".join(sorted(changed))} · 대기열 줄 닫음 {close_queue(did)}')
 
 
-FIELD_WORD = {'enabled': '수집', 'wake': '크롬 열기', 'all_off': '전체 끔', 'auto_judge': '자동 판정', 'download': '첨부', 'images': '그림', 'auto': '자동 판정', 'purpose': '목적', 'hours': '주기', 'pages': '쪽',
+FIELD_WORD = {'enabled': '수집', 'wake': '크롬 띄우기', 'all_off': '전체 끔', 'auto_judge': '자동 판정', 'download': '첨부', 'images': '그림', 'auto': '자동 판정', 'purpose': '목적', 'hours': '주기', 'pages': '쪽',
               'skip+': '뺄 말 더함', 'skip-': '뺄 말 뺌', 'keep+': '남길 말 더함', 'keep-': '남길 말 뺌', 'course': '과목'}
 
 
@@ -1664,7 +1682,7 @@ def view(_reason='open'):
         if links.get(x['id']):
             x['moa'] = links[x['id']]
     attach_sort(sources)
-    return {'now': fmt(now), 'me': ME, 'hist': hist, 'allOff': sw.get('all_off') is True, 'autoJudge': sw.get('auto_judge') is True, 'wakePc': sw.get('wake_pc') is not False, 'alarmNote': alarm_note() if cfg is not False else ALARM_NOTE, 'alarmBad': alarm_bad, 'sources': sources, 'candidates': candidates()}
+    return {'now': fmt(now), 'me': ME, 'hist': hist, 'allOff': sw.get('all_off') is True, 'autoJudge': sw.get('auto_judge') is True, 'wakePc': wake_pc_on(), 'alarmNote': alarm_note() if cfg is not False else ALARM_NOTE, 'alarmBad': alarm_bad, 'sources': sources, 'candidates': candidates()}
 
 
 # ── 연습(튜토리얼 E2 · 11-08) — «연습: 모듈» 장 동안 수집 창이 그리는 자료 · 쓰기 흉내 ──

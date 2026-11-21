@@ -31,6 +31,14 @@
 .bb-text > :first-child { margin-top: 0; }
 .bb-text > :last-child { margin-bottom: 0; }
 .bb-streaming { white-space: pre-wrap; }
+.bb-streaming.markdown-rendered { white-space: normal; }
+/* 표(0.49.24 · 사용자 11-20 «표가 깨짐») — 곁창보다 넓으면 그 표 안에서만 옆으로 밀림(대화 목록 전체가 밀리던 것) · 셀은 낱말 단위로 줄바꿈 */
+.bb-text table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: var(--font-ui-small); }
+.bb-text th, .bb-text td { word-break: keep-all; overflow-wrap: break-word; min-width: 7em; }
+.bb-text th:first-child, .bb-text td:first-child { min-width: 4em; }
+/* 답 속 `볼트 경로` = 누르면 그 파일(0.49.24) */
+.bb-text code.bb-path-link { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.bb-text code.bb-path-link:hover { color: var(--text-accent); }
 
 /* 도구 = 접힌 단계(왼쪽 선으로 묶음) */
 .bb-steps { display: flex; flex-direction: column; gap: 1px; border-left: 2px solid var(--background-modifier-border); padding-left: 8px; margin-left: 4px; }
@@ -418,8 +426,10 @@ body.bb-armed .textLayer ::selection { background: hsla(var(--accent-h), var(--a
 .bb-set-re svg.svg-icon { width: 13px; height: 13px; }
 .bb-set-num { width: 96px; text-align: end; }
 
-/* 움직임 낮음(기능 단계 ui.motion) · 윈도 «애니메이션 효과» 끔 — 기다림 표시는 그대로 두고 돌지만 않게 */
-body.bb-still [class*="bb-"], body.bb-still [class*="bb-"]::before, body.bb-still [class*="bb-"]::after, body.bb-still [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
+/* 기다림 회전 끔(ui.spin) · 반짝임 끔(ui.sparkle) · 둘 다 끔 = 옛 «움직임 낮음»(바뀜 효과까지) · 윈도 «애니메이션 효과» 끔 — 기다림 표시는 그대로 두고 돌지만 않게 */
+body.bb-nospin .bb-tool-run .bb-tool-state::after, body.bb-nospin .bb-wait::before, body.bb-nospin .bb-wait-ring, body.bb-nospin .bb-health-bar.is-waiting::after, body.bb-nospin [class*="bb-"] .is-spinning svg { animation: none !important; }
+body.bb-noshimmer .bb-activity .bb-wait-text { animation: none !important; }
+body.bb-nospin.bb-noshimmer [class*="bb-"], body.bb-nospin.bb-noshimmer [class*="bb-"]::before, body.bb-nospin.bb-noshimmer [class*="bb-"]::after, body.bb-nospin.bb-noshimmer [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   [class*="bb-"], [class*="bb-"]::before, [class*="bb-"]::after, [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
 }

@@ -655,9 +655,14 @@ class Source:
                     pass
 
     # ── 깨우기·시각 예약 ──
-    def wake_level(self):
-        """기능 단계(조리법 wake_level · options.py) — 못 읽거나 칸이 없으면 'high'(지금 동작)."""
+    def wake_id(self):
+        """조리법 wake_level — 옛 id collect.wake 는 «크롬 띄우기» collect.chrome 으로 읽는다(11-20 나눔 · 옛 조리법이 남은 볼트)."""
         lvl = self.rc.get('wake_level')
+        return {'collect.wake': cl.CHROME}.get(lvl, lvl)
+
+    def wake_level(self):
+        """기능 «크롬 띄우기»(조리법 wake_level · options.py) — 못 읽거나 칸이 없으면 'high'(지금 동작)."""
+        lvl = self.wake_id()
         if not lvl:
             return 'high'
         try:
@@ -667,8 +672,8 @@ class Source:
             return 'high'
 
     def wake_chosen(self):
-        """기능 단계의 고른 값(배터리 규칙 전) — 깨우기 예약을 둘지는 이 값으로 정한다(배터리로 잠깐 낮아진 값으로 예약을 지우지 않게). 못 읽으면 'high'."""
-        lvl = self.rc.get('wake_level')
+        """기능 «크롬 띄우기»의 고른 값(배터리 규칙 전) — 이 출처의 시각 예약을 둘지는 이 값으로 정한다(배터리로 잠깐 낮아진 값으로 예약을 지우지 않게). 못 읽으면 'high'."""
+        lvl = self.wake_id()
         if not lvl:
             return 'high'
         try:
@@ -679,14 +684,14 @@ class Source:
             return 'high'
 
     def wake_state(self):
-        """시각 깨우기를 하나 — 값은 기능 단계 하나(수집 창 «깨우기» 스위치도 이 값을 바꾼다 · 11-07 «두 스위치 통일»).
-        단계가 높음이어도 수집 전체 끔·출처 끔이면 안 깨운다(깨워 놓고 아무것도 안 하는 헛깨우기를 막음). 돌려줌 = (켬, 까닭 낱말)."""
+        """시각에 크롬을 띄우나 — 값은 기능 «크롬 띄우기» 하나(수집 창 «크롬 열기» 스위치도 이 값을 바꾼다 · 11-07 «두 스위치 통일»).
+        PC 를 깨울지는 따로(«PC 깨우기» collect.wake_pc · 예약 엔진이 WakeToRun 으로). 켬이어도 수집 전체 끔·출처 끔이면 안 깨운다(깨워 놓고 아무것도 안 하는 헛깨우기를 막음). 돌려줌 = (켬, 까닭 낱말)."""
         if switches().get('all_off') is True:
             return False, 'all_off'
         if self.settings().get('enabled') is False:
             return False, 'source_off'
         if self.wake_chosen() != 'high':
-            return False, 'level_low'
+            return False, 'chrome_off'
         return True, ''
 
     def wake_sync(self):
@@ -727,8 +732,8 @@ class Source:
         if not on:                      # 꺼진 날 예약이 돌았다 = 예약이 값과 어긋남 — 예약을 값대로 맞춰 다음부터 안 돈다
             rc, out = self.wake_sync()
             return self.log(f'깨우기: 꺼 둠({why}) · 예약 맞춤 rc={rc} {out[-120:]}')
-        if self.wake_level() != 'high':     # 고른 값은 높음인데 배터리 규칙으로 지금 낮음 = 크롬을 새로 띄우지도 PC 를 붙들지도 않음(예약은 그대로)
-            return self.log('깨우기: 낮음 — 크롬을 띄우지 않음')
+        if self.wake_level() != 'high':     # 고른 값은 켬인데 지금 읽기 값이 다름(배터리 규칙 · 켬/끔 칸엔 낮음이 없어 보통 안 옴) = 크롬을 새로 띄우지도 PC 를 붙들지도 않음(예약은 그대로)
+            return self.log('깨우기: 크롬 띄우기 끔 — 크롬을 띄우지 않음')
         return self.hold_awake()
 
     def legacy_wake(self):

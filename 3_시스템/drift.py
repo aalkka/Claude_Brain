@@ -440,21 +440,29 @@ def mem_rows(m=None, locked=None):
         for _pid, kind in left:
             kinds[kind] = kinds.get(kind, 0) + 1
         rows.append(("시험 프로세스", "warn", f"남은 시험 프로세스 {len(left)}개({', '.join(f'{k} {n}' for k, n in kinds.items())}) — 끄기 = `{KILL_CMD}`(건강 «고치기»로 · 시험 잠금이 없을 때만)"))
+    try:                                    # Claude 데스크톱 앱 로그인 풀림(11-20 사고 · 서버가 정한 수명이라 막지 못하고 알리기만) — 풀렸을 때만
+        import claude_login
+        rows += claude_login.health_rows()
+    except Exception:  # noqa: BLE001
+        pass
+    try:                                    # 주인 장부(11-19) — 주인이 끝났거나 쉬는데 남은 것 · 하루 넘게 쉬는 세션 · 되찾기가 도는지
+        import own
+        rows += own.doctor_rows()
+    except Exception:  # noqa: BLE001
+        pass
     return rows
 
 
 def kill_test(procs=None, locked=None):
-    """남은 시험 프로세스를 끈다(자식째) — 사용자가 건강 «고치기»로 고를 때만 부른다(자동으로 안 끔). 시험 잠금이 있으면 안 끔."""
+    """남은 시험 프로세스를 끈다(자식째) — 사용자가 건강 «고치기»로 고를 때만 부른다(자동으로 안 끔). 시험 잠금이 있으면 안 끔.
+    끄는 길은 주인 장부 하나(own.kill_tests · 11-19) — 자동 되찾기(own.py tick)와 같은 가족 찾기·기록을 쓴다."""
     if heavy_locked() if locked is None else locked:
         return None
-    procs = processes() if procs is None else procs
-    done = []
-    for pid, kind in test_procs(procs):
-        fam = _family(pid, procs)           # taskkill /T 는 죽은 부모의 pid 를 다시 받은 프로세스 아래 남의 고아까지 끈다 — 시작 시각으로 가른다
-        r = subprocess.run(["taskkill", "/F"] + [x for q in fam for x in ("/PID", str(q))], capture_output=True, timeout=30,
-                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-        done.append((pid, kind, r.returncode == 0))
-    return done
+    import own
+    if procs is not None:                   # 시험이 넣은 표(drift 꼴) → own 꼴 · 시작 시각으로 가족을 가름
+        procs = {p: {"ppid": r[0], "name": r[1], "start": ((_start(p) or 0) / 1e7 - 11644473600) if _start(p) else 0, "cmd": r[3], "cpu": None, "priv": r[2]}
+                 for p, r in procs.items()}
+    return [(d["pid"], d["why"], bool(d["ok"])) for d in (own.kill_tests(procs, check_lock=False) or [])]
 
 
 def _start(pid):
@@ -531,7 +539,7 @@ def main(argv):
     if "--kill-test" in argv:           # 건강 «고치기»로 사용자가 고를 때만
         done = kill_test()
         if done is None:
-            print("시험 잠금(_index/bigboss/*/heavy.lock)이 있어 안 끔 — 시험이 도는 중")
+            print("시험 잠금(heavy.lock)이 있어 안 끔 — 시험이 도는 중")
         else:
             print("끌 것 없음" if not done else "\n".join(f"{'끔' if ok else '못 끔'} {kind} pid {pid}" for pid, kind, ok in done))
         return 0

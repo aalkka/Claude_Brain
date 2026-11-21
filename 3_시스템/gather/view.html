@@ -79,7 +79,7 @@ q{display:block;color:var(--tx3);font-size:var(--fs1);quotes:"«" "»"}
 #more:hover{color:var(--tx)}
 .empty{padding:36px 10px;text-align:center;color:var(--tx3)}
 .err{color:var(--err);font-size:var(--fs1);white-space:pre-wrap}
-/* 폰 = 좁은 표(11-17 사용자 고름 «B») — 제목·마감·내 칸만 · 나머지 거르기 칸은 머리 칩 · 칸 너비 끌기 없음 · html.ph 일 때만(PC·탭은 위 그대로) */
+/* 폰 = 좁은 표(11-17 사용자 고름 «B» → 11-20 «moa B + 칸 그리드 조절» = 모든 칸 좁게 · 머리 칸 오른쪽 끝을 손가락으로 끌어 늘림 · 넓어지면 표 안 가로 밀기) · html.ph 일 때만(PC·탭은 위 그대로) */
 .ph #app{padding:0 0 24px}
 .ph .hd{flex-wrap:nowrap;align-items:center;margin:0;padding:8px 12px 6px}
 .ph .hd .sp{flex:1}
@@ -101,13 +101,21 @@ q{display:block;color:var(--tx3);font-size:var(--fs1);quotes:"«" "»"}
 .ph .menu label,.ph .menu button{min-height:36px;padding:0 10px;font-size:var(--fs2)}
 .ph .menu .n{margin-left:auto;padding-left:12px;color:var(--tx3)}
 .ph #more{margin:10px 12px 0}
+.ph th,.ph td{padding-left:5px;padding-right:5px}
+.ph th{position:sticky}
+.ph th .rz{width:12px;cursor:default}
+.ph th .rz::after{content:"";position:absolute;right:0;top:22%;height:56%;border-right:1px solid var(--line2)}
+.ph th .rz.on::after{border-right:2px solid var(--accent)}
+.ph table.pfx{width:auto}
+.ph td.x{max-width:none;font-size:var(--fs1)}
+.ph td.x .cl{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <div id="menu" class="menu" hidden></div>
 <script>
-const S={v:null,key:null,rev:false,f:{},open:null,past:false,menu:null,w:null,dw:null,drag:null,pend:false};
+const S={v:null,key:null,rev:false,f:{},open:null,past:false,menu:null,w:null,dw:null,drag:null,pend:false,pw:null,pwk:null};
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const send=m=>parent.postMessage(m,'*');
@@ -122,8 +130,11 @@ const mineCols=()=>S.v.columns.filter(c=>c.kind==='mine');
 let DEV=null;
 function devOf(){if(DEV)return DEV;const mm=q=>matchMedia(q).matches;if(window.matchMedia)return mm('(pointer:coarse)')&&mm('(hover:none)')?(Math.min(screen.width,screen.height)<600?'phone':'tablet'):'desktop';return innerWidth<=600?'phone':'desktop'}
 const PH=()=>devOf()==='phone';
-/** 폰 표의 칸 = 제목 · 첫 날짜 칸 · 내 칸(원래 차례) — 나머지는 줄을 누른 세부에 */
-function phCols(){const cs=S.v.columns,d=cs.find(c=>c.kind==='date');const o=cs.filter(c=>c.id==='제목'||c===d||c.kind==='mine');return o.length?o:cs.slice(0,1)}
+/** 폰 표의 칸 = 꽁돈 칸(줄 금색 띠로 대신)을 뺀 모든 칸(원래 차례 · 11-20 건희님 «moa B») — 잘리면 머리 끝을 끌어 늘림 */
+function phCols(){const cs=S.v.columns,o=cs.filter(c=>c.kind!=='gold');return o.length?o:cs.slice(0,1)}
+/** 폰 칸 처음 너비 — 날짜 50 · 내 칸 56 · 글 칸 = 가장 긴 값(머리 포함) 어림 60~80 · 제목 = 남은 폭 */
+function phW0(c){if(c.kind==='date')return 50;if(c.kind==='mine')return 56;
+  const n=Math.max(String(c.head||c.id).length+1,...S.v.rows.map(r=>{const v=val(r,c.id);return v===null?0:String(v).length}));return Math.max(60,Math.min(80,n*12+14))}
 function num(x){const m=String(x).replace(/,/g,'').match(/(\d+(?:\.\d+)?)\s*(만|억)?/);return m?parseFloat(m[1])*(m[2]==='억'?1e4:1):NaN}
 function sorted(rows){const k=S.key,has=rows.filter(r=>val(r,k)!==null),no=rows.filter(r=>val(r,k)===null);
   has.sort((a,b)=>{let x=val(a,k),y=val(b,k);if(k==='금액'){x=num(x);y=num(y);if(isNaN(x))x=-1;if(isNaN(y))y=-1}else if(typeof x==='boolean'){x=+x;y=+y}return(x<y?-1:x>y?1:0)*(S.rev?-1:1)});return has.concat(no)}
@@ -173,13 +184,13 @@ function draw(){const v=S.v;if(!v)return;const app=$('#app');
   h+=`<div class="main"><div class="tw">${tb}<thead>${head}</thead><tbody>${body}</tbody></table>${more}${past}</div></div>`;
   app.innerHTML=h}
 // 폰 좁은 표(초안 B) — 머리 = 정렬 · ▾ = 거르기 · 표에 없는 거르기 칸 = 머리 줄 칩(지급 ▾) · 줄 누름 = 세부(숨은 칸 값 포함) · 내 칸 = 상태 단추
-function drawPh(){const v=S.v,app=$('#app'),cols=phCols(),ids=cols.map(c=>c.id),rest=v.columns.filter(c=>!ids.includes(c.id)&&c.kind!=='gold');
+function drawPh(){phSaved();const v=S.v,app=$('#app'),cols=phCols(),ids=cols.map(c=>c.id),rest=v.columns.filter(c=>!ids.includes(c.id)&&c.kind!=='gold');
   const rows=shown(),gone=Object.values(v.hidden||{}).reduce((a,b)=>a+b,0),gold=v.columns.some(c=>c.kind==='gold');
   const hd=k=>{const c=v.columns.find(x=>x.id===k);return c?(c.head||c.id):k};
   const chips=v.filters.filter(k=>!ids.includes(k)).map(k=>{const n=S.f[k]&&S.f[k].size;return`<button class="pchip${n?' on':''}" data-menu="${esc(k)}">${esc(hd(k))}${n?` ${n}`:''}<span class="a">▾</span></button>`}).join('');
   let h=`<div class="hd"><b>${esc(v.name)}</b><span class="cnt">${rows.length}건</span><span class="sp"></span>${chips}</div>`;
-  const PW={date:78,mine:66},tb=`<table><colgroup>${cols.map(c=>`<col${PW[c.kind]?` style="width:${PW[c.kind]}px"`:''}>`).join('')}</colgroup>`;
-  const head=`<tr>${cols.map(c=>{const fl=v.filters.includes(c.id),on=S.f[c.id]&&S.f[c.id].size;return`<th class="${c.id===S.key?'s':''}"><span class="h" data-sort="${esc(c.id)}">${esc(c.head||c.id)}${c.id===S.key?`<span class="a">${S.rev?'▼':'▲'}</span>`:''}</span>${fl?`<span class="f${on?' on':''}" data-menu="${esc(c.id)}">▾</span>`:''}</th>`}).join('')}</tr>`;
+  const pw=S.pw,tb=`<table${pw?` class="pfx" style="width:${phSum()}px"`:''}><colgroup>${cols.map(c=>{const w=pw?pw[c.id]:c.id==='제목'?0:phW0(c);return`<col data-p="${esc(c.id)}"${w?` style="width:${w}px"`:''}>`}).join('')}</colgroup>`;
+  const head=`<tr>${cols.map(c=>{const fl=v.filters.includes(c.id),on=S.f[c.id]&&S.f[c.id].size;return`<th class="${c.id===S.key?'s':''}"><span class="h" data-sort="${esc(c.id)}">${esc(c.head||c.id)}${c.id===S.key?`<span class="a">${S.rev?'▼':'▲'}</span>`:''}</span>${fl?`<span class="f${on?' on':''}" data-menu="${esc(c.id)}">▾</span>`:''}<span class="rz" data-rz="${esc(c.id)}"></span></th>`}).join('')}</tr>`;
   const tr=(r,dim)=>`<tr class="row${r['꽁돈']&&gold?' gold':''}${S.open===r.id?' sel':''}${dim?' dim':''}" data-id="${esc(r.id)}">${cols.map(c=>phCell(c,r)).join('')}</tr>`
     +(S.open===r.id?`<tr class="det"><td colspan="${cols.length}">${detail(r,rest)}</td></tr>`:'');
   const body=rows.length?rows.map(r=>tr(r,false)).join(''):`<tr><td class="empty" colspan="${cols.length}">없음</td></tr>`;
@@ -190,10 +201,21 @@ function drawPh(){const v=S.v,app=$('#app'),cols=phCols(),ids=cols.map(c=>c.id),
 function phCell(c,r){
   if(c.kind==='date'){const d=due(r);if(!d)return'<td class="d"><span>—</span></td>';const t=new Date(r['마감']+'T00:00:00');return`<td class="d"><b class="${d.cls}">${d.tag}</b><span>${t.getMonth()+1}/${t.getDate()}</span></td>`}
   if(c.id==='제목')return`<td class="t"><span class="tt">${esc(r[c.id])}</span></td>`;
-  return cell(c,r)}
+  return cell(c,r).replace(/^<td class="x">([\s\S]*)<\/td>$/,'<td class="x"><span class="cl">$1</span></td>')}
+// 폰 칸 너비(11-20 건희님 «좁은 칸 때문에 잘릴 경우 내가 늘려서 볼 수 있게 · 컴퓨터에 이미 있는 동작») — PC 와 같은 손(머리 칸 오른쪽 끝 끌기 · 두 번 누르면 처음대로)
+// 다른 점 = 폰 너비는 폰에 둔다(끈 뒤 pcols 로 알림 → brain-server 가 이 기기에 파일별로 적고 열 때 pcols 로 돌려줌 · 11-20 건희님 «기억 B»)
+// .moa «widths» 는 PC 너비라 읽지도 적지도 않음(폰 412 크기로 PC 너비를 덮지 않게) · 옛 brain-server 는 pcols 를 모른 채 버림(그 화면에만 남음)
+function phSaved(){if(S.pw||!S.pwk||!Object.keys(S.pwk).length)return;S.pw={};phCols().forEach(c=>{S.pw[c.id]=S.pwk[c.id]||(c.id==='제목'?160:phW0(c))})}
+const phSum=()=>phCols().reduce((a,c)=>a+(S.pw[c.id]||0),0);
+function applyPW(){const t=$('#app table');if(!t)return;t.classList.add('pfx');t.style.width=phSum()+'px';
+  document.querySelectorAll('#app col[data-p]').forEach(c=>{c.style.width=S.pw[c.dataset.p]+'px'})}
+function freezeP(){if(S.pw)return false;S.pw={};const ths=document.querySelectorAll('#app thead th');phCols().forEach((c,i)=>{if(ths[i])S.pw[c.id]=Math.round(ths[i].getBoundingClientRect().width)});return true}
 // 칸 너비 — S.w = {칸 id: px}(없으면 브라우저가 나눔) · 처음 값 = .moa «widths»(자료로 옴) · 끈 뒤 brain-base 에 cols 로 알린다(받는 쪽이 파일에 적으면 다시 열어도 남음)
 const MINW=40;
-const fixed=()=>!!(S.w&&Object.keys(S.w).length);
+// 손가락 화면(탭)에서 저장된 너비 합이 화면보다 넓으면 그 너비를 안 쓰고 화면 폭에 맞춘 표로(11-20 건희님 «moa 화면에 맞추기. 한번에 보이도록» ·
+// 잼: 탭 800dp 에 PC 너비 1222px = 442px 넘침) — 파일의 너비는 그대로(PC 는 저장한 너비) · 끄는 동안은 지금 너비를 따름
+const rawSum=()=>S.v.columns.reduce((a,c)=>a+(S.w&&S.w[c.id]>0?S.w[c.id]:100),0);
+const fixed=()=>!!(S.w&&Object.keys(S.w).length)&&(!!S.drag||devOf()==='desktop'||rawSum()<=(($('#app')||{}).clientWidth||innerWidth));
 const W=id=>S.w&&S.w[id]>0?S.w[id]:100;
 const sumW=()=>S.v.columns.reduce((a,c)=>a+W(c.id),0);
 function takeW(d){const w=d&&d.widths&&typeof d.widths==='object'?d.widths:{},dw=JSON.stringify(w);if(dw===S.dw)return;S.dw=dw;S.w=Object.keys(w).length?{...w}:null}
@@ -202,16 +224,18 @@ function applyW(){const fx=fixed();
   document.querySelectorAll('#app col[data-c]').forEach(c=>{c.style.width=fx?W(c.dataset.c)+'px':''})}
 function freeze(){if(fixed())return false;S.w={};const ths=document.querySelectorAll('#app thead th');S.v.columns.forEach((c,i)=>{if(ths[i])S.w[c.id]=Math.round(ths[i].getBoundingClientRect().width)});return true}
 document.addEventListener('pointerdown',e=>{const h=e.target.closest('[data-rz]');if(!h||e.button!==0)return;
+  if(PH()){e.preventDefault();closeMenu();const was=freezeP();applyPW();S.drag={ph:1,id:h.dataset.rz,x:e.clientX,w:S.pw[h.dataset.rz],el:h,was,moved:false};h.classList.add('on');try{h.setPointerCapture(e.pointerId)}catch{}return}
   e.preventDefault();closeMenu();const was=freeze();applyW();
   S.drag={id:h.dataset.rz,x:e.clientX,w:W(h.dataset.rz),el:h,was,moved:false};h.classList.add('on');document.body.classList.add('rzing');
   try{h.setPointerCapture(e.pointerId)}catch{}});
-document.addEventListener('pointermove',e=>{const d=S.drag;if(!d)return;const w=Math.max(MINW,Math.round(d.w+e.clientX-d.x));if(w===S.w[d.id])return;S.w[d.id]=w;d.moved=true;applyW()});
+document.addEventListener('pointermove',e=>{const d=S.drag;if(!d)return;if(d.ph){const w=Math.max(MINW,Math.round(d.w+e.clientX-d.x));if(w!==S.pw[d.id]){S.pw[d.id]=w;d.moved=true;applyPW()}return}const w=Math.max(MINW,Math.round(d.w+e.clientX-d.x));if(w===S.w[d.id])return;S.w[d.id]=w;d.moved=true;applyW()});
 function endDrag(){const d=S.drag;if(!d)return;S.drag=null;d.el.classList.remove('on');document.body.classList.remove('rzing');
+  if(d.ph){if(d.moved){S.pwk={...S.pw};send({t:'pcols',widths:S.pw})}if(!d.moved&&d.was){S.pw=null;draw()}else if(S.pend){S.pend=false;draw()}return}
   if(d.moved)send({t:'cols',widths:S.w});else if(d.was){S.w=null;applyW()}
   if(S.pend){S.pend=false;draw()}}
 document.addEventListener('pointerup',endDrag);
 document.addEventListener('pointercancel',endDrag);
-document.addEventListener('dblclick',e=>{if(!e.target.closest('[data-rz]')||!fixed())return;S.w=null;send({t:'cols',widths:{}});draw()});
+document.addEventListener('dblclick',e=>{if(!e.target.closest('[data-rz]'))return;if(PH()){S.pw=null;S.pwk=null;send({t:'pcols',widths:{}});draw();return}if(!fixed())return;S.w=null;send({t:'cols',widths:{}});draw()});
 function find(id){return[...S.v.rows,...(S.v.gone||[])].find(r=>r.id===id)}
 function menu(el,html){const m=$('#menu'),b=el.getBoundingClientRect();m.innerHTML=html;m.hidden=false;m.style.left=Math.min(b.left,innerWidth-m.offsetWidth-8)+'px';m.style.top=(b.bottom+4)+'px';
   if(PH()&&b.bottom+4+m.offsetHeight>innerHeight-8)m.style.top=Math.max(8,b.top-4-m.offsetHeight)+'px'}
@@ -223,7 +247,8 @@ function mineMenu(el,field,id){S.menu=['m',field,id];const c=mineCols().find(x=>
 function setMine(field,id,value){const r=find(id);if(r){r[field]=value||null}send({t:'set',field,id,value});closeMenu();draw()}
 addEventListener('message',e=>{const m=e.data||{};
   if(m.t==='theme'){for(const[k,x]of Object.entries(m.vars||{}))if(x)document.documentElement.style.setProperty(k,x)}
-  else if(m.t==='data'){S.v=m.data;if(S.drag){S.pend=true;return}takeW(m.data);closeMenu();draw()}
+  else if(m.t==='data'){if(S.v&&m.data&&m.data.key!==S.v.key){S.pw=null;S.pwk=null}S.v=m.data;if(S.drag){S.pend=true;return}takeW(m.data);closeMenu();draw()}
+  else if(m.t==='pcols'){const w=m.widths&&typeof m.widths==='object'?m.widths:{};if(JSON.stringify(w)===JSON.stringify(S.pwk||{}))return;S.pwk=w;if(S.drag)return;S.pw=null;if(S.v&&PH())draw()}
   else if(m.t==='env'&&(m.device||null)!==DEV){DEV=m.device||null;if(S.v&&!S.drag){closeMenu();draw()}}});
 addEventListener('resize',()=>S.v&&!S.drag&&draw());
 document.addEventListener('click',e=>{const q=s=>e.target.closest(s);let t;

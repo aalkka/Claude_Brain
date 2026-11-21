@@ -15,7 +15,7 @@
  "manifest": "_index/{id}/manifest.json",
  "at_default": ["06:55"],
  "action": "collect.tick",
- "wake_level": "collect.wake",
+ "wake_level": "collect.chrome",
  "group": "강의",
  "filer": "collect-file.py",
  "login": {"line": "{id} 로그인 만료 — 크롬에서 로그인"}

@@ -315,7 +315,7 @@ function Get-ScheduledTaskInfo {{ $null }}
 
 
 def wake_cases(root):
-    """깨우기 통일(11-07 사용자 «두 스위치 통일») — 값은 기능 단계 collect.wake 하나 · 수집 창 깨우기·전체 끔·mylms 끔이 같은 예약 맞추기 길을 부름 · desk.json wake 는 안 읽음."""
+    """깨우기 통일(11-07 사용자 «두 스위치 통일») — 값은 기능 «크롬 띄우기» collect.chrome 하나(옛 collect.wake · 11-20 나눔) · 수집 창 깨우기·전체 끔·mylms 끔이 같은 예약 맞추기 길을 부름 · desk.json wake 는 안 읽음."""
     tv, ts = os.path.join(root, 'vault'), os.path.join(root, 'vault', '3_시스템')
     env = dict(os.environ, PYTHONIOENCODING='utf-8', FILEOPS_NO_OBSIDIAN='1', COLLECT_TEST_STATE=os.path.join(root, 'lms-state'), DESK_NO_OPEN='1')
     new, old, opt = os.path.join(ts, 'collect.local.json'), os.path.join(ts, 'lms', 'desk.json'), os.path.join(ts, 'options.local.json')
@@ -325,7 +325,7 @@ def wake_cases(root):
     run = lambda *a: subprocess.run([sys.executable, *a], cwd=tv, env=env, capture_output=True, encoding='utf-8', errors='replace', timeout=120)
     dk = lambda *a: run(os.path.join(tv, '.claude', 'skills', 'collect_desk', 'scripts', 'collect_desk.py'), *a)
     state = lambda: run(os.path.join(ts, 'collect-browser.py'), '--wake-state').stdout.strip()
-    level = lambda: ((load(opt) or {}).get('levels') or {}).get('collect.wake')
+    level = lambda: ((load(opt) or {}).get('levels') or {}).get('collect.chrome')
     last = lambda: (read(calls).strip().splitlines() or [''])[-1]
     wake_on = lambda: next((x.get('wakeOn') for x in json.loads(dk('view').stdout.strip().splitlines()[-1])['sources'] if x['id'] == 'mylms'), None)
 
@@ -333,8 +333,8 @@ def wake_cases(root):
     put(old, {'wake': False})
     ok('[깨우기] desk.json 옛 wake 칸은 안 읽음(값은 기능 단계 하나)', state() == 'on' and wake_on() is True, (state(), wake_on()))
     r = dk('set', 'mylms', 'wake', 'false')
-    ok('[깨우기] 창에서 끔 = 기능 단계 low · 옛 칸 걷음 · 시각 예약 맞추기(시험) 한 번 · mylms 예약 없음 · off level_low',
-       r.returncode == 0 and level() == 'low' and load(old) == {} and last() == NONE and wake_on() is False and state() == 'off level_low',
+    ok('[깨우기] 창에서 끔 = 크롬 띄우기 off · 옛 칸 걷음 · 시각 예약 맞추기(시험) 한 번 · mylms 예약 없음 · off chrome_off',
+       r.returncode == 0 and level() == 'off' and load(old) == {} and last() == NONE and wake_on() is False and state() == 'off chrome_off',
        (r.returncode, r.stderr[-200:], level(), load(old), last(), wake_on()))
     r = dk('set', 'mylms', 'wake', 'true')
     ok('[깨우기] 창에서 켬 = 기능 단계 high · 예약 맞추기 · on', r.returncode == 0 and level() == 'high' and last() == MY_ON and wake_on() is True,

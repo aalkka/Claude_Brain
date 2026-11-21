@@ -7,7 +7,8 @@
 출처 = 조리법 `3_시스템/collect/<id>.json`(켬 · 계약 있음 · `at` 있음) → 매일 그 시각 · 놓치면 깬 뒤 곧.
 크롬이 필요한 출처(로그인 가족)는 «제공자»가 예약 줄과 받기를 맡는다 — 제공자 = 이 폴더의 `collect-browser.py`(조리법 `collect/browser/*.json` 이 있을 때만 · 없으면 그 출처는 없음 · 11-16 S4).
   제공자 약속: schedule_tasks() → {예약 이름: (시각들, 깨우기, 행위 인자, 설명)} · run_at(sid) → 받기 · at_sources() → 맡는 출처 id 목록.
-PC 를 깨울지 = 수집 창 «잠든 PC»(collect.local.json wake_pc · 없으면 깨움). 시각이 없는 출처는 15분 반영이 recheck_hours 로 돌린다.
+PC 를 깨울지 = 기능 «PC 깨우기»(options collect.wake_pc · 없으면 옛 collect.local.json wake_pc · 둘 다 없으면 깨움 · collectlib.wake_pc). 시각이 없는 출처는 15분 반영이 recheck_hours 로 돌린다.
+깨워 받고 다시 재움: 웹 받기는 받는 동안만 PC 를 붙들고(ES_SYSTEM_REQUIRED) 놓는다 — 타이머로 깬 PC 는 윈도가 무인 절전(2분)으로 다시 재운다. 대본이 강제로 재우지 않는다(사람이 막 연 PC 를 재우지 않게 · 11-03).
 15분 반영 예약 «외부뇌-수집 반영»(brain.py run collect.tick · S7): 명령 줄이 같은 예약(이름 무관 · 옛 이름 포함)이 있으면 그것이 맡고 안 만든다 · 예약 목록을 못 읽으면 안 만든다(겹쳐 돌지 않게).
 다른 볼트가 맡으면 안 건드림: 수집 예약이 가리키는 brain.py 가 다른 볼트에 아직 있으면 --sync 는 아무것도 안 바꾼다(시험·사본 볼트가 진짜 예약을 덮어쓰지 않게 · 11-17).
 시험만: COLLECT_TEST_STATE(상태 폴더 · 예약을 안 건드리고 할 일을 tasks-sync.log 에) · COLLECT_TASK_DRY=1(예약을 안 건드리고 할 일만 적음).
@@ -86,7 +87,7 @@ def desired_tasks():
     sw = cl.switches(SYS)
     if sw.get('all_off') is True:
         return {}
-    wake = sw.get('wake_pc') is not False        # «잠든 PC» — 깨움 = 그 시각에 PC 를 깨움 · 깬 뒤 = 안 깨우고 깬 뒤 놓친 것 한 번(StartWhenAvailable)
+    wake = cl.wake_pc(SYS)                       # 기능 «PC 깨우기»(collect.wake_pc · 모든 시각 수집) — 켬 = 그 시각에 PC 를 깨움 · 끔 = 깬 뒤 놓친 것 한 번(StartWhenAvailable)
     out = {}
     m = provider()
     if m is not None and hasattr(m, 'schedule_tasks'):
@@ -275,6 +276,17 @@ def lock_path():
     return os.path.join(STATE, 'tick.lock' if not TEST_STATE else 'auto.lock')
 
 
+def hold_awake():
+    """받는 동안 PC 를 붙든다(ES_CONTINUOUS | ES_SYSTEM_REQUIRED) — 타이머로 깬 PC 는 무인 절전 2분 뒤 다시 잠들어 긴 받기가 끊긴다. 돌려줌 = 놓을 함수(윈도 밖·실패 = None)."""
+    try:
+        import ctypes
+        es = ctypes.windll.kernel32.SetThreadExecutionState
+        es(0x80000000 | 0x00000001)
+        return es
+    except Exception:
+        return None
+
+
 def run_at(sid):
     """시각 예약 «외부뇌-수집 <출처>»가 부른다. 제공자가 맡는 출처 = 제공자 · 웹 = 받을 차례면 받는다(web-collect --source --due · 15분 확인과 같은 잠금)."""
     m = provider()
@@ -286,12 +298,15 @@ def run_at(sid):
     if not held:
         log(f'시각 {sid}: 다른 처리 중 — 15분 확인이 이어 받는다')
         return print('받은 것: 웹 새 글 0 (다른 처리 중)')
+    es = hold_awake()
     try:
         r = subprocess.run([PY, os.path.join(SYS, 'web-collect.py'), '--source', sid, '--due'], cwd=VAULT, capture_output=True, text=True,
                            encoding='utf-8', errors='replace', creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         rc, out = r.returncode, (r.stdout or '') + (r.stderr or '')
     finally:
         held.close()
+        if es:
+            es(0x80000000)                  # ES_CONTINUOUS 만 — 붙들기를 놓는다(타이머로 깼으면 윈도가 2분 뒤 다시 재움)
     lines = [ln for ln in out.splitlines() if ln.startswith(sid + ':') or '대기열' in ln]
     log(f'시각 {sid}: web-collect rc={rc} ' + (' · '.join(lines)[:400] if lines else '받을 차례 아님(이미 받음)'))
     if rc and cl.queue_add('web', f'web-collect.py --source {sid} 실패 rc={rc}', once='line'):

@@ -187,6 +187,7 @@ CORE = [
     "3_시스템/follow.py", "3_시스템/outside.py", "3_시스템/default-layout.json",  # mf:allow-path
     # 받는 문 — 볼트 밖 → 받은함(ADR-031 · 2026-11-03)
     "3_시스템/door.py",  # mf:allow-path
+    "3_시스템/own.py", "3_시스템/claude_login.py",  # mf:allow-path  — 되찾기(11-20 범용판) · Claude 앱 로그인 풀림 읽기(건강 줄)
     # 코어 훅·행위가 부르는 대본(2026-11-03 반영 때 층 분류) — 표 고침·MOC·어긋남·기록·주간·일정·변환 · 대화창 규약 글
     "3_시스템/mdtable.py", "3_시스템/moc.py", "3_시스템/drift.py", "3_시스템/record.py", "3_시스템/weekly.py", "3_시스템/speed.py",  # mf:allow-path  (speed = weekly «속도» 칸 · 11-16)
     "3_시스템/skillstat.py", "3_시스템/schedule.py", "3_시스템/docpdf.py", "3_시스템/vault-chat/*",  # mf:allow-path
