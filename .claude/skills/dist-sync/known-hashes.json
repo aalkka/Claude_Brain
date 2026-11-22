@@ -45,7 +45,8 @@
 "85b1c05191a9": "fdfdd91d43316761",
 "935108da48b3": "cbe398b00d17f44e",
 "a1e6dc8ab40b": "fec5cf4c3e3f6b63",
-"d2277ce29d57": "a629e58dfba34cfb"
+"d2277ce29d57": "a629e58dfba34cfb",
+"d97c8afd49fc": "2a2c73f8227f666f"
 },
 ".claude/skills/collect_desk/skills/add/SKILL.md": {
 "2f30e33282bc": "03a99a07fcd646f8",
@@ -589,6 +590,7 @@
 },
 "3_시스템/_eval/measure.md": {
 "9713fa5373ad": "876de08079c5b890",
+"e545a5417069": "4f387bda7ef8298a",
 "f1f758e57070": "ab38ea959b8206c8",
 "f605cedf9199": "0c97502427f50a25",
 "f8d73bb03b72": "f4ff06b32808e0b2",
@@ -659,7 +661,8 @@
 "a9679c105e86": "d60e0d1c47d93d8b"
 },
 "3_시스템/_eval/sort_learn_check.py": {
-"9e0fca77f725": "19f5e3ee51b2b331"
+"9e0fca77f725": "19f5e3ee51b2b331",
+"fca8113778eb": "42f65ab270e42d13"
 },
 "3_시스템/_eval/sort_notice_golden.py": {
 "62772cc779c7": "5ac91d18e5f9fe1f"
@@ -921,7 +924,8 @@
 },
 "3_시스템/collect-file.py": {
 "19a260bd9a63": "095203d35d2013ef",
-"cbd654c36112": "31e08456dd6c327a"
+"cbd654c36112": "31e08456dd6c327a",
+"ebd52101a204": "9dc43c4ed2d71eaf"
 },
 "3_시스템/collect-schedule.py": {
 "4916e4dba0f9": "4b730d027acf3f9e",
@@ -1614,6 +1618,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "7e3abe4f5b87",
+"rev": "df79c64755ef",
 "schema": 1
 }
