@@ -59,6 +59,10 @@ def run(T):
     NOW = datetime.now().replace(second=0, microsecond=0)
     TODAY = NOW.date()
     nf = load('notice_filter', os.path.join(SYS, 'notice-filter.py'))
+    miss = [x for x in (nf.STATE, nf.RECIPES, nf.CARD) if not os.path.exists(x)]
+    if miss:                                               # 새 볼트 = 공지 수집을 아직 안 돌림 — 견줄 옛 길 자료가 없다
+        print('건너뜀: 이 볼트에 공지 수집 자료가 없다 — 이 시험은 공지 수집을 쓰는 볼트의 자료로 잰다 · 없음 ' + ' · '.join(os.path.relpath(x, VAULT) for x in miss))
+        return 0
     # ── 사본 ──
     st = os.path.join(T, 'state')
     shutil.copytree(nf.STATE, st, ignore=shutil.ignore_patterns('*.log', '*.lock', '제출'))

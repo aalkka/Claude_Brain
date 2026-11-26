@@ -253,6 +253,7 @@
    "3_시스템/_eval/sort_desk_check.py",
    "3_시스템/_eval/sort_learn_check.py",
    "3_시스템/_eval/sort_notice_golden.py",
+   "3_시스템/_eval/tag_alert_check.py",
    "3_시스템/collect_price.py",
    "3_시스템/sort-examples/",
    "3_시스템/sort_collect.py",

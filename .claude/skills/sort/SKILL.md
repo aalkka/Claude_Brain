@@ -42,4 +42,4 @@ description: 분류·태그·알림 범용 도구 셋(sort.py · tag.py · 알�
 ## 지킬 것
 - 분류는 결정만 · 태그·알림은 동작만 — 태그 도구·알림 도구에 «붙일지·울릴지»를 넣지 않는다(체계 규칙으로).
 - `1_수집` 원본은 고치지 않는다(태그는 겹쳐 보이기). 노트 쓰기는 기본 끔 — 켜는 것은 사용자 결정.
-- 겉 동작 검사: `sort.py check` · `_eval/sort_check.py` · `_eval/sort_notice_golden.py`(py -3 · py -3.11) · 알림 쪽은 mobility 모듈의 시험.
+- 겉 동작 검사: `sort.py check` · `_eval/sort_check.py` · `_eval/sort_notice_golden.py`(py -3 · py -3.11) · `_eval/tag_alert_check.py`(알림 쪽은 mobility 모듈이 있을 때만 돈다).

@@ -135,6 +135,12 @@ def skip_pending(item):
     return bool(dl) and dl < date.today().isoformat()
 
 
+def redo(item):
+    """판정은 있지만 다시 뽑을 글 — 글이 고쳐져 새 판을 받음(web-collect revise · again). 옛 extract 처럼 그때까지 옛 캐시로 판정."""
+    if item['raw']['d'] is not None and item['raw']['n'].get('again'):
+        return '글이 고쳐짐 — 다시 뽑기 전(옛 캐시로 판정 중)'
+
+
 def _posts_map():
     """로그인 출처 글 칸 sid → 그 조리법 id(판정 자리) — 한 번 읽어 둠(run 한 번에 대상마다 묻는다)."""
     if not _pm:
