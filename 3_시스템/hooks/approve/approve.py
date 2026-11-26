@@ -19,7 +19,7 @@
   approve.py result <run> <NN>              명령 승인의 상태·결과 JSON
   approve.py reject-cmd <run> <NN> [--why 글]    폰 «거절» - 명령 요청을 닫는다
 
-목적·사유(11-20 approve-all): 모든 승인(묶음 meta · 명령 요청)에 purpose(목적 40자)·reason(사유 80자)이 한 줄씩 있어야 한다 · 비면 거절.
+목적·사유(11-20):모든 승인(묶음 meta · 명령 요청)에 purpose(목적 40자)·reason(사유 80자)이 한 줄씩 있어야 한다 · 비면 거절.
 명령 승인 = 사용자 권한 PowerShell 한 줄(관리자 승격·숨긴 명령·게이트 코어 경로 거절) · 서명 글이 명령 글·작업 폴더·이름이 나온 파일 sha 를 덮는다.
 
 믿음: 폰 승인의 근거는 키 목록(keys.txt · 이 폴더)에 있는 폰 Keystore 키의 서명 하나뿐이다. 서버 토큰·서버·pending.py 는 나르기만 한다.
@@ -65,7 +65,7 @@ GATE_CORE = re.compile(r"(^|/)CLAUDE\.md$|^3_시스템/hooks/|^3_시스템/searc
 # 자기 제외 = 폰으로 못 붙이는 자리(승인 장치 · 게이트 자신 · 훅 등록) - PC y 로만.
 SELF = re.compile(r"^3_시스템/hooks/approve/|^3_시스템/hooks/core-gate[^/]*$|^\.claude/settings(\.local)?\.json$"  # mf:allow-path
                   r"|(^|/)\.core-token[. ]*$", re.I)
-# 목적·사유 · 명령 승인(11-20 approve-all · 설계 §9)
+# 목적·사유 · 명령 승인(11-20 · 설계 §9)
 RUN_PURPOSE = "brain-approve/1 run"
 PURPOSE_MAX, REASON_MAX = 40, 80   # 글자 수(NFC)
 CMD_MAX = 2000                     # 명령 한 줄 상한(글자)
@@ -700,7 +700,7 @@ def bundle(run):
     return root, group, diffs, [p for p in paths if SELF.search(p)], [p for p in paths if GATE_CORE.search(p)]
 
 
-# ── 명령 승인(사용자 권한 한 줄 · 11-20 approve-all · 설계 §9.3) ─────────
+# ── 명령 승인(사용자 권한 한 줄 · 11-20 · 설계 §9.3) ─────────
 # 요청 = <bigboss>/<run>/commands/NN-이름.json (pending.py cmd 가 쓴다 · 비코어 · 안 믿음) - 믿는 것은 이 파일이 서명 글을 다시 만들어 견주는 것뿐.
 def cmd_dir(run):
     return os.path.join(bb_root(), re.sub(r"[^\w.-]", "-", run), "commands")
