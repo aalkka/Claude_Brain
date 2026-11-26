@@ -17,6 +17,7 @@ description: 신규 설치 개인최적화. 첫 실행 시 또는 "/재보정" �
 5. 목표·프로젝트: 활성 목표 → open-loops "활성".
 6. 경계·금지: 절대 금지·프라이버시(sensitive 태그 대상) → profile 경계·금지.
 7. 기존 지식: 이전할 노트/PDF 있나 → 있으면 inbox/pdf-ingest 경로 안내(일괄 마이그레이션 아님, 개별).
+7b. 주제 등록(묻지 않고 · 볼트에 노트·폴더가 이미 있을 때): `dist-sync:update` 4단계 «적용 뒤 = 주제 등록» 과 같은 절차(`py -3 3_시스템/topic_register.py scan` → `add` → «주제:» 값 · `loose` → `tag`) · 결과 한 줄과 되돌리기 묶음 id 를 알린다.
 8. 하드웨어: **자동감지 먼저** — `nvidia-smi --query-gpu=name,memory.total --format=csv` 실행(실패 시 `wmic path win32_VideoController get name` + RAM은 `systeminfo`). 감지 실패 시에만 질문. → 임베딩 모델 config 결정(VRAM≥8GB=bge-m3 / 4~8GB=e5-base / 그 외·CPU=e5-small). 일반 사용자는 GPU 사양 모름 — 물어보는 것보다 감지가 정확.
    **우선순위: 측정 > 티어표.** `_eval/results-*`에 측정 채택 구성이 이미 있으면(=첫 사용자·측정 수행자) 그것이 config 우선 — 티어표는 측정 안 하는 신규 배포 사용자의 기본값. config는 `3_시스템/config.json` `"embed_model"`.
    **기능 단계(옵션):** 감지 뒤 `options` 스킬 절차(재기 → 표 → 답 → 확정)를 이 자리에서 돈다. 새 볼트는 모델이 아직 없어 임베딩은 CPU 점수로 미루고, 노트가 적어 git·색인 값이 작게 나온다(까닭에 «빈 볼트 값» · 노트가 3배로 늘면 건강 줄이 «옵션 추천 다시»를 권함). **의미 찾기가 «끔»이면 임베딩 모델을 내려받지 않는다.**

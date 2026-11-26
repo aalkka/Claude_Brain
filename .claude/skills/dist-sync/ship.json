@@ -190,6 +190,7 @@
    "3_시스템/migrations/"
   ],
   "본체 · 볼트 대본": [
+   "3_시스템/topic_register.py",
    "3_시스템/restart.py",
    "3_시스템/after_restart.json",
    "3_시스템/module_ship.py",
