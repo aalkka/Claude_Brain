@@ -198,7 +198,11 @@ def ops_rows():
         r = subprocess.run(["git", "-C", VAULT, "log", "-1", "--format=%ct"], capture_output=True, text=True, timeout=5)
         h = (time.time() - int(r.stdout.strip())) / 3600
         if h >= COMMIT_H:
-            rows.append(("운영", "git", f"마지막 커밋 {int(h)}시간 전 — 자동 커밋 확인"))
+            # 커밋할 것이 남아 있을 때만 «멈춤» — 새로 받은 볼트(마지막 커밋 = 배포 커밋 · 작업 트리 깨끗)나
+            # 며칠 안 쓴 볼트는 오래된 커밋이 정상이다(11-26 새 설치 첫 세션에 거짓 경고)
+            s = subprocess.run(["git", "-C", VAULT, "status", "--porcelain", "-uno"], capture_output=True, text=True, timeout=10)
+            if s.returncode != 0 or s.stdout.strip():
+                rows.append(("운영", "git", f"마지막 커밋 {int(h)}시간 전 — 자동 커밋 확인"))
     except (OSError, ValueError, subprocess.SubprocessError):
         pass
     # 민감 노트가 추적되면 자동 push 로 원격에 간다 — pre-commit 은 스테이지 순간만 보고 이미 든 것은 못 뺀다(11-05 실측 7건)
