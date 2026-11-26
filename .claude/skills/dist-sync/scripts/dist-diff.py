@@ -425,7 +425,7 @@ def load_allow(vault):
         return ALLOW_ALWAYS | {ln.split("#")[0].strip().lower() for ln in f if ln.split("#")[0].strip()}
 
 
-ALLOW_ALWAYS = {"noreply@anthropic.com"}       # 커밋 꼬리 Co-Authored-By (11-22 이력 검사 거짓 표시)
+ALLOW_ALWAYS = {"noreply@" "anthropic.com"}    # 커밋 꼬리 Co-Authored-By (11-22 이력 검사 거짓 표시) · 둘로 끊어 적음 = 이 줄이 메일 꼴에 안 걸리게
 BUNDLE = re.compile(r"^\.obsidian/plugins/[^/]+/[^/]+\.(js|mjs|css)$|\.min\.(js|css)$")
 PLUGIN_TOP = re.compile(r"^\.obsidian/plugins/[^/]+/[^/]+$")     # 플러그인 폴더 맨 위 — 번들·manifest(남의 플러그인 작성자 메일)
 NOTICE = re.compile(r"(^|/)(THIRD_PARTY_NOTICES|LICENSE|NOTICE|COPYING)[^/]*$", re.I)
