@@ -420,7 +420,7 @@ def load_allow(vault):
     """배포판이 일부러 쓰는 값(개인 층 leak-allow.txt · 한 줄에 하나 · # 뒤는 까닭) — 걸린 글이 이 값과 같으면(대소문자 무시) 안 센다."""
     p = os.path.join(vault, LEAK_ALLOW)
     if not os.path.exists(p):
-        return set()
+        return set(ALLOW_ALWAYS)          # 허용 파일이 없는 볼트(새로 받은 배포판)도 늘 허용 값은 쓴다 — 전엔 공개 이력의 커밋 꼬리 메일 52줄이 걸렸다
     with open(p, encoding="utf-8") as f:
         return ALLOW_ALWAYS | {ln.split("#")[0].strip().lower() for ln in f if ln.split("#")[0].strip()}
 
