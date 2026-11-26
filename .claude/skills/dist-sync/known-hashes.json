@@ -220,6 +220,9 @@
 ".claude/skills/dist-sync/scripts/privguard.py": {
 "624e6a31b405": "6252f0e595b42ff7"
 },
+".claude/skills/dist-sync/scripts/pub_merge.py": {
+"f9c7a30a0a0e": "7e39876e73e496cf"
+},
 ".claude/skills/dist-sync/scripts/test_dist_check.py": {
 "33514b3f688d": "5e0a0b4d0b305a12",
 "3f5124c086a1": "726d10de6e05912c",
@@ -260,6 +263,7 @@
 "be0593105623": "b4cb6b18fc4f8aef",
 "dc66e7abc1db": "98bbfbc4fc281932",
 "ec3bbfe21d8a": "c2420238b81cf4ea",
+"ee4c7e3623bb": "a4f7d9c84a05fd6a",
 "fc60e208826f": "171c3768befc01a7"
 },
 ".claude/skills/dist-sync/skills/update/SKILL.md": {
@@ -1875,6 +1879,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "e9b0c56c6cf3",
+"rev": "8b7d67d025aa",
 "schema": 1
 }
