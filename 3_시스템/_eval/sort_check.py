@@ -84,9 +84,9 @@ try:
        sort.resolve('@가격선', env(trip('2027-02-10', '2027-02-15'), vals)) == 900000
        and sort.resolve('@가격선', env(trip('2027-01-20', '2027-01-25'), vals)) == 700000
        and sort.resolve('@가격선', env({}, vals)) is sort.MISSING)
-    sort.set_card({'꽁돈': {'지급': ['현금']}})
-    cv = sort.card_view({'카드기본': {'꽁돈': {'지급': ['현금', '혼합'], '소득심사 막음': True}}})
-    ok('@카드 + 카드기본 — 카드가 이기고 빈 열쇠만 채움', cv['꽁돈'] == {'지급': ['현금'], '소득심사 막음': True})
+    sort.set_card({'황금': {'지급': ['현금']}})
+    cv = sort.card_view({'카드기본': {'황금': {'지급': ['현금', '혼합'], '소득심사 막음': True}}})
+    ok('@카드 + 카드기본 — 카드가 이기고 빈 열쇠만 채움', cv['황금'] == {'지급': ['현금'], '소득심사 막음': True})
     ok('체계.<id> · 빼기', sort.resolve('체계.공지', e) == '해당' and sort.resolve({'빼기': ['@가격선', 'p']}, env({'p': 1, **trip('2027-01-01', '2027-01-05')}, vals)) == 699999)
     # ── 표 규칙(예시 체계 · 설계 §8.4 예) ──
     ex = json.load(open(os.path.join(sort.EXAMPLES, '항공권-티어.json'), encoding='utf-8'))
@@ -233,7 +233,7 @@ try:
        and res[1][0]['요약'] == '한 건' and res[0][1]['in'] == 2000)
     ns2 = ns + [{'rc': {'filter': {}}, 'title': 'x', 'date': '', 'text': '짧음', 'att': []}]
     bs = nft.batches(ns2, 6)
-    ok('batches — 지시문(꽁돈 칸)이 다르면 다른 묶음 · 1 = 한 건씩', [len(b) for b in bs] == [3, 1] and len(nft.batches(ns2, 1)) == 4)
+    ok('batches — 지시문(황금 칸)이 다르면 다른 묶음 · 1 = 한 건씩', [len(b) for b in bs] == [3, 1] and len(nft.batches(ns2, 1)) == 4)
     del sys.modules['ingest_vision']
 
     # ── check ──

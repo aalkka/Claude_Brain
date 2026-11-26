@@ -82,6 +82,10 @@ SEED = [
     "2_지식/주제.md",  # mf:allow-path  (볼트 개혁 R6 — 머리말 = 규약 · JSON 블록 = 개인 주제)
     "2_지식/보존.md",  # mf:allow-path  (볼트 개혁 R8 — 표 값은 사용자가 고침)
 ]
+# 일반 CSS 스니펫 — `.obsidian/` 은 통째로 제외지만 이 둘은 씨앗으로 싣는다(없으면 넣음 · 있는 파일은 안 건드림 · 켜는 것은 사용자 설정).
+# 개인 태그의 칠(태그 사전 «칠» → tag.py paint 가 만드는 스니펫)은 여기 적지 않는다 — 사용자마다 자기 볼트에서 만든다.
+SEED_SNIPPETS = [".obsidian/snippets/canvas-card-properties.css", ".obsidian/snippets/source-index.css"]  # mf:allow-path
+SEED += SEED_SNIPPETS
 # CLAUDE.md 는 단독 층 — §0(개인) + 나머지(코어)가 한 파일이다.
 # 경로 «세그먼트» 제외 — 글로브는 중첩 경로를 못 잡는다.
 #   DoD 검증(2026-09-12)에서 `.claude/skills/*/scripts/__pycache__/*.pyc` 가 새어 들어왔고
@@ -328,6 +332,8 @@ def layer(rel):
             if p.endswith(EXCLUDE_EXT):
                 return "제외"
             return "개인" if p[len(d):] in DIST_PLUGIN_PERSONAL else "코어"
+    if p in SEED_SNIPPETS:
+        return "씨앗"
     if EXCLUDE_SEG & set(segs) or p.endswith(EXCLUDE_EXT):
         return "제외"
     if p in PERSONAL_EXCEPT:
@@ -370,7 +376,7 @@ def walk(root):
         # 배포 플러그인으로 가는 길(.obsidian · .obsidian/plugins)은 그 폴더 하나만 보러 들어간다 — 형제 파일은 layer 가 제외한다
         dns[:] = [d for d in dns
                   if (rel_dir + "/" + d).lstrip("/") == KNOWLEDGE
-                  or any(x.startswith((rel_dir + "/" + d).lstrip("/") + "/") for x in DIST_PLUGINS)
+                  or any(x.startswith((rel_dir + "/" + d).lstrip("/") + "/") for x in DIST_PLUGINS + SEED_SNIPPETS)
                   or layer((rel_dir + "/" + d).lstrip("/") + "/x") not in ("개인", "제외")]
         for fn in fns:
             rel = (rel_dir + "/" + fn).lstrip("/")
@@ -1230,7 +1236,7 @@ def update_plan(A, B):
                 out = os.path.join(state, L_CLAUDE.replace(".md", ".merged.md"))
                 write_text(out, merged)
                 ops.append({"op": "put", "rel": r, "src": os.path.abspath(out), "why": why})
-        elif lay == "씨앗" and r not in fb and os.path.dirname(r) in (KNOWLEDGE, "3_시스템"):  # mf:allow-path
+        elif lay == "씨앗" and r not in fb and (os.path.dirname(r) in (KNOWLEDGE, "3_시스템") or r in SEED_SNIPPETS):  # mf:allow-path
             ops.append({"op": "put", "rel": r, "src": os.path.abspath(fa[r]), "why": WHY_SEED})
         elif lay in ("씨앗", "미분류") and (r not in fb or sha(fa[r]) != sha(fb[r])):
             notes.append("%s 층이라 넣지 않음: %s" % (lay, r))

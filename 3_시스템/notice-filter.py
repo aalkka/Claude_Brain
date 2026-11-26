@@ -9,10 +9,10 @@
 저장 전 거르기(10-29 · 수집은 선별): 엔진(web-collect)이 글을 받기 전에 gate()(제목만 · LLM 0)를 묻고, 받은 글은 대기 칸
     (_index/collect/stage — 볼트 지식층 밖)에 둔다. 판정이 나면 엔진 settle 이 verdicts()를 물어 KEEP(해당·확인 필요·관심)만
     볼트로 들이고, 비해당은 대기 칸에 둔 채 장부 한 줄(카드가 바뀌면 다시 판정) · 지남은 지운다. 추출은 본문만 먼저(첨부는 들인 뒤).
-꽁돈(11-10 · 황금 태그): 조리법 filter.gold 가 켠 글은 추출 때 지급 형태·선정 뒤 의무·소득 심사도 뽑는다(같은 호출).
-    판정이 해당·확인 필요이고 카드 «꽁돈» 칸(현금·막는 의무·소득 심사)을 넘으면 일정 줄에 #꽁돈 · 판정표에 «꽁돈» · 수집 창 한 줄 맨 앞에 «꽁돈».
+황금(11-10 · 황금 태그): 조리법 filter.gold 가 켠 글은 추출 때 지급 형태·선정 뒤 의무·소득 심사도 뽑는다(같은 호출).
+    판정이 해당·확인 필요이고 카드 «황금» 칸(현금·막는 의무·소득 심사)을 넘으면 일정 줄에 #황금 · 판정표에 «황금» · 수집 창 한 줄 맨 앞에 «황금».
 
-분류 엔진 잇기(범용 도구 셋 S4 · 11-18): 판정(judge_one)·꽁돈(gold)은 sort 판정 장부에서 읽는다(bridge · 체계 3_시스템/sort/공지-들이기·꽁돈 ·
+분류 엔진 잇기(범용 도구 셋 S4 · 11-18): 판정(judge_one)·황금(gold)은 sort 판정 장부에서 읽는다(bridge · 체계 3_시스템/sort/공지-들이기·황금 ·
     겉 출력은 옛 길과 바이트 같음 = _eval/sort_notice_golden.py). 옛 길 = collect.local.json "sort": false · sort 가 오류를 내면 그 회차만 옛 길 + 대기열 한 줄.
 
   py -3.11 3_시스템/notice-filter.py extract [--max N] [--again 글번호...] [--batch N]   # 추출 안 된 공지만 claude -p(--again = 첨부 색인을 고친 글도 다시) — 사용량이 든다(누를 때만) · 끝나면 settle
@@ -35,6 +35,8 @@ VAULT = os.path.dirname(SYS)
 sys.path.insert(0, SYS)
 import roles  # noqa: E402 — 노트는 이름으로 찾는다(볼트 개혁 R6 · 옮겨도 따라감)
 import collectlib as cl  # noqa: E402 — 로그인 출처 조리법 읽기(S6)
+import sort as _sort  # noqa: E402 — 개인화 파트 읽기(황금 태그 이름)
+GOLD_TAG = _sort.gold_tag()                             # 황금 태그 이름(일정 줄 # · 판정표 · 수집 창 한 줄 · 자격 카드 칸) — 개인화 파트 · 없으면 «황금»
 ME = roles.me()                                     # 사용자 호칭(프로필) — 표시·장부 글에
 CARD = os.path.join(VAULT, *(roles.find_note('자격-카드') or roles.path('notes', '자격-카드.md')).split('/'))
 RECIPES = os.path.join(SYS, 'collect')          # 거를 출처 = 조리법에 "filter" 가 있는 것(출처 이름을 코드에 두지 않는다)
@@ -72,7 +74,7 @@ JSON 하나만 출력한다(앞뒤 글 없음):
 - 기타: 위에 없는 조건 짧은 설명
 규칙: 근거는 반드시 원문 그대로(띄어쓰기 포함, 고치지 말 것). 조건이 «첨부 참조»·그림에만 있다고 보이면 "첨부에만":true.
 조건이 없으면 "조건":[]. 마감은 이 공지의 신청·접수 마감(학교 기한이 따로 있으면 학교 기한)."""
-# 꽁돈 칸(11-10) — 조리법 filter.gold 가 켠 글에만 덧붙인다(true = 모든 글 · 글자 = 제목이 맞는 글). 자격 판정과 따로 «받으면 통장으로 현금이 오고
+# 황금 칸(11-10) — 조리법 filter.gold 가 켠 글에만 덧붙인다(true = 모든 글 · 글자 = 제목이 맞는 글). 자격 판정과 따로 «받으면 통장으로 현금이 오고
 # 무거운 의무가 없는가»를 본다. 근거는 조건과 같이 원문 그대로 — 원문에 없으면 그 칸은 모름.
 GOLD = """
 이 공지가 장학금·지원금 모집이면 JSON 에 세 칸을 더한다(아니면 "지급":null,"의무":[],"소득심사":null):
@@ -82,7 +84,7 @@ GOLD = """
  "의무":[{"종류":"보고서|활동|근로봉사|사용계획|행사|성적유지|기타","근거":"<원문 그대로>"}]
    선정된 뒤 해야 하는 일만(연구·결과 보고서 제출 · 정기 활동·멘토링 · 근로·봉사 시간 · 사용계획서·영수증 · 행사 참석 · 성적 유지). 지원할 때 내는 서류는 의무가 아니다.
  "소득심사":{"반영":true,"근거":"<원문 그대로>"} — 자격 조건은 아니지만 심사에서 소득·가계 형편을 본다는 문장이 있을 때만. 없으면 null."""
-GOLD_DEFAULT = {'지급': ['현금', '혼합'], '막는 의무': ['보고서', '활동', '근로봉사', '사용계획'], '소득심사 막음': True}   # 카드 «꽁돈» 칸이 덮어쓴다
+GOLD_DEFAULT = {'지급': ['현금', '혼합'], '막는 의무': ['보고서', '활동', '근로봉사', '사용계획'], '소득심사 막음': True}   # 카드 «황금» 칸이 덮어쓴다
 # 묶어 부르기(11-18 · 설계 §5) — 같은 지시문 글 여러 개를 한 호출로. 고정분(지시문 약 2,800 토큰)을 나눠 낸다. 기본 끔(--batch 1) · 질 시험 = _eval/sort_batch_quality.py
 BATCH = """
 여러 공지를 한 번에 준다(«=== 공지 k ===» 줄로 나뉨). 공지마다 위 꼴의 JSON 하나를 따로 만들고 맨 앞에 "번호":k 칸을 더한다.
@@ -281,7 +283,7 @@ def parse_array(out):
 
 
 def extract_many(ns):
-    """묶어 부르기 — 같은 지시문(꽁돈 칸 켬·끔이 같음)의 글 여러 개를 한 호출로. 돌려줌 = [(d | None, 사용량, 오류)] 글마다(사용량은 고르게 나눔 · «묶음» 칸).
+    """묶어 부르기 — 같은 지시문(황금 칸 켬·끔이 같음)의 글 여러 개를 한 호출로. 돌려줌 = [(d | None, 사용량, 오류)] 글마다(사용량은 고르게 나눔 · «묶음» 칸).
     배열이 깨지면 한 번 더 · 그래도 빠진 글은 그 글만 한 건씩(extract_one) — 묶음이 망가져도 글은 안 잃는다."""
     import ingest_vision as iv
     if len(ns) == 1:
@@ -801,12 +803,12 @@ def gold_on(n):
 
 
 def gold(n, d, me, v):
-    """꽁돈(황금 태그) — 해당·확인 필요 가운데 통장으로 현금이 오고, 막는 의무·소득 심사가 없는 글.
-    돌려줌 (True | False | None, 까닭). None = 따질 수 없음(꽁돈 칸이 꺼진 출처 · 꽁돈 칸 없이 뽑힌 옛 캐시 · 자격 밖).
+    """황금(황금 태그) — 해당·확인 필요 가운데 통장으로 현금이 오고, 막는 의무·소득 심사가 없는 글.
+    돌려줌 (True | False | None, 까닭). None = 따질 수 없음(황금 칸이 꺼진 출처 · 황금 칸 없이 뽑힌 옛 캐시 · 자격 밖).
     근거가 원문에 없으면: 지급은 «모름»(황금 아님) · 의무·소득 심사는 있는 것으로 본다(헛황금을 막는 쪽)."""
     if not gold_on(n) or v not in ('해당', '확인 필요') or '지급' not in d:
         return None, ''
-    cfg = {**GOLD_DEFAULT, **(me.get('꽁돈') or {})}
+    cfg = {**GOLD_DEFAULT, **(me.get(GOLD_TAG) or {})}
     strong, weak = src_text(n)
     seen = lambda q: bool(norm(q)) and (norm(q) in strong or norm(q) in weak)
     pay = d.get('지급') or {}
@@ -818,7 +820,7 @@ def gold(n, d, me, v):
         return False, '의무 ' + '·'.join(dict.fromkeys(heavy))
     if cfg.get('소득심사 막음') and (d.get('소득심사') or {}).get('반영'):
         return False, '소득 심사'
-    return True, f'꽁돈 · {form} «{(pay.get("근거") or "")[:30]}»'
+    return True, f'{GOLD_TAG} · {form} «{(pay.get("근거") or "")[:30]}»'
 
 
 def judge_one(n, d, me):
@@ -884,8 +886,8 @@ def judged(sid):
         d = json.load(open(cpath(n), encoding='utf-8'))
         v, res = judge_one(n, d, me)
         why = ' · '.join(dict.fromkeys(x[1] for x in res if x[0] in ('불충족', '모름', '관심')))
-        if gold(n, d, me, v)[0]:          # 수집 창은 이 한 줄(엔진 상태 why)을 보여 준다 — 꽁돈을 맨 앞에
-            why = '꽁돈' + (f' · {why}' if why else '')
+        if gold(n, d, me, v)[0]:          # 수집 창은 이 한 줄(엔진 상태 why)을 보여 준다 — 황금을 맨 앞에
+            why = GOLD_TAG + (f' · {why}' if why else '')
         out[n['id']] = (v, why[:160], deadline(n, d))
     return out
 
@@ -1010,7 +1012,7 @@ def judge(quiet=False):
         if g:
             golds.append(f'- {dl or "마감?"} · {n["title"][:60]} — {gwhy}')
         elif g is False:
-            gwhy = f'꽁돈 아님({gwhy})'
+            gwhy = f'{GOLD_TAG} 아님({gwhy})'
         if v == '비해당':
             r = next(x for x in res if x[0] == '불충족')
             why = f'{r[1]} — «{(r[2].get("근거") or "")[:60]}»'
@@ -1025,13 +1027,13 @@ def judge(quiet=False):
             why = '추출 전 — `notice-filter.py extract`' if v.startswith('판정 대기') else ''
         if gwhy:
             why = f'{why} · {gwhy}' if why else gwhy
-        L.append(f'- **{v}**{" · 꽁돈" if g else ""} {dl or "마감?"} · {"" if n["where"] == "볼트" else "(" + n["where"] + ") "}{n["title"][:60]} — {why}')
+        L.append(f'- **{v}**{" · " + GOLD_TAG if g else ""} {dl or "마감?"} · {"" if n["where"] == "볼트" else "(" + n["where"] + ") "}{n["title"][:60]} — {why}')
     for rc in recipes():                 # 장부 — 제목만으로 걸러져 본문을 받지 않은 글
         for aid, it in state_items(rc).items():
             if not it.get('path') and not it.get('stage') and not it.get('archived') and it.get('verdict'):
                 cnt[(rc['id'], '장부 ' + it['verdict'])] = cnt.get((rc['id'], '장부 ' + it['verdict']), 0) + 1
                 L.append(f'- **{it["verdict"]}** (장부) · {(it.get("title") or "")[:60]} — {it.get("why", "")} · {it.get("url", "")}')
-    L += ['', '## 꽁돈 (해당·확인 필요 중 현금 · 막는 의무 없음 · 기준 = 카드 «꽁돈» 칸)', *(golds or ['- 없음'])]
+    L += ['', f'## {GOLD_TAG} (해당·확인 필요 중 현금 · 막는 의무 없음 · 기준 = 카드 «{GOLD_TAG}» 칸)', *(golds or ['- 없음'])]
     L += ['', '## 집계', *[f'- {k[0]} {k[1]}: {c}' for k, c in sorted(cnt.items())]]
     # 성과 칸(M1-4) — 출처별 자리 수 · 사용자 표시 · 놓침 장부. 목표값은 기준선(M2 뒤 2주)을 잰 다음 정한다.
     marks, S = load_marks(), {}
@@ -1096,7 +1098,7 @@ def write_schedule(rows, SCHED, label):
         dd = datetime.strptime(dl, '%Y-%m-%d')
         # 짧은 글 번호는 게시판마다 따로 늘어나 한 파일에서 겹칠 수 있다(체크가 번지고 알림 키가 같아진다) — 출처를 붙인다. 포털 18자리는 게시판 번호가 들어 있고 이미 쓰는 줄이라 그대로
         bid = f'sch-{n["id"]}' if len(n['id']) >= 12 else f'sch-{n["sid"]}-{n["id"]}'
-        tag = ('' if v == '해당' else f' ({v})') + (' #꽁돈' if gold(n, d, me, v)[0] else '')   # 황금 태그(CSS 조각 꽁돈.css)
+        tag = ('' if v == '해당' else f' ({v})') + (' #' + GOLD_TAG if gold(n, d, me, v)[0] else '')   # 황금 태그(칠 = 태그 사전 «칠» · tag.py paint)
         name = re.sub(r'^\[[^\]]*\]\s*', '', n['title'])[:50]
         if (dl, norm(name)) in seen:     # 같은 글을 여러 게시판이 올림(표본 단과대·학부 공지 제목 3개가 같다) — 한 줄만
             continue
@@ -1106,13 +1108,13 @@ def write_schedule(rows, SCHED, label):
     title = os.path.splitext(os.path.basename(SCHED))[0].replace('-', ' ')
     head = ['---', 'type: episodic', f'title: {title}', f'created: {today}', f'updated: {today}', f'tags: [일정, {label}, 생성파일]',
             'links: ["[[외부뇌-일정-형식]]", "[[자격-카드]]"]', 'status: active', 'source: claude', '---', f'# {title} (생성 파일)', '',
-            '> `3_시스템/notice-filter.py judge` 가 «해당»·«확인 필요» 중 마감이 남은 것만 다시 쓴다(조리법 `filter.schedule`). 체크만 남는다. 비해당과 근거는 `3_시스템/_index/collect/판정.md`. 꽁돈 태그 = 통장으로 현금이 오고 막는 의무가 없는 것(카드 «꽁돈» 칸).', '']
+            '> `3_시스템/notice-filter.py judge` 가 «해당»·«확인 필요» 중 마감이 남은 것만 다시 쓴다(조리법 `filter.schedule`). 체크만 남는다. 비해당과 근거는 `3_시스템/_index/collect/판정.md`. ' + GOLD_TAG + ' 태그 = 통장으로 현금이 오고 막는 의무가 없는 것(카드 «' + GOLD_TAG + '» 칸).', '']
     with open(SCHED, 'w', encoding='utf-8', newline='\n') as f:
         f.write('\n'.join(head + lines) + '\n')
 
 
 # ───────── 분류 엔진 잇기(범용 도구 셋 S4 · 11-18 · 설계 §9) ─────────
-# 판정(judge_one)·꽁돈(gold) = sort 판정 장부 읽기(sort_collect 다리). 한 프로세스에 sort.run 한 번 — 추출·표시 뒤엔 다시(rebridge).
+# 판정(judge_one)·황금(gold) = sort 판정 장부 읽기(sort_collect 다리). 한 프로세스에 sort.run 한 번 — 추출·표시 뒤엔 다시(rebridge).
 # 옛 길 = 스위치(collect.local.json "sort": false) · sort 오류 = 그 회차만 옛 길 + 대기열 한 줄(수집은 안 멈춤).
 _OLD = {'judge_one': judge_one, 'gold': gold}
 _bridged = []

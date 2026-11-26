@@ -52,6 +52,27 @@ from collections import Counter
 SYS = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(SYS)
 SYSTEMS = os.path.join(SYS, 'sort')                 # 개인 층 체계 파일
+PERSONAL = os.path.join(VAULT, '.claude', 'skills', 'sort', 'personal', 'values.json')   # 개인화 파트(스킬 sort 옆 · 배포판에 안 실림)
+_personal = {}
+
+
+def personal(key, default=None):
+    """개인화 파트의 한 칸 — 파일·칸이 없으면 일반 기본값(개인 값이 없어도 돈다 · 조리법 = 스킬 sort «개인화 파트»)."""
+    if PERSONAL not in _personal:
+        try:
+            with open(PERSONAL, encoding='utf-8') as f:
+                _personal[PERSONAL] = json.load(f)
+        except (OSError, ValueError):
+            _personal[PERSONAL] = {}
+    v = _personal[PERSONAL].get(key) if isinstance(_personal[PERSONAL], dict) else None
+    return default if v in (None, '') else v
+
+
+def gold_tag():
+    """황금 태그의 이름 — 그 체계·태그·자격 카드 칸·모아보기 칸이 이 이름 하나를 쓴다(개인화 파트 «황금 태그» · 없으면 «황금»)."""
+    return personal('황금 태그', '황금')
+
+
 EXAMPLES = os.path.join(SYS, 'sort-examples')       # 배포판 빈 틀
 INDEX = os.path.join(SYS, '_index', 'sort')         # 장부·상태·넘김(볼트 지식층 밖)
 _REAL_INDEX = INDEX                                 # 분류 직후 알림(ALERT_AFTER)은 이 자리일 때만 — 시험이 INDEX 를 임시로 바꾸면 안 부름(진짜 폰에 안 감)
@@ -728,7 +749,7 @@ ANSWERED = []              # 마지막 run 이 적은 answers 열쇠 — 대상 
 
 
 def answer(sid, tid, branch, who='사람', why='', now=None):
-    """사람·대화 Claude 의 판정 하나를 적는다(설계 §11 sort.answer · 태그 도구 tag.apply «이거 꽁돈»이 부름 · S8 11-18).
+    """사람·대화 Claude 의 판정 하나를 적는다(설계 §11 sort.answer · 태그 도구 tag.apply «이거 황금»이 부름 · S8 11-18).
     그 체계와 그것에 기대는 체계만 run 한 번 — 대상 칸·앞 체계·장부·넘김은 사다리 판정과 같은 길. 판정자 = who(사람 · 대화 · claude) 라
     입력(사실·앞 체계 갈래·카드)이 같은 동안 ① 기억이 이 판정을 지킨다(규칙을 고쳐도 안 바뀜 · 입력이 바뀌면 사다리가 다시 정함).
     없는 체계·갈래·꺼진 체계·대상 밖이면 ValueError. 돌려줌 = run 요약."""
@@ -747,7 +768,7 @@ def answer(sid, tid, branch, who='사람', why='', now=None):
     if hasattr(ad, 'prepare'):
         ad.prepare()                               # 수집글 = 카드를 공지 필터 것과 같게(다리와 같은 지문)
     only, grew = {sid}, True
-    while grew:                                    # 이 체계에 기대는 체계(꽁돈 ← 공지-들이기 꼴)도 함께
+    while grew:                                    # 이 체계에 기대는 체계(황금 ← 공지-들이기 꼴)도 함께
         more = {k for k, x in systems().items() if not x.get('_err') and set(deps_of(x)) & only} - only
         only |= more
         grew = bool(more)
@@ -934,7 +955,7 @@ def estimate(rows):
         ad = adapter(kind)
         f = getattr(ad, 'out_each', None) if ad else None
 
-        def out_of(r):                            # 어댑터가 특징별 잰 값을 주면 그것(꽁돈 칸 글은 출력이 약 3배)
+        def out_of(r):                            # 어댑터가 특징별 잰 값을 주면 그것(황금 칸 글은 출력이 약 3배)
             try:
                 return (f(r.get('특징') or ()) if f else None) or OUT_EACH
             except TypeError:

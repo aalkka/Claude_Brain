@@ -86,6 +86,7 @@ py -3 3_시스템/fileops.py migrate --apply
 |---|---|---|
 | **코어** | `.claude/skills/**` · `settings.json` · `hooks/**` · `search.py` · `session-stub.py` · `conventions.md` · `_ref/**` · `_eval/**` · `fileops.py` · `migrations/**` · `ingest.py` … | **안 고친 파일 = 교체(옛 판 = 휴지통)** · 고친 파일 = 합침, 못 합치면 그대로 · 배포판이 뺀 파일 = 안 고친 것만 휴지통 |
 | **씨앗** | `recent.md` · `open-loops.md` · `MOC.md` · `profile.md` · `config.json` · `주제.md` · `보존.md` · 설계노트 · 사용자설명서 | 덮어쓰지 않음 · 뿌리 칸에 없는 것만 넣음 · 머리말 갱신은 **아직 손으로** |
+| **일반 CSS 스니펫** | `.obsidian/snippets/` 의 `canvas-card-properties.css` · `source-index.css` | 없을 때만 넣음(있는 파일은 안 건드림) · 넣었으면 «설정 › 모양 › CSS 스니펫에서 켜면 캔버스 카드·원본 색인이 정돈돼 보인다»고 알린다 — 켜는 것은 사용자 |
 | **`CLAUDE.md`** | — | **§0 보존 · 나머지 교체**(합본) · §0 밖을 고쳤으면 합침, 못 합치면 그대로 |
 | **개인** | `1_수집/**` · `2_지식` 의 나머지 · `_index/` · `_claude-memory/` · `ledger/` · `장부.md` · 플러그인 `data.json` | **내용을 바꾸지 않는다** — 구조가 바뀌면 이전(migration) 파일이 옮기고 경로 링크만 고친다 |
 

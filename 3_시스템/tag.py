@@ -3,19 +3,22 @@
 붙일지는 분류(sort.py)가 정한다(판정 기록의 동작 {"태그": 이름}). 이 도구는 붙이고 떼는 일만 한다.
   지금 붙은 태그 = 분류 상태(_index/sort/<체계>.json)의 지금 판정 — «지금 판정에 맞추기»(멱등)라 넘김 장부를 몇 번 다시 읽어도 같다.
   보이는 자리(대상마다):
-    수집글·가격줄 = 겹쳐 보이기. 1_수집 원본은 고치지 않는다 — 일정 줄 #꽁돈 · 판정표 · 수집 창 한 줄 · 모아보기 칸이 has() 로 지금 판정을 읽는다.
+    수집글·가격줄 = 겹쳐 보이기. 1_수집 원본은 고치지 않는다 — 일정 줄 #황금 · 판정표 · 수집 창 한 줄 · 모아보기 칸이 has() 로 지금 판정을 읽는다.
     노트(0_작업·2_지식 안 .md) = 프론트매터 tags — 체계가 "노트에 쓰기": true 일 때만(기본 끔 · 11-18 켠 체계 0).
       도구가 붙인 것만 뗀다(붙인 장부 = _index/sort/태그.json «붙임» · 사람이 먼저 단 같은 태그는 적지도 떼지도 않음 · 줄 = 태그.jsonl).
       노트 자리 = 어댑터 note(대상) 또는 대상 id «note:<볼트 상대 경로>».
   태그 사전 = 3_시스템/sort/태그/사전.json(개인 층 · 배포판 빈 틀 = 3_시스템/sort-examples/태그/사전.json) — 뜻 · 순서 · 가족(«티어/SSS» = 가족 티어의 값 SSS · 앞이 높음).
     어느 체계가 쓰는가는 체계 파일 «갈래» 동작에서 센다(사전에 적지 않음 — 어긋날 길이 없게).
-  사람 태그(행위 tag.apply · «이거 꽁돈»): 그 태그를 주는 체계에 판정자 «사람» 판정을 적는다(sort.answer) → 분류 상태·넘김 장부가 바뀌고 겹쳐 보이기를 다시 그린다.
+  칠(태그가 노트·일정 줄에서 보이는 꼴) = 사전의 «칠» 칸 {"바탕", "글", "굵기", "테", "알약"} → paint 가 스니펫 <태그>.css 를 만든다.
+    이 도구는 태그 이름을 모른다 — 어떤 태그를 어떻게 칠할지는 사전(개인 층)이 정한다. 손으로 만든 같은 이름 스니펫은 규칙이 같으면 그대로 두고, 다르면 안 건드린다(--force 로만).
+  사람 태그(행위 tag.apply · «이거 황금»): 그 태그를 주는 체계에 판정자 «사람» 판정을 적는다(sort.answer) → 분류 상태·넘김 장부가 바뀌고 겹쳐 보이기를 다시 그린다.
 
   py -3 3_시스템/tag.py list [--json]                 # 태그 사전 + 쓰는 체계 + 지금 붙은 수 + 문제(사전에 없는 태그 · 가족 밖 값)
   py -3 3_시스템/tag.py has <대상> <태그>               # 지금 붙었나(겹쳐 보이기 읽기 · 공지 필터·모아보기가 부르는 has() 그대로)
   py -3 3_시스템/tag.py sync [--all] [--dry]          # 넘김 장부의 새 붙임·뗌을 보이는 자리에(노트 쓰기 켠 체계만 파일을 씀) · --all = 장부 처음부터 + 전부 다시 맞춤
   py -3 3_시스템/tag.py tick                          # 15분 확인 끝(collect-tick act_tick) — sync 하고 노트를 바꾼 때만 한 줄
-  py -3 3_시스템/tag.py apply <대상> <태그> [--off] [--why <말>] [--system <체계>] [--by <누가>] [--no-redraw]   # 사람이 «이거 꽁돈»(--off = «꽁돈 아님»)
+  py -3 3_시스템/tag.py paint [--dry] [--force]       # 태그의 칠(옵시디언 CSS 스니펫) — 사전 «칠» 칸이 있는 태그마다 스니펫 하나를 만들고 켠다(행위 tag.paint)
+  py -3 3_시스템/tag.py apply <대상> <태그> [--off] [--why <말>] [--system <체계>] [--by <누가>] [--no-redraw]   # 사람이 «이거 황금»(--off = «황금 아님»)
 """
 import argparse
 import json
@@ -50,7 +53,7 @@ def dict_path():
 
 # ───────── 사전 ─────────
 def dictionary():
-    """태그 사전 {이름: {뜻, 순서?, 가족?, 보임?}} — 없거나 깨지면 {}(겹쳐 보이기는 사전 없이도 돈다)."""
+    """태그 사전 {이름: {뜻, 순서?, 가족?, 보임?, 칠?}} — 없거나 깨지면 {}(겹쳐 보이기는 사전 없이도 돈다)."""
     try:
         d = json.load(open(dict_path(), encoding='utf-8'))
     except (OSError, ValueError):
@@ -106,7 +109,7 @@ def givers(tag):
 # ───────── 겹쳐 보이기 읽기 ─────────
 def has(tid, tag):
     """(True 붙음 | False 판정은 났는데 안 붙음 | None 판정 없음·대기, 근거) — 그 태그를 줄 수 있는 체계의 지금 판정.
-    공지 필터 꽁돈(일정 줄 #꽁돈 · 판정표 · 수집 창 한 줄 · 모아보기 꽁돈 칸)이 sort_collect.gold_from_ledger 로 부른다 —
+    공지 필터 황금(일정 줄 #황금 · 판정표 · 수집 창 한 줄 · 모아보기 황금 칸)이 sort_collect.gold_from_ledger 로 부른다 —
     옛 sort.tag_of 와 같은 셈(체계 파일 이름 차례 · 처음 판정 난 체계)이라 출력 바이트 같음(골든)."""
     for sid, s in sort.systems().items():
         if s.get('_err') or not any({'태그': tag} in (b.get('동작') or []) for b in (s.get('갈래') or {}).values()):
@@ -401,7 +404,7 @@ def tick():
 
 # ───────── 사람 태그 ─────────
 def apply(tid, tag, off=False, why='', system=None, by=None, now=None, redraw=True):
-    """사람이 «이거 꽁돈»(off = «꽁돈 아님») — 그 태그를 주는 체계에 판정자 «사람» 판정(sort.answer) → 노트 맞춤 → 겹쳐 보이기 다시 그림(어댑터 refresh).
+    """사람이 «이거 황금»(off = «황금 아님») — 그 태그를 주는 체계에 판정자 «사람» 판정(sort.answer) → 노트 맞춤 → 겹쳐 보이기 다시 그림(어댑터 refresh).
     갈래: 붙이기 = 그 태그를 주는 갈래(하나여야) · 떼기 = 그 태그가 없는 갈래 중 «모르면» · 아니면 하나뿐인 것."""
     gs = givers(tag)
     if system:
@@ -429,15 +432,91 @@ def apply(tid, tag, off=False, why='', system=None, by=None, now=None, redraw=Tr
     return {'체계': sid, '대상': tid, '갈래': g, '근거': say, '판정': run.get(sid), '노트': notes, '다시 그림': drew}
 
 
+# ───────── 칠 — 사전 «칠» → 옵시디언 CSS 스니펫 ─────────
+PAINT_MARK = 'tag.py paint'
+PAINT_KEYS = (('바탕', 'background'), ('글', 'color'), ('굵기', 'font-weight'), ('테', 'border'))
+CSS_VALUE = re.compile(r'^[^;{}<>\\]+$')        # 값 한 칸 — 선언을 끊거나 규칙을 여는 글자는 안 받는다
+
+
+def snippet_dir():
+    return os.path.join(VAULT, '.obsidian', 'snippets')  # mf:allow-path  (옵시디언이 읽는 자리 — 만든 파일만 쓴다)
+
+
+def paint_css(tag, spec):
+    """태그 하나의 스니펫 글 — 읽기 화면(a.tag) · 편집 화면(cm-hashtag) 둘 다. 알약 = 둥근 꼴(편집 화면의 # 과 이름 두 조각을 한 덩이로)."""
+    decl = [f'  {css}: {spec[k]};' for k, css in PAINT_KEYS if spec.get(k) not in (None, '')]
+    L = [f'/* #{tag} 태그의 칠 — {PAINT_MARK} 가 태그 사전 «칠» 칸에서 만든다(여기서 고치지 않는다) */',
+         f'a.tag[href="#{tag}"],', f'.cm-hashtag.cm-tag-{tag} {{', *decl, '}']
+    if spec.get('알약'):
+        L += [f'a.tag[href="#{tag}"] {{ border-radius: 999px; padding: 0 0.55em; }}',
+              f'.cm-hashtag-begin.cm-tag-{tag} {{ border-right: none; border-radius: 999px 0 0 999px; padding-left: 0.45em; }}',
+              f'.cm-hashtag-end.cm-tag-{tag} {{ border-left: none; border-radius: 0 999px 999px 0; padding-right: 0.45em; }}']
+    return '\n'.join(L) + '\n'
+
+
+def _rules(css):
+    """견줄 글 — 주석·공백을 뺀 규칙만."""
+    return re.sub(r'\s+', '', re.sub(r'/\*.*?\*/', '', css, flags=re.S))
+
+
+def paint(dry=False, force=False):
+    """사전에 «칠» 이 있는 태그마다 스니펫을 맞추고 켠다 → [{태그, 파일, 한 일}]. 한 일 = 만듦 · 고침 · 같음 · 손 파일(안 건드림) · 거절(까닭).
+    켜기 = appearance.json 의 enabledCssSnippets 에 이름을 더한다(다른 칸·차례는 그대로 · 옵시디언은 다시 열거나 설정에서 새로 읽을 때 반영)."""
+    out, on = [], []
+    for tag, e in dictionary().items():
+        spec = e.get('칠') if isinstance(e, dict) else None
+        if not isinstance(spec, dict):
+            continue
+        row = {'태그': tag, '파일': f'{tag}.css'}
+        out.append(row)
+        bad = [k for k, _ in PAINT_KEYS if spec.get(k) not in (None, '') and not CSS_VALUE.match(str(spec[k]))]
+        if not TAG_RX.match(tag) or bad:
+            row['한 일'] = '거절(' + ('태그 이름 꼴' if not TAG_RX.match(tag) else '값 꼴: ' + '·'.join(bad)) + ')'
+            continue
+        a, css = os.path.join(snippet_dir(), tag + '.css'), paint_css(tag, spec)
+        old = None
+        if os.path.isfile(a):
+            with open(a, encoding='utf-8') as f:
+                old = f.read()
+        if old is not None and _rules(old) == _rules(css):
+            row['한 일'] = '같음'
+        elif old is not None and PAINT_MARK not in old and not force:
+            row['한 일'] = '손 파일(안 건드림 · --force 로 덮음)'
+            continue
+        else:
+            row['한 일'] = '만듦' if old is None else '고침'
+            if not dry:
+                os.makedirs(snippet_dir(), exist_ok=True)
+                _write(a, css)
+        on.append(tag)
+    ap = os.path.join(VAULT, '.obsidian', 'appearance.json')  # mf:allow-path
+    try:
+        with open(ap, encoding='utf-8') as f:
+            conf = json.load(f)
+    except (OSError, ValueError):
+        conf = {}
+    cur = conf.get('enabledCssSnippets') if isinstance(conf.get('enabledCssSnippets'), list) else []
+    add = [t for t in on if t not in cur]
+    for r in out:
+        if r['태그'] in add:
+            r['켬'] = '켬' if not dry else '켤 것'
+    if add and not dry and isinstance(conf, dict):
+        conf['enabledCssSnippets'] = cur + add
+        os.makedirs(os.path.dirname(ap), exist_ok=True)
+        _write(ap, json.dumps(conf, ensure_ascii=False, indent=2))
+    return out
+
+
 def main():
     sys.stdout.reconfigure(encoding='utf-8')
     ap = argparse.ArgumentParser(description='태그 도구 — 분류가 정한 태그를 보이는 자리에')
-    ap.add_argument('cmd', choices=['list', 'has', 'sync', 'apply', 'tick'])
+    ap.add_argument('cmd', choices=['list', 'has', 'sync', 'apply', 'tick', 'paint'])
     ap.add_argument('target', nargs='?')
     ap.add_argument('tag', nargs='?')
     ap.add_argument('--json', action='store_true')
     ap.add_argument('--all', action='store_true', help='sync: 장부 처음부터 + 전부 다시 맞춤')
-    ap.add_argument('--dry', action='store_true', help='sync: 쓰지 않음')
+    ap.add_argument('--dry', action='store_true', help='sync · paint: 쓰지 않음')
+    ap.add_argument('--force', action='store_true', help='paint: 손으로 만든 같은 이름 스니펫도 덮음')
     ap.add_argument('--off', action='store_true', help='apply: «아님»(태그 없는 갈래)')
     ap.add_argument('--why', default='', help='apply: 근거(비우면 «사람 «이거 <태그>»»)')
     ap.add_argument('--system', help='apply: 그 태그를 주는 체계가 여럿일 때')
@@ -465,6 +544,12 @@ def main():
         return 0
     if a.cmd == 'sync':
         print(json.dumps(sync(a.all, a.dry), ensure_ascii=False))
+        return 0
+    if a.cmd == 'paint':
+        rows = paint(a.dry, a.force)
+        for r in rows:
+            print(f'- #{r["태그"]} → 스니펫 {r["파일"]} · {r["한 일"]}' + (f' · {r["켬"]}' if r.get('켬') else ''))
+        print(f'칠할 태그 {len(rows)}' + ('' if rows else ' — 태그 사전(3_시스템/sort/태그/사전.json)의 태그에 «칠» 칸을 적으면 만든다') + (' (--dry: 안 씀)' if a.dry else ''))
         return 0
     if a.cmd == 'tick':
         out = tick()

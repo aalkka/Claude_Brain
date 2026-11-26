@@ -1,4 +1,4 @@
-"""공지 필터·꽁돈 → sort 체계 이관 골든 대조(S3 M0~M2 · 2026-11-18 · 설계 §9) — 사본 위에서 · Claude 0 · 볼트에 안 씀.
+"""공지 필터·황금 → sort 체계 이관 골든 대조(S3 M0~M2 · 2026-11-18 · 설계 §9) — 사본 위에서 · Claude 0 · 볼트에 안 씀.
 
 사본: _index/collect(상태·추출 캐시·대기 칸·보관 칸·평가) · 자격 카드 · 조리법 · 수집 대기열 · 일정 파일 2개를 임시 폴더로 복사하고
      공지 필터의 자리(STATE·CACHE·STAGE·ARCH·MARKS·REPORT·STATUS·QUEUE·RECIPES·CARD)와 오늘·시각을 그쪽·고정값으로 돌린다.
@@ -7,7 +7,7 @@ M0 골든  = 옛 길(스위치 끔 · notice-filter sort_on → False): 출처�
            moa 2개 rows(--all·보임). 옛 길은 sort 를 안 부른다(장부 폴더가 안 생겨야).
 M1 이은 길 = S4 잇기 그대로(notice-filter bridge → sort_collect.bridge → sort.run · 장부는 임시 폴더) → 같은 출력.
            두 번째 bridge(rebridge 뒤)의 sort.run 은 전부 ① 기억이어야 한다.
-M2 대기  = sort 판정 대기(자리 = 출처) 대 옛 extract 가 뽑을 글 — 공지-들이기 대기 = 옛 todo 와 같아야 · 꽁돈만의 대기는 따로 셈.
+M2 대기  = sort 판정 대기(자리 = 출처) 대 옛 extract 가 뽑을 글 — 공지-들이기 대기 = 옛 todo 와 같아야 · 황금만의 대기는 따로 셈.
 M3 떨어짐 = sort.run 이 오류를 내면 그 회차는 옛 길 — 출력이 골든과 같고(세션 줄은 대기열 +1 만) 대기열에 sort 줄 하나.
 합격 = 파일마다 바이트 같음 · 다리 빗나감 0 · M3.
 
@@ -155,11 +155,11 @@ def run(T):
         bad.append('M0 스위치 끔인데 sort 가 돎')
     if not bridged_ok:
         bad.append('M1 이은 길이 아님')
-    gold_st = sort.state('꽁돈')['items']
-    tagged = sum(1 for r in gold_st.values() if r['갈래'] == '꽁돈')
+    gold_st = sort.state(sc.SYS_GOLD)['items']
+    tagged = sum(1 for r in gold_st.values() if r['갈래'] == sc.TAG_GOLD)
     print(f'판정 {n76}건(출처 {len(gold_out)}) · sort 1회 {json.dumps(r1, ensure_ascii=False)}')
     print(f'sort 2회 {json.dumps(r2, ensure_ascii=False)}')
-    print(f'꽁돈 판정 {len(gold_st)}건(꽁돈 {tagged}) · 다리 빗나감 {len(sc.MISSES)}')
+    print(f'황금 판정 {len(gold_st)}건(황금 {tagged}) · 다리 빗나감 {len(sc.MISSES)}')
     memo_ok = all(set(v) <= {'기억', '대기', '대기 뺌', '대상 밖', '앞 체계 대기'} for v in r2.values())
     if not memo_ok:
         bad.append('2회째 기억 아님')
@@ -169,10 +169,10 @@ def run(T):
     todo = {f'collect:{n["sid"]}:{n["id"]}' for n in nf.notices()
             if (n.get('again') or not os.path.exists(nf.cpath(n))) and not ((nf.deadline(n, {}) or '9999') < TODAY.isoformat())}
     pend_n = set(sort.state('공지-들이기')['대기'])
-    pend_g = set(sort.state('꽁돈')['대기'])
+    pend_g = set(sort.state(sc.SYS_GOLD)['대기'])
     print(f'M2 공지-들이기 대기 {len(pend_n)} · 옛 extract 할 글 {len(todo)} · {"같음" if pend_n == todo else "다름"}'
           + (f' (sort만 {sorted(pend_n - todo)[:5]} · 옛것만 {sorted(todo - pend_n)[:5]})' if pend_n != todo else ''))
-    print(f'M2 꽁돈만의 대기(캐시는 있는데 꽁돈 칸 없음 · 마감 안 지남) {len(pend_g - pend_n)} · 자리별 {json.dumps(sort.places(), ensure_ascii=False)}')
+    print(f'M2 황금만의 대기(캐시는 있는데 황금 칸 없음 · 마감 안 지남) {len(pend_g - pend_n)} · 자리별 {json.dumps(sort.places(), ensure_ascii=False)}')
     for where in sorted(sort.places()):
         est = sort.estimate(sort.pending(where))
         cmds = sc.judge_cmds(where, sort.pending(where))

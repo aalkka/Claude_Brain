@@ -76,6 +76,8 @@ PROTECT_FILES = ("claude.md", "readme.md", ".gitignore", ".gitattributes")
 UPDATE_DENY = tuple(p + "/" for p in [roles.path("work"), roles.path("sources")] + roles.group("content")) + (
                "3_시스템/_index/", "3_시스템/_claude-memory/", LEDGER_DIR + "/",
                "3_시스템/vault/", ".git/", TRASH + "/", ".obsidian/")
+# 예외 — 옵시디언 설정 자리지만 업데이터가 «없을 때만» 넣는 일반 CSS 스니펫(dist-diff SEED_SNIPPETS 와 같은 목록 · 있는 파일은 안 건드림 · 켜는 것은 사용자).
+UPDATE_SEED_ONLY = (".obsidian/snippets/canvas-card-properties.css", ".obsidian/snippets/source-index.css")
 CODE_EXT = (".py", ".ps1", ".psm1", ".json", ".mjs", ".js", ".ts", ".tsv", ".txt", ".yaml", ".yml", ".sh", ".md")
 
 WIKI = re.compile(r"(!?\[\[)([^\[\]|#\n]+)((?:#[^\[\]|\n]*)?(?:\|[^\[\]\n]*)?\]\])")
@@ -171,6 +173,8 @@ def guard(r, core_ok=False):
         raise Stop("볼트 뿌리는 다루지 않는다")
     low = r.lower()
     if core_ok:
+        if low in UPDATE_SEED_ONLY:
+            return
         if any((low + "/").startswith(x.lower()) for x in UPDATE_DENY):
             raise Stop("업데이터가 쓰지 않는 자리(개인·내용 층): %s" % r)
         return
@@ -1533,6 +1537,8 @@ def op_update(ctx, path, apply):
         r, a = o["rel"], ctx.abs(o["rel"])
         if o["op"] == "put":
             if os.path.isfile(a) and sha256(a) == sha256(o["src"]):
+                continue
+            if r.lower() in UPDATE_SEED_ONLY and os.path.exists(a):     # 없을 때만 넣는 자리 — 사용자가 고친 스니펫을 덮지 않는다
                 continue
             if os.path.exists(a):
                 slot = trash_slot(ctx, r)

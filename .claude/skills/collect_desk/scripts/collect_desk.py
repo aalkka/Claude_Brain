@@ -1138,7 +1138,7 @@ def judge_source(sid):
     if not post:
         raise Refuse('판정할 글 칸이 없는 출처')
     with Busy(sid, '판정 중'):
-        if sort_on() and os.path.exists(os.path.join(SYS, 'sort.py')):    # S4 — 그 자리에 걸린 체계 전부(한 대상 한 호출 · 꽁돈만 대기도) · 엔진 오류(3)면 옛 길
+        if sort_on() and os.path.exists(os.path.join(SYS, 'sort.py')):    # S4 — 그 자리에 걸린 체계 전부(한 대상 한 호출 · 황금만 대기도) · 엔진 오류(3)면 옛 길
             r = subprocess.run([sys.executable, os.path.join(SYS, 'sort.py'), 'judge', '--place', sid, '--yes'], cwd=VAULT, capture_output=True,
                                encoding='utf-8', errors='replace', creationflags=NO_WINDOW, env=dict(os.environ, PYTHONIOENCODING='utf-8'))
             if r.returncode == 0:

@@ -14,7 +14,7 @@
 
 .moa 꼴(JSON · 칸 이름은 COLS):
   {"from": {"collect": {"label": "장학"}},       # 수집 출처 — label(조리법 filter.label) 또는 sources(출처 id 목록) · title = 제목 정규식(선택)
-   "columns": ["꽁돈", "제목", "마감", "금액", "지급", "의무"],
+   "columns": ["황금", "제목", "마감", "금액", "지급", "의무"],
    "sort": ["마감"],                             # 칸 이름 · 앞에 - 면 거꾸로 · 값 없음은 맨 뒤
    "hide": {"past": true, "verdict": ["비해당"]},  # 지난 것 · 판정(verdict 기본 = 비해당 · [] 면 다 보임)
    "strip": "^\\[[^\\]]*\\]\\s*",                # 보일 제목에서 뺄 글(선택)
@@ -35,10 +35,14 @@ VAULT = os.path.dirname(SYS)
 FILTER = os.path.join(SYS, 'notice-filter.py')
 EXT = '.moa'
 SKIP_DIRS = {'.git', '.obsidian', '.trash', '.claude', 'node_modules', '__pycache__'}
+if SYS not in sys.path:
+    sys.path.insert(0, SYS)
+import sort as _sort  # noqa: E402 — 개인화 파트 읽기(황금 태그 이름)
+GOLD = _sort.gold_tag()                             # 황금 칸의 이름(.moa columns 에 적는 글) — 개인화 파트 · 없으면 «황금»
 
 # 칸 — 이름 → (머리 글, 꼴)
 COLS = {
-    '꽁돈': ('', 'gold'),
+    GOLD: ('', 'gold'),
     '제목': ('제목', 'title'),
     '마감': ('마감', 'date'),
     '금액': ('금액', 'text'),
@@ -221,7 +225,7 @@ def rows(d, today):
                 strong, weak = m.src_text(n)
                 seen = lambda q: bool(m.norm(q or '')) and (m.norm(q) in strong or m.norm(q) in weak)  # noqa: E731
                 pay = c.get('지급') or {}
-                # None = 지급 칸 없이 뽑힌 글 · null = 돈 주는 공고가 아님 · 근거가 원문에 없으면 모름(꽁돈 판정과 같음)
+                # None = 지급 칸 없이 뽑힌 글 · null = 돈 주는 공고가 아님 · 근거가 원문에 없으면 모름(황금 판정과 같음)
                 form = None if '지급' not in c else '없음' if c['지급'] is None else pay.get('형태') if seen(pay.get('근거')) else '모름'
                 duty = list(dict.fromkeys(o.get('종류') for o in c.get('의무') or [] if o.get('종류') and o.get('종류') != '기타'))
             else:   # 아직 안 뽑은 글(대기 칸) — 제목 마감만 · 엔진이 적은 판정이 있으면 그것
@@ -238,7 +242,7 @@ def rows(d, today):
                 'id': f'{rc["id"]}:{n["id"]}', '제목': title or n['title'], '출처': rc.get('name') or rc['id'], '날짜': n['date'],
                 'open': where, '판정': v, '마감': None if dl == '0000-00-00' else dl, 'D': dn,
                 '지남': bool(dl) and (dl == '0000-00-00' or dn < 0),
-                '금액': (c or {}).get('금액'), '지급': form, '의무': duty, '꽁돈': g, '요약': (c or {}).get('요약'),
+                '금액': (c or {}).get('금액'), '지급': form, '의무': duty, GOLD: g, '요약': (c or {}).get('요약'),
             }
             for k, rules in (d.get('fields') or {}).items():
                 if k not in COLS:

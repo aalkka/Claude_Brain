@@ -1,12 +1,12 @@
 """sort 의 «수집글» 대상 어댑터(범용 도구 셋 S3 · 2026-11-18) — 공지 필터(notice-filter.py)의 글·추출 캐시를 사실로 준다.
 
   사실: 제목 · 출처 · 날짜 · 자리 · 조리법(filter) · 본문지문 · 표시(헛것·쓸모) · 특징.notice(Claude 추출 캐시 그대로) ·
-        꽁돈 칸(지급.형태·지급.근거 · 의무.종류 · 소득심사.반영) — 캐시에 «지급» 칸이 있을 때만(없으면 꽁돈 규칙이 «모름» → ④ 대기).
+        황금 칸(지급.형태·지급.근거 · 의무.종류 · 소득심사.반영) — 캐시에 «지급» 칸이 있을 때만(없으면 황금 규칙이 «모름» → ④ 대기).
         지급.형태 는 근거 인용이 원문에 글자 그대로 있을 때만 그 값 · 없으면 «모름»(공지 필터 ② 근거 검사 그대로).
   등록 함수: judge = notice-filter judge_one 감싸기(체계 공지-들이기 · 세부 = 조건별 판정 그대로 넘김).
   자리(판정 단추): 출처 id(로그인 출처 글 칸은 그 조리법 id) — 수집 창 출처 줄의 «판정 N».
   옛 출력 다리(겹쳐 보이기): judge_one_from_ledger · gold_from_ledger — 판정표·일정 줄·수집 창 한 줄·moa 가 판정 장부에서 읽게.
-    꽁돈 태그는 태그 도구(tag.has · S8 11-18)를 거친다 · 사람 태그(tag.apply) 뒤 다시 그리기 = refresh()(notice-filter judge).
+    황금 태그는 태그 도구(tag.has · S8 11-18)를 거친다 · 사람 태그(tag.apply) 뒤 다시 그리기 = refresh()(notice-filter judge).
 
 잇기(S4 · 11-18): notice-filter.py bridge() 가 판정 전에 bridge() 를 한 번 부른다(sort.run + 다리 끼우기) · 스위치
   collect.local.json "sort": false = 옛 길 · sort 오류 = 그 회차 옛 길(notice-filter 가 받음). 다리는 장부에 없는 글·읽기 오류면 옛 함수로.
@@ -24,7 +24,9 @@ SYS = os.path.dirname(os.path.abspath(__file__))
 if SYS not in sys.path:
     sys.path.insert(0, SYS)                      # sort · tag(겹쳐 보이기 읽기)
 NF_PATH = os.path.join(SYS, 'notice-filter.py')
-SYS_NOTICE, SYS_GOLD, TAG_GOLD = '공지-들이기', '꽁돈', '꽁돈'      # 옛 출력 다리가 읽는 체계·태그
+import sort as _sort  # noqa: E402 — 개인화 파트 읽기(황금 태그 이름)
+SYS_NOTICE = '공지-들이기'
+SYS_GOLD = TAG_GOLD = _sort.gold_tag()             # 옛 출력 다리가 읽는 체계·태그(이름 = 개인화 파트 «황금 태그» · 없으면 «황금»)
 _nf, _orig, MISSES, _pm = [], {}, [], []
 
 
@@ -153,8 +155,8 @@ _outs = {}
 
 
 def out_each(feats=()):
-    """출력 토큰 중앙값 — 추출 캐시의 잰 값(없으면 None → 엔진 기본). 꽁돈 칸을 뽑는 글(feats 에 notice.gold)은 꽁돈 칸 캐시끼리 —
-    11-18 묶음 시험: 꽁돈 칸 글 출력 ≈ 1,000 토큰 · 전체 중앙값 369 로 재면 예상이 2.7배 낮았다."""
+    """출력 토큰 중앙값 — 추출 캐시의 잰 값(없으면 None → 엔진 기본). 황금 칸을 뽑는 글(feats 에 notice.gold)은 황금 칸 캐시끼리 —
+    11-18 묶음 시험: 황금 칸 글 출력 ≈ 1,000 토큰 · 전체 중앙값 369 로 재면 예상이 2.7배 낮았다."""
     key = 'notice.gold' in (feats or ())
     if key not in _outs:
         m = nf()
@@ -170,7 +172,7 @@ def out_each(feats=()):
 
 
 def judge_cmds(where, rows, batch=1):
-    """한 자리(출처)의 ④ = 옛 추출 단추 그대로(자격+꽁돈 칸을 한 지시문으로). 캐시가 있는데 특징이 모자란 글은 --again.
+    """한 자리(출처)의 ④ = 옛 추출 단추 그대로(자격+황금 칸을 한 지시문으로). 캐시가 있는데 특징이 모자란 글은 --again.
     batch > 1 = 묶어 부르기(같은 지시문 글을 한 호출에 · 체계 «묶음» · 기본 1 = 한 글 한 호출)."""
     src = {v: k for k, v in _posts_map().items()}.get(where, where)
     again = [tid.split(':', 2)[2] for tid, r in rows.items() if 'notice.자격' not in r['특징']]
@@ -207,7 +209,7 @@ def judge_one_from_ledger(n, d, me):
 
 
 def gold_from_ledger(n, d, me, v):
-    """꽁돈 태그 읽기(겹쳐 보이기 — 태그 도구 tag.has · S8 11-18) — 보이는 판정(v)이 꽁돈 체계의 대상 갈래일 때만(판정표의 «· 마감 지남» 줄은 안 붙임 = 옛 gold 와 같음).
+    """황금 태그 읽기(겹쳐 보이기 — 태그 도구 tag.has · S8 11-18) — 보이는 판정(v)이 황금 체계의 대상 갈래일 때만(판정표의 «· 마감 지남» 줄은 안 붙임 = 옛 gold 와 같음).
     공지-들이기가 아직 못 본 글·읽기 오류는 옛 gold(판정 읽기와 같은 길로)."""
     try:
         import sort
@@ -224,7 +226,7 @@ def gold_from_ledger(n, d, me, v):
 
 
 def refresh():
-    """태그 도구가 사람 태그(tag.apply «이거 꽁돈»)를 적은 뒤 겹쳐 보이기를 다시 그림 — notice-filter judge(판정표·일정 줄·세션 줄 · LLM 0 · 15분 확인과 같은 길).
+    """태그 도구가 사람 태그(tag.apply «이거 황금»)를 적은 뒤 겹쳐 보이기를 다시 그림 — notice-filter judge(판정표·일정 줄·세션 줄 · LLM 0 · 15분 확인과 같은 길).
     수집 창 한 줄은 다음 받기 정리(settle) 때 · 모아보기는 열 때 지금 판정을 읽는다."""
     import subprocess
     r = subprocess.run([sys.executable, NF_PATH, 'judge'], cwd=os.path.dirname(SYS), capture_output=True, text=True, encoding='utf-8',
@@ -233,7 +235,7 @@ def refresh():
 
 
 def install(m, old=None):
-    """공지 필터 모듈의 판정·꽁돈을 판정 장부 읽기로 바꿔 끼운다. old = 옛 함수 {judge_one, gold}(주면 그것 · 두 번 끼워도 다리가 다리를 안 부름)."""
+    """공지 필터 모듈의 판정·황금을 판정 장부 읽기로 바꿔 끼운다. old = 옛 함수 {judge_one, gold}(주면 그것 · 두 번 끼워도 다리가 다리를 안 부름)."""
     use(m)
     if old:
         _orig.update(old)
