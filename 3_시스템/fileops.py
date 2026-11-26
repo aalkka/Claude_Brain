@@ -985,8 +985,24 @@ def same_content_in_vault(ctx, a, skip_rel=None):
     return None
 
 
-def op_cp(ctx, src, dst, why, dup_ok=False, by_undo=None, src_label=None, move=False, quiet=False):
-    """들이기. move = 원래 것을 옮겨 들인다(수집 대본의 격리 칸 → 1_수집 · 복사 금지 규약) · quiet = 출력 없음(JSON 을 내는 대본)."""
+BACK = "3_시스템/_index/fileops-back.json"     # 밖에서 들인 것의 원래 자리 {장부 id: 절대 경로} — git 밖(장부에는 볼트 밖 경로를 적지 않는다 · outside.py 머리)
+
+
+def back_put(ctx, eid, path):
+    p = ctx.abs(BACK)
+    d = load_json(p) if os.path.exists(p) else {}
+    d[eid] = path
+    save_json(p, d)
+
+
+def back_of(ctx, eid):
+    p = ctx.abs(BACK)
+    return (load_json(p) if os.path.exists(p) else {}).get(eid)
+
+
+def op_cp(ctx, src, dst, why, dup_ok=False, by_undo=None, src_label=None, move=False, quiet=False, back=False):
+    """들이기. move = 원래 것을 옮겨 들인다(수집 대본의 격리 칸 → 1_수집 · 복사 금지 규약) · quiet = 출력 없음(JSON 을 내는 대본).
+    back = 사람이 볼트 밖에서 옮겨 들인 것(받는 문·볼트 밖 후보) — 장부에 원래 자리를 적어 되돌리기가 그 자리로 돌려놓는다."""
     rs, a_s = to_rel(ctx, src, outside_ok=True)
     if not os.path.isfile(a_s):
         raise Stop("파일이 아님(폴더 들이기는 아직 안 함): %s" % src)
@@ -1022,7 +1038,9 @@ def op_cp(ctx, src, dst, why, dup_ok=False, by_undo=None, src_label=None, move=F
     if info["sha"] != h:
         raise Stop("들인 뒤 내용이 다르다(sha256): %s" % rd)
     ev = ctx.add("cp", src=label, dst=rd, why=why, undo_of=by_undo, made=[ctx.rel(m) for m in made],
-                 moved=True if move else None, **info)
+                 moved=True if move else None, back=True if (back and move and not rs) else None, **info)
+    if ev and ev.get("back"):
+        back_put(ctx, ev["id"], a_s)
     if not quiet:
         print("들임 %s → %s" % (label, rd))
     return ev
@@ -1239,6 +1257,22 @@ def op_undo(ctx, key):
             drop_made(ctx, e.get("made"))
         elif op == "rm":
             r = op_restore(ctx, e["id"], by_undo=e["id"], core_ok=core)
+        elif op == "cp" and e.get("back") and back_of(ctx, e["id"]) and os.path.exists(ctx.abs(e["dst"])):
+            o = back_of(ctx, e["id"])   # 볼트 밖에서 옮겨 들인 것 — 원래 자리로(그 자리에 같은 이름이 있으면 덮지 않고 휴지통)
+            if os.path.exists(o):
+                print("  ⚠ 원래 자리에 같은 이름이 있다 — 덮지 않고 볼트 휴지통으로(30일): %s" % e["src"])
+                r = op_rm(ctx, e["dst"], "되돌리기 " + e["id"], by_undo=e["id"], core_ok=core, quiet=True)
+            else:
+                os.makedirs(os.path.dirname(o), exist_ok=True)     # 폴더째 들인 것 — 받는 문이 비운 원래 폴더를 다시 만든다
+                move_file(ctx.abs(e["dst"]), o)
+                r = ctx.add("out", src=e["dst"], dst=e["src"], back=True, why="되돌리기 " + e["id"], undo_of=e["id"])
+                if r:
+                    back_put(ctx, r["id"], o)
+                print("볼트 밖으로(원래 자리) %s → %s" % (e["dst"], e["src"]))
+            drop_made(ctx, e.get("made"))
+        elif op == "out" and e.get("back") and back_of(ctx, e["id"]):   # 되돌리기를 되돌림 = 다시 들임
+            r = op_cp(ctx, back_of(ctx, e["id"]), e["src"], "되돌리기 " + e["id"], dup_ok=True, by_undo=e["id"], src_label=e["dst"], move=True, quiet=True, back=True)
+            print("다시 들임 %s → %s" % (e["dst"], e["src"]))
         elif op in ("cp", "restore"):
             r = op_rm(ctx, e["dst"], "되돌리기 " + e["id"], by_undo=e["id"], core_ok=core, quiet=True)
             drop_made(ctx, e.get("made"))

@@ -202,7 +202,7 @@ def bring(ctx, a, inbox, taken):
     base = roles.path("inbox") + "/" + os.path.basename(a.rstrip("\\/"))
     if os.path.isfile(a):
         dst = inbox.free(base, taken)
-        fileops.op_cp(ctx, a, dst, "받는 문", dup_ok=True, src_label=label(a), move=True, quiet=True)
+        fileops.op_cp(ctx, a, dst, "받는 문", dup_ok=True, src_label=label(a), move=True, quiet=True, back=True)
         return dst.rsplit("/", 1)[-1]
     files = [f for f in fileops.files_under(a) if os.path.basename(f).lower() not in JUNK]
     if not files:
@@ -210,7 +210,7 @@ def bring(ctx, a, inbox, taken):
     dst = inbox.free(base, taken, isdir=True)
     for f in files:
         rel = os.path.relpath(f, a).replace("\\", "/")
-        fileops.op_cp(ctx, f, dst + "/" + rel, "받는 문", dup_ok=True, src_label=label(f), move=True, quiet=True)
+        fileops.op_cp(ctx, f, dst + "/" + rel, "받는 문", dup_ok=True, src_label=label(f), move=True, quiet=True, back=True)
     for d, _, names in os.walk(a, topdown=False):
         for n in names:
             if n.lower() in JUNK:

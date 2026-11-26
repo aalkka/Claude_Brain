@@ -8,6 +8,7 @@
   py -3 3_시스템/outside.py [--json] [--days 60]    후보 목록(최근 60일 · 바로 아래 · 문서만)
   py -3 3_시스템/outside.py take <열쇠|이름>         받은함으로 옮김(같은 내용이 볼트에 있으면 거절)
   py -3 3_시스템/outside.py hide <열쇠|이름>         목록에서 뺌(내용 해시로 기억 · 파일은 그대로)
+  py -3 3_시스템/outside.py hidden                  뺀 것 목록 · unhide <열쇠|이름> = 목록에 다시(뺌 되돌리기)
 """
 import argparse
 import hashlib
@@ -49,7 +50,7 @@ def vault_hashes():
     return {e[3] for e in files.values() if e[3]}
 
 
-def candidates(days=60):
+def candidates(days=60, hidden_only=False):
     """→ [{key, name, place, size, days, a}] 새것 먼저 · a(절대 경로)는 메모리 안에서만. 볼트 사진이 없으면 []."""
     have = vault_hashes()
     if have is None:
@@ -82,7 +83,7 @@ def candidates(days=60):
                 except OSError:         # 받는 중·잠김 — 다음에
                     continue
             cache[k] = [st.st_size, st.st_mtime_ns, sha]
-            if sha in have or sha in hidden:
+            if sha in have or (sha in hidden) != hidden_only:
                 continue
             out.append({"key": k, "name": e.name, "place": label, "size": st.st_size, "days": int(age), "sha": sha, "a": e.path})
     if cache != old:
@@ -100,17 +101,26 @@ def pick(rows, key):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="outside", description="내려받기·바탕화면의 볼트에 없는 문서")
-    ap.add_argument("cmd", nargs="?", choices=["take", "hide"])
+    ap.add_argument("cmd", nargs="?", choices=["take", "hide", "hidden", "unhide"])
     ap.add_argument("key", nargs="?")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--days", type=int, default=60)
     ap.add_argument("--by", default=None, help="장부의 «누가»")
     a = ap.parse_args(argv)
-    rows = candidates(a.days)
+    rows = candidates(a.days, hidden_only=a.cmd in ("hidden", "unhide"))
+    if a.cmd == "hidden":
+        for x in rows:
+            print("%s · %s · %d일 · %s" % (x["name"], x["place"], x["days"], x["key"]))
+        print("뺀 것 %d" % len(rows))
+        return 0
     if a.cmd:
         x = pick(rows, a.key or "")
         if not x:
             return 1
+        if a.cmd == "unhide":
+            follow.save_json(HIDDEN, [s for s in (follow.load_json(HIDDEN) or []) if s != x["sha"]])
+            print("목록에 다시: %s" % x["name"])
+            return 0
         if a.cmd == "hide":
             hidden = follow.load_json(HIDDEN) or []
             if x["sha"]:
@@ -119,7 +129,7 @@ def main(argv=None):
             return 0
         ctx = fileops.Ctx(VAULT, by=a.by)
         try:
-            fileops.op_cp(ctx, x["a"], roles.path("inbox") + "/" + x["name"], "볼트 밖 후보를 받은함으로(사람이 고름)", src_label="%s/%s" % (x["place"], x["name"]), move=True)
+            fileops.op_cp(ctx, x["a"], roles.path("inbox") + "/" + x["name"], "볼트 밖 후보를 받은함으로(사람이 고름)", src_label="%s/%s" % (x["place"], x["name"]), move=True, back=True)
         except fileops.Stop as e:
             print("✗ %s" % e)
             return 1

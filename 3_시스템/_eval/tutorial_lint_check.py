@@ -45,7 +45,7 @@ CORE = """---
 ## 확인
 말: 혼자 해 보세요. 노트를 다시 여세요.
 보여 주기: close @연습 노트.md
-가리키기: 탐색기 "연습 노트"
+가리키기: 탐색기 "연습 노트" 또는 파일칩
 기다리기: 연파일 @연습 노트.md
 풀이: open @연습 노트.md here
 """
@@ -80,12 +80,12 @@ MOD = """---
 
 CHAT_STEP = """
 ## 묻기
-말: 직접 쳐서 보내 보세요.
+말: 채워진 말을 보내 보세요.
 가리키기: 입력
-시킬 말: ^안녕
+넣기: 안녕하세요
 연습: 답 | 반갑습니다.
 기다리기: 늘어남 결과
-풀이: 보내기 안녕하세요
+풀이: 보내기
 """
 
 
@@ -167,15 +167,15 @@ def main():
     # 화면 문(E3 · brain-base 0.43) — 화면 안은 «화면 <사건>» 기다리기와 누르기·치기만
     case("화면 안 상태는 «화면 보임» 꼴만", MOD.replace('기다리기: 화면 누름 "출처"', '기다리기: 보임 화면 "출처"'), "VOCAB", module=True)
     case("화면 안 고르기 없음", MOD.replace('풀이: 누르기 화면 "후보"', '풀이: 고르기 화면 "후보"'), "VOCAB", module=True)
-    case("화면 바뀜·보임 · 치기 = 통과", MOD.replace('기다리기: 화면 누름 "출처"\n풀이: 누르기', '기다리기: 화면 바뀜 "출처"\n풀이: 치기 화면 "출처" 낱말').replace('기다리기: 화면 누름 "후보"', '기다리기: 화면 보임 "후보"'), module=True)
-    # 보낼 말
-    put_step = CHAT_STEP.replace("시킬 말: ^안녕", "넣기: 안녕").replace("풀이: 보내기 안녕하세요\n", "")
-    case("넣기 = 경고", rep("\n## 설명\n말: 노트는 여기 열립니다.\n기다리기: 다음\n", put_step), "PUT", "warns")
-    case("넣기 = 해 보기로 안 셈", CORE.replace("\n## 확인", put_step + "\n## 확인"), "T1")
-    case("넣기와 시킬 말", CORE.replace("\n## 확인", CHAT_STEP.replace("시킬 말: ^안녕", "시킬 말: ^안녕\n넣기: 안녕") + "\n## 확인"), "CHAT")
-    case("연습 답 없는 시킬 말", CORE.replace("\n## 확인", CHAT_STEP.replace("연습: 답 | 반갑습니다.\n", "") + "\n## 확인"), "CHAT")
-    case("정규식 꼴", CORE.replace("\n## 확인", CHAT_STEP.replace("^안녕", "(안녕") + "\n## 확인"), "CHAT")
-    case("풀이 말이 안 맞음", CORE.replace("\n## 확인", CHAT_STEP.replace("보내기 안녕하세요", "보내기 잘 가") + "\n## 확인"), "SOLVE")
+    case("화면 바뀜·보임 · 치기 = 통과", MOD.replace('## 고르기\n말: 이 출처를 눌러 보세요.\n', '## 고르기\n말: 이 출처를 눌러 보세요.\n보여 주기: 채우기 화면 "출처" 낱말\n').replace('기다리기: 화면 누름 "출처"\n풀이: 누르기', '기다리기: 화면 바뀜 "출처"\n풀이: 치기 화면 "출처" 낱말').replace('기다리기: 화면 누름 "후보"', '기다리기: 화면 보임 "후보"'), module=True)
+    # 보낼 말(11-08 «넣기:» — 보낼 말은 입력칸에 미리 채우고 사람은 전송만)
+    chat = lambda s: CORE.replace("\n## 확인", s + "\n## 확인")
+    case("옛 «시킬 말:» 칸", chat(CHAT_STEP.replace("넣기: 안녕하세요", "시킬 말: ^안녕\n넣기: 안녕하세요")), "OLD")
+    case("넣기 단계의 말이 치게 시킴", chat(CHAT_STEP.replace("채워진 말을 보내 보세요.", "직접 쳐서 보내 보세요.")), "TYPE")
+    case("넣기 단계 풀이에 보내기 없음", chat(CHAT_STEP.replace("풀이: 보내기", "풀이: 누르기 입력")), "SOLVE")
+    case("연습 답 없는 넣기", chat(CHAT_STEP.replace("연습: 답 | 반갑습니다.\n", "")), "CHAT")
+    case("넣기 단계가 다음으로 넘어감", chat(CHAT_STEP.replace("기다리기: 늘어남 결과", "기다리기: 다음")), "CHAT")
+    case("풀이 말이 안 맞음", chat(CHAT_STEP.replace("풀이: 보내기", "풀이: 보내기 잘 가")), "SOLVE")
     case("보낼 말 없는 연습 답", rep("말: 노트는 여기 열립니다.", "말: 노트는 여기 열립니다.\n연습: 답 | 글"), "CHAT")
     case("보낼 말 없이 결과 기다림", rep("기다리기: 연파일 @연습 노트.md\n풀이: open @연습 노트.md here\n\n## 설명", "기다리기: 늘어남 결과\n풀이: 누르기\n\n## 설명"), "CHAT")
     # 장 전체
@@ -203,8 +203,10 @@ def main():
     with open(vj, "w", encoding="utf-8", newline="\n") as f:
         f.write(vj_text)
     case("화면 사건 꼴", MOD.replace('기다리기: 화면 누름 "출처"', '기다리기: 화면 클릭 "출처"'), "VOCAB", module=True)
-    case("진짜 먼저(T6)", MOD.replace("\n## 확인", CHAT_STEP + "\n## 확인"), "T6", "warns", module=True)
-    case("진짜 행위를 쓰면 T6 없음", MOD.replace("\n## 확인", CHAT_STEP + "\n## 보기\n말: 골라 보세요.\n보여 주기: 홈\n가리키기: 홈 \"행위 고르기\"\n기다리기: 보임 창 \"✓ 데모 보기\"\n풀이: 행위 demo.look\n" + "\n## 확인"), ok=True, module=True)
+    look = "\n## 보기\n말: 골라 보세요.\n보여 주기: 홈\n가리키기: 홈 \"행위 고르기\" 또는 고르기창 \"데모 보기\"\n기다리기: 보임 창 \"✓ 데모 보기\"\n"
+    case("진짜 행위를 바로 돌림 = 막음(REAL · 11-09)", MOD.replace("\n## 확인", look + "풀이: 행위 demo.look\n" + "\n## 확인"), "REAL", module=True)
+    case("고른 행위 흉내 없음 = 막음(SIM)", MOD.replace("\n## 확인", look + "풀이: 누르기 홈 \"행위 고르기\"\n풀이: 누르기 고르기창 \"데모 보기\"\n" + "\n## 확인"), "SIM", module=True)
+    case("고른 행위 = «연습: 행위» 흉내 = 통과", MOD.replace("\n## 확인", look + "연습: 행위 | demo.look | 데모를 봤습니다.\n풀이: 누르기 홈 \"행위 고르기\"\n풀이: 누르기 고르기창 \"데모 보기\"\n" + "\n## 확인"), ok=True, module=True)
     # v1 · 대본 아님 · 폴더
     r = run("---\n장: 1\n이름: 시험\n연습 파일: 없음.md\n---\n## 하나\n기다리기: 다음\n")
     good = r["version"] == 1 and not r["ok"] and "단계 «하나» 에 «말:» 없음." in r["legacy"] and "연습 파일 없음 '없음.md'(대본 폴더 안)." in r["legacy"]
