@@ -31,8 +31,6 @@ EXEMPT = {
     "3_시스템/roles.json": "역할 원본 — 자리를 적는 유일한 곳",
     "3_시스템/roles.py": "역할 대본의 사용 예시",
     ".claude/settings.local.json": "게이트 자신(허용 규칙 글자) — 사용자 몫 · 토큰으로도 못 고침",
-    "3_시스템/labreport-exp5-build.py": "일회성 보고서 생성기(지난 과제 · 다시 돌리지 않음)",
-    "3_시스템/dsl-report-build.py": "일회성 보고서 생성기(주차마다 OUT 을 손으로 바꿈)",
     ".claude/skills/module-forge/scripts/test_check.py": "시험 자료 — 가짜 볼트 안 경로",
     ".claude/skills/canvas/scripts/canvas-check.py": "시험 자료 — 예시 경로",
     "3_시스템/_eval/r8_cleanup_check.py": "시험 자료 — 격리 볼트 안 가짜 경로",
@@ -43,6 +41,11 @@ EXEMPT = {
     "3_시스템/lms-intake.py": "사용 예시(--dest 도움말) — 실제 자리는 부르는 쪽이 역할로 준다",
     "3_시스템/conventions.md": "코어 글 — 코어 토큰으로 고칠 곳(10-31 R9 뒤 · 사용자 승인)",
 }
+# 이 볼트만의 대본 예외는 개인화 파트 _eval/personal/hardpaths-exempt.json {"경로": "까닭"} 에 둔다 — 없으면 위 목록만.
+_PX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "personal", "hardpaths-exempt.json")
+if os.path.exists(_PX):
+    with open(_PX, encoding="utf-8") as _f:
+        EXEMPT.update({k: v for k, v in json.load(_f).items() if isinstance(v, str)})
 ROOTS = ["3_시스템", ".claude"]
 
 LAYER = r"(?:0_작업|1_수집|2_지식)"

@@ -14,7 +14,7 @@
 볼트 쓰기는 `--apply-plugins` 하나뿐이다(2026-10-23) — 배포 플러그인 폴더를 배포판과 같게 하고
 배포판이 거둔 플러그인을 지운다. 있는 data.json(사용자 설정)은 건드리지 않는다.
 
-층 분류 근거 → [[외부뇌-dist-sync-모듈]] · ADR-012.
+층 분류 근거 → `외부뇌-dist-sync-모듈`(제작자 노트 · 배포판에 없음) · ADR-012.
 module-forge 스캐폴드 보일러플레이트 ①~⑤는 실측 인시던트 대응이라 지우지 말 것.
 """
 import sys, os, re, argparse, hashlib, fnmatch, datetime, json, shutil, filecmp, subprocess, difflib, tempfile
@@ -59,18 +59,21 @@ PERSONAL = [
     "3_시스템/lms/*", "3_시스템/lms-*", "3_시스템/collect/*",  # mf:allow-path  (수집 엔진 web-collect·notice-filter 는 코어로 · 11-09)
     "3_시스템/sort/*",  # mf:allow-path  (분류 체계·태그 사전 = 사용자 것 · 빈 틀 = 3_시스템/sort-examples · 11-19)
     "3_시스템/collect-ext/ext-state.json", "3_시스템/collect-ext/known-*.json",  # mf:allow-path  (확장 폴더의 PC 파생물 · 출처 호스트·과목 번호 · .gitignore 와 같음 · S7 — 폴더째 실리는 collect-ext/ 안이라 ① 에 «새 파일»로 떴다)
-    "3_시스템/labreport-*", "3_시스템/dsl-report-build.py", "3_시스템/md2docx-simple.py",  # mf:allow-path
-    "3_시스템/ask.py", "3_시스템/travel-mode.ps1",  # mf:allow-path
     # 2026-11-09 — 배포판에 안 싣는 모듈(빅보스·로드맵·폰 연결 mobility) · 이 PC 의 값 · 그래프 색표 · LMS 예약·깨우기 시험
     ".claude/skills/bigboss/*", ".claude/skills/interactive_roadmap/*", "3_시스템/*.local.json", "3_시스템/graph_topics.json",  # mf:allow-path
     ".claude/skills/mobility/*",  # mf:allow-path  (폰 연결 모듈 · 11-16 — 폰 앱·폰 플러그인이 배포판에 없음)
-    "3_시스템/m2-setup.ps1", "3_시스템/wake-test.ps1",  # mf:allow-path  (LMS 무인 수집 예약·깨우기 시험 — 개인 층 · 서버는 11-16 mobility 로)
     # 개인 층 대상(학교 LMS 대본·서버·lms-intake·로그인 조리법 mylms)·안 싣는 모듈(로드맵·study-helper)을 돌리는 시험 · 제작자 노트를 묻는 검색 골든셋
     "3_시스템/_eval/lms_*", "3_시스템/_eval/browser_cookie_report_check.py", "3_시스템/_eval/browser_report_file_check.py", "3_시스템/_eval/collect_ext_cookie_check.py", "3_시스템/_eval/collect_ext_popup_check.mjs",  # mf:allow-path  (S7 이름 바꿈 · 옛 lms_* — 진짜 조리법·학교 쿠키 이름에 기댐)
     "3_시스템/_eval/flow_rehearsal_check.py",  # mf:allow-path
     "3_시스템/_eval/r6_intake_check.py", "3_시스템/_eval/collect_desk_off_check.py", "3_시스템/_eval/roadmap_engine_check.py", "3_시스템/_eval/module_toggle_check.py",  # mf:allow-path
     "3_시스템/_eval/golden.jsonl", "3_시스템/_eval/golden-paraphrase.jsonl",  # mf:allow-path
 ]
+# 이 볼트만의 대본 이름(일회성 보고서 생성기·이 PC 의 예약 대본 등)은 개인화 파트 personal/layer.json {"개인 층": [glob…]} 에 둔다 — 없으면 위 목록만.
+_PL = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "personal", "layer.json")
+if os.path.exists(_PL):
+    with open(_PL, encoding="utf-8") as _f:
+        PERSONAL += [g for g in json.load(_f).get("개인 층", []) if isinstance(g, str)]
+
 # 예외 — 개인 폴더 안이지만 제작자가 배포하는 것
 PERSONAL_EXCEPT = list(_SYSDOCS)
 
