@@ -222,6 +222,7 @@
 "624e6a31b405": "6252f0e595b42ff7"
 },
 ".claude/skills/dist-sync/scripts/pub_merge.py": {
+"016d259d6443": "f033dd867d524f92",
 "f9c7a30a0a0e": "7e39876e73e496cf"
 },
 ".claude/skills/dist-sync/scripts/test_dist_check.py": {
@@ -1901,6 +1902,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "92aeb2b5774c",
+"rev": "7e8279ed65db",
 "schema": 1
 }
