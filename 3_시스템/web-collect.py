@@ -290,6 +290,8 @@ def calendar_rows(rc, page):
             continue
         w = re.fullmatch(r'(\d{1,2})\((\S)\)(?:\s*~\s*(?:(\d{1,2})월\s*)?(\d{1,2})\((\S)\))?', when)
         if not w or not month:
+            if C.get('skip') and re.search(C['skip'], what):    # 어차피 빼는 줄(입학식 «3.2(화)~2(화)» · 11-27)의 날짜 꼴로 표 전체를 세우지 않는다
+                continue
             raise ValueError(f'날짜 꼴 모름: {when!r}')
         a = day(year, month, int(w[1]), w[2])
         b = None
