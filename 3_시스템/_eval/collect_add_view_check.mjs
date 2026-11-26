@@ -1,6 +1,6 @@
-// 수집 추가·고침 단추 화면 시험(collect-add · 11-06) — 격리 옵시디언 · 임시 프로필 · 포트 9394 · 플러그인 = C:/brain-base/build(설치 전 판)
+// 수집 추가·고침 단추 화면 시험(collect-add · 11-06) — 격리 옵시디언 · 임시 프로필 · 포트 9394 · 플러그인 = <BRAIN_BASE_DIR>/build(설치 전 판)
 //  · 진짜 설정의 읽기 사본 · 내 컴퓨터 안 시험 서버 · 모델 호출 0(답 보내기는 가짜 엔진).
-// 실행: 임시 폴더를 현재 폴더로 두고 `node C:/Claude_Brain/3_시스템/_eval/collect_add_view_check.mjs`. 볼트·C:\brain-base 에 쓰지 않는다.
+// 실행: 임시 폴더를 현재 폴더로 두고 `node <볼트>/3_시스템/_eval/collect_add_view_check.mjs` · BRAIN_BASE_DIR = 빌더 저장소(없으면 건너뜀). 볼트·빌더 저장소에 쓰지 않는다.
 //  A «＋ 수집 추가» = 목록 맨 아래 · 누르면 대화창 새 대화 + 첫 질문(매니페스트 글자) · 입력 빔 · claude 엔진·길잡이 띄움 0
 //  B 조리법을 일부러 깨고 엔진을 돌리면 목록 «실패» + 실패 줄 «고침» · 누르면 실패 줄 + «고칠까요?» · 엔진 0
 //  C 답을 보내면 «/collect_desk:fix <id> <답>» 한 번 · 실패 줄은 안 감
@@ -9,19 +9,22 @@
 //  F 곁창 신호(brain-base env · 시험은 화면에 직접 보냄): 넓은 폭이어도 «옆에 열림»이면 위쪽 꼴 · 실패 칩 «실패» → 누르면 실패 줄 + «고침» · 닫힘이면 나무
 //  G 진짜 곁창 신호(brain-base 0.38.3 env): 넓은 폭에서 왼쪽 곁창을 펴면 위쪽 꼴 · 수집 창 왼쪽에 다른 칸을 나누면 나무 · 그 칸을 닫으면 위쪽 · 곁창을 접으면 나무
 //  (A~F 는 곁창 신호와 갈라 재려고 시작할 때 왼쪽 곁창을 접는다)
-//  BB_BUILD = 다른 빌드 폴더(예: 설치한 고정 사본) — 비우면 C:/brain-base/build
+//  BB_BUILD = 다른 빌드 폴더(예: 설치한 고정 사본) — 비우면 <BRAIN_BASE_DIR>/build
 import { execFile } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { launch, sleep, TV } from "file:///C:/brain-base/test/obs_cdp.mjs";
+const HERE = path.dirname(decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, "$1"));
+const REAL = path.resolve(HERE, "..", "..").replace(/\\/g, "/");   // 이 시험이 든 볼트(제 자리 기준)
+const BB = (process.env.BRAIN_BASE_DIR || "").replace(/\\/g, "/");   // 빌더 저장소(brain-base 소스) — 받은 사람에게는 없다
+if (!BB || !fs.existsSync(BB + "/test/obs_cdp.mjs")) { console.log("건너뜀: 빌더 저장소 도구 없음(BRAIN_BASE_DIR=" + BB + ")"); process.exit(0); }
+const { launch, sleep, TV } = await import("file:///" + BB + "/test/obs_cdp.mjs");
 
 const cwd = path.resolve(".").replace(/\\/g, "/");
-if (cwd.startsWith("C:/Claude_Brain") || cwd.startsWith("C:/brain-base")) throw new Error("임시 폴더에서 돌릴 것");
+if (cwd.startsWith(REAL) || cwd.startsWith(BB)) throw new Error("임시 폴더에서 돌릴 것");
 process.env.DESK_NO_OPEN = "1";
 const PORT = +(process.env.BB_PORT ?? 9394);
-const REAL = "C:/Claude_Brain";
-const BUILD = process.env.BB_BUILD ?? "C:/brain-base/build";
+const BUILD = process.env.BB_BUILD ?? BB + "/build";
 const MOD = ".claude/skills/collect_desk";
 const cp = (rel) => {
   const a = path.join(REAL, rel);

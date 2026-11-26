@@ -21,7 +21,7 @@ git fetch dist
 git worktree add ../brain-dist dist/main
 ```
 
-임시 자리는 늘 `../brain-dist`(볼트 옆) · 명령은 한 줄에 하나씩, 셸 변수(`D=…`) 없이 글자 그대로 쓴다 — 볼트 설정이 이 글자 그대로의 읽기·미리 보기 명령만 묻지 않고 허용한다(사용자 승인 창을 줄이려고). 적용(`--apply`)·플러그인 교체는 여전히 묻는다.
+임시 자리는 늘 `../brain-dist`(볼트 옆) · 명령은 한 줄에 하나씩, 셸 변수(`D=…`) 없이 글자 그대로 쓴다 — 볼트 설정은 읽기만 하는 명령(git status·log·fetch · brain.py list·doctor · external.py check · tasklist)만 묻지 않고 허용한다. 받은 배포판의 대본(`../brain-dist/…`)을 부르는 미리 보기·적용과 worktree 만들기·지우기는 사람이 매번 승인한다(받은 코드를 승인 없이 돌리지 않으려고).
 
 원격이 없으면 사용자에게 배포판 위치를 묻는다. **`git pull`·`git merge`를 이 볼트에 실행하지 않는다.**
 

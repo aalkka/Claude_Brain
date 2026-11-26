@@ -781,7 +781,7 @@ def power_events(days):
 
 def battery_wakes(days):
     """(배터리에서 타이머로 깬 횟수, 전원 연결에서 타이머로 깬 횟수, 그 밖 깸, 사람 입회 시험 깸). 전원선 여부 = 깨기 전 마지막 Kernel-Power 105.
-    «외부뇌 깨우기 시험»(wake-test.ps1 · T1·T5 입회 시험)이 깨운 것은 따로 센다 — 수집 예약이 가방 속 PC 를 깨웠는지가 기준이라서(11-12 Wi-Fi 시험 2회가 미달로 셈 · 11-14)."""
+    «외부뇌 깨우기 시험»(제작자의 입회 시험 대본 · T1·T5)이 깨운 것은 따로 센다 — 수집 예약이 가방 속 PC 를 깨웠는지가 기준이라서(11-12 Wi-Fi 시험 2회가 미달로 셈 · 11-14)."""
     ev = power_events(days)
     if ev is None:
         return None

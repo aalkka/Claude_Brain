@@ -4,7 +4,7 @@
 R9(구조 이전)에서 자리가 바뀌는 경로가 코드에 박혀 있으면 이전 때마다 코드를 고쳐야 한다.
 R6 완료 기준 = 이 목록의 «움직이는 경로» 0(역할 이름으로 묻게 바꿈 — `3_시스템/roles.py`).
 
-  py -3 3_시스템/_eval/hardpaths.py [--extra C:/brain-base/src ...] [--all] [--json]
+  py -3 3_시스템/_eval/hardpaths.py [--extra <빌더 저장소>/src ...] [--all] [--json]
 
 움직이는 경로(설계안 §1.3): 0_작업/<과목> · 2_지식/notes·sessions·decisions·_canvas · 1_수집/학교/<학교> 공지.
 그대로인 경로: 1_수집/학교/<과목>(공지 빼고) · 1_수집/받은함·_색인·_lms · 2_지식 뿌리 파일·일정·modules · 3_시스템.

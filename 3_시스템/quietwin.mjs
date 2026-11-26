@@ -1,5 +1,5 @@
 // 시험이 창을 띄울 때 쓰는 공통 부품(ADR-044). child_process.spawn 과 같은 꼴이고 창만 사용자 화면 밖에 뜬다.
-//   import { spawnQuiet } from "file:///C:/Claude_Brain/3_시스템/quietwin.mjs";
+//   import { spawnQuiet } from "file:///<볼트>/3_시스템/quietwin.mjs";
 // BRAIN_SHOW_WINDOW=1 = 사람이 보려고 일부러 띄울 때만.
 // 격리 옵시디언(Obsidian.exe --user-data-dir=…)은 띄우기 전에 링크 파이프 주인을 잰다(obs_pipe.py · 11-23 사고
 // incident-2026-11-23-볼트링크-시험옵시디언이-cli파이프-쥠): 옵시디언 1.15 는 링크를 OS 사용자당 하나뿐인 파이프로 넘기고 먼저 뜬 창이 쥔다 —

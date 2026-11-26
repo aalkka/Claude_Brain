@@ -3,16 +3,17 @@
  "항목": [
   {
    "id": "python",
-   "이름": "파이썬 3.10 이상(py 실행기 포함)",
+   "이름": "파이썬 3.10~3.14(py 실행기 포함)",
    "종류": ["프로그램 설치"],
    "쓰는 곳": ["3_시스템/brain.py", ".claude/settings.json"],
    "필수": true,
-   "까닭": "훅·검색·색인·건강 줄 등 볼트의 대본이 모두 `py -3` 로 돈다.",
-   "확인": "py -3 -c \"import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)\"",
+   "까닭": "훅·검색·색인·건강 줄 등 볼트의 대본이 모두 `py -3` 로 돈다. 3.15 이상은 문서 색인 꾸러미(markitdown)가 옛 0.0.2 로만 깔려 docx·pptx·xlsx 색인이 안 된다(11-27 빈 윈도 실측 · 꾸러미가 새 판을 따라오면 풀림).",
+   "확인": "py -3 -c \"import sys; sys.exit(0 if (3, 10) <= sys.version_info[:2] < (3, 15) else 1)\"",
    "하기": "winget install --id Python.Python.3.12 -e --accept-source-agreements --accept-package-agreements",
    "안내": [
     "브라우저에서 python.org/downloads 를 연다(Microsoft Store 판은 py 실행기가 없어 쓰지 않는다).",
-    "노란 «Download Python» 단추로 받은 파일을 실행한다.",
+    "노란 «Download Python» 단추는 가장 새 판이라 쓰지 않는다 — 아래 «Looking for a specific release?» 목록에서 3.14 의 가장 새 판 «Download» → «Windows installer (64-bit)» 를 받아 실행한다.",
+    "3.15 이상이 이미 깔려 있으면 설정 › 앱 에서 그 «Python 3.15» 를 지운다(py 가 가장 새 판을 고르기 때문).",
     "첫 화면 맨 아래 «Add python.exe to PATH» 칸에 체크하고 «Install Now» 를 누른다.",
     "«Setup was successful» 이 뜨면 «Close» 를 누르고, 열려 있던 Claude·터미널 창을 모두 닫았다가 다시 연다."
    ]
@@ -24,11 +25,27 @@
    "쓰는 곳": ["3_시스템/search.py", "3_시스템/ingest.py"],
    "필수": true,
    "까닭": "찾기(하이브리드 검색)와 PDF·Office·한글 원본 색인에 쓴다.",
-   "확인": "py -3 -c \"import importlib.util as u, sys; sys.exit(0 if all(u.find_spec(m) for m in ('sentence_transformers','markitdown','pypdfium2','PIL','olefile','psutil')) else 1)\"",
+   "확인": "py -3 -c \"import importlib.util as u, importlib.metadata as md, sys; ok = all(u.find_spec(m) for m in ('sentence_transformers','markitdown','pypdfium2','PIL','olefile','psutil')) and tuple(int(x) for x in md.version('markitdown').split('.')[:2]) >= (0, 1); sys.exit(0 if ok else 1)\"",
    "하기": "py -3 -m pip install sentence-transformers \"markitdown[docx,pptx,xlsx]\" pypdfium2 pillow olefile psutil",
    "안내": [
     "Claude 에게 «파이썬 꾸러미 설치해 줘» 라고 하면 하기 명령을 대신 돌린다(몇 분).",
-    "직접 하려면 시작 메뉴에서 «터미널» 을 열고 하기 명령을 붙여 넣은 뒤 Enter."
+    "직접 하려면 시작 메뉴에서 «터미널» 을 열고 하기 명령을 붙여 넣은 뒤 Enter.",
+    "깔았는데도 «안 됨»이면 markitdown 이 옛 0.0.2 로 깔린 것이다 — 파이썬 판(3.10~3.14)부터 본다."
+   ]
+  },
+  {
+   "id": "vc-redist",
+   "이름": "Microsoft Visual C++ 재배포 패키지(x64)",
+   "종류": ["프로그램 설치"],
+   "쓰는 곳": ["3_시스템/search.py"],
+   "필수": true,
+   "까닭": "검색 모델이 쓰는 torch 가 이것 없이는 «c10.dll … WinError 126»으로 안 뜬다 — 찾기·첫 색인이 통째로 죽는다(11-27 빈 윈도 실측). 다른 프로그램이 이미 깔아 둔 PC 가 많다.",
+   "확인": "$k = 'HKLM:\\SOFTWARE\\Microsoft\\VisualStudio\\14.0\\VC\\Runtimes\\x64'; if ((Test-Path $k) -and ((Get-ItemProperty $k).Installed -eq 1)) { exit 0 } else { exit 1 }",
+   "하기": "winget install --id Microsoft.VCRedist.2015+.x64 -e --accept-source-agreements --accept-package-agreements",
+   "안내": [
+    "브라우저에서 aka.ms/vs/17/release/vc_redist.x64.exe 를 열면 받기가 시작된다.",
+    "받은 파일을 실행해 «동의»에 체크하고 «설치» → 관리자 확인 «예» → «닫기».",
+    "Claude·터미널 창을 닫았다가 다시 연다."
    ]
   },
   {
@@ -195,6 +212,20 @@
    ],
    "누름": [
     {"앱": "브라우저", "길": ["claude.com/download"], "누름": null, "근거": "웹 쪽 — 로그인해야 보이고 판마다 바뀌어 PC 에서 못 잼", "확인 필요": "내려받기 단추 글"}
+   ]
+  },
+  {
+   "id": "claude-path",
+   "이름": "터미널에서 claude 이름으로 부르기(PATH)",
+   "종류": ["윈도우 설정"],
+   "쓰는 곳": ["README.md"],
+   "필수": true,
+   "까닭": "Claude Code 설치 명령이 실행 파일을 사용자 폴더 .local\\bin 에 두고 PATH 에는 안 넣는다 — 그대로면 README 6단계 «claude» 가 «찾을 수 없음»이다(11-27 빈 윈도 실측). 볼트 대본은 claude_bin.py 로 찾아 돌지만 사람이 치는 첫 실행이 막힌다.",
+   "확인": "if (Get-Command claude -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }",
+   "하기": "[Environment]::SetEnvironmentVariable('Path', ([Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:USERPROFILE + '\\.local\\bin'), 'User')",
+   "안내": [
+    "시작 메뉴에서 «터미널»을 열고 하기 명령을 붙여 넣고 Enter(사용자 PATH 에 .local\\bin 을 더한다 · 관리자 필요 없음).",
+    "터미널을 닫았다가 다시 열고 claude --version 이 판 번호를 내는지 본다."
    ]
   },
   {

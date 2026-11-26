@@ -1,5 +1,5 @@
 // 수집 창(collect_desk) 화면 시험 — 격리 옵시디언 · 임시 프로필 · 포트 9377 · 진짜 설정의 읽기 사본 · 내 컴퓨터 안 시험 서버.
-// 실행: 임시 폴더를 현재 폴더로 두고 `node C:/Claude_Brain/3_시스템/_eval/collect_desk_view_check.mjs`. 볼트·C:\brain-base 에 쓰지 않는다. 학교 서버에 요청이 안 나간다.
+// 실행: 임시 폴더를 현재 폴더로 두고 `node <볼트>/3_시스템/_eval/collect_desk_view_check.mjs`. 볼트·빌더 저장소(BRAIN_BASE_DIR)에 쓰지 않는다. 학교 서버에 요청이 안 나간다.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
@@ -10,7 +10,7 @@ if (!CDP || !fs.existsSync(CDP)) { console.log("건너뜀: 빌더 저장소 도�
 const { launch, sleep, TV, OUT } = await import("file:///" + CDP);
 
 const cwd = path.resolve(".").replace(/\\/g, "/");
-if (cwd.startsWith("C:/Claude_Brain") || cwd.startsWith("C:/brain-base")) throw new Error("임시 폴더에서 돌릴 것");
+if (cwd.startsWith(path.resolve(path.dirname(decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, "$1")), "..", "..").replace(/\\/g, "/")) || (process.env.BRAIN_BASE_DIR && cwd.startsWith(process.env.BRAIN_BASE_DIR.replace(/\\/g, "/")))) throw new Error("임시 폴더에서 돌릴 것");
 process.env.DESK_NO_OPEN = "1"; // 시험에서는 브라우저를 안 띄운다
 const PORT = +(process.env.BB_PORT ?? 9377);   // 시험마다 다른 디버그 포트(BB_PORT · 기본 9377)
 const REAL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..").split(path.sep).join("/");

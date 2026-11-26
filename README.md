@@ -6,7 +6,8 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 - **Windows** (훅이 PowerShell — 현재 Windows 전용. 타 OS는 훅 스크립트 포팅 필요)
 - **Git for Windows**(Git Bash 포함 — 훅 하나가 Bash 문법) · Claude Code v2.1.59+(구독 로그인) · Obsidian
 - 선택: Node.js(웹페이지 읽기 도구 `defuddle` · 삼성노트 `.sdocx` 색인) · MS Word(docx 를 PDF 로) · 크롬(수집 창이 글을 여는 브라우저)
-- **Python 3.10+ — python.org 설치판**(`py` 실행기가 함께 깔린다 · 훅·대본이 `py -3` 으로 부른다 · Microsoft Store 판은 `py` 가 없어 훅 절반이 안 돈다 — `brain.py doctor` 의 «파이썬» 줄로 확인) + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
+- **Microsoft Visual C++ 재배포 패키지(x64)** — 없으면 검색 모델(torch)이 «c10.dll … WinError 126»으로 안 뜬다. 다른 프로그램이 이미 깔아 둔 PC 가 많다 · 없으면 `aka.ms/vs/17/release/vc_redist.x64.exe` 를 받아 실행(«볼트 밖 설정 점검»이 잰다).
+- **Python 3.10~3.14 — python.org 설치판**(3.15 이상은 아직 문서 색인 꾸러미 `markitdown` 이 옛 0.0.2 로만 깔려 docx·pptx·xlsx 색인이 안 된다 — 노란 «Download Python» 단추 대신 «Looking for a specific release?» 에서 3.14 · `py` 실행기가 함께 깔린다 · 훅·대본이 `py -3` 으로 부른다 · Microsoft Store 판은 `py` 가 없어 훅 절반이 안 돈다 — `brain.py doctor` 의 «파이썬» 줄로 확인) + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
   첫 검색 시 임베딩 모델(기본 `intfloat/multilingual-e5-small`, ~470MB)을 자동 내려받아 로컬 인덱스를 만든다. 첫 색인은 PC 에 따라 몇 분에서 십여 분(코어 2개 PC 에서 12분 넘게 잼) — 도는 동안 «색인 만드는 중 · k/N 조각» 줄이 나온다.
 
 ## 설치
@@ -36,7 +37,11 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
    ```
 5. Obsidian에서 이 폴더를 볼트로 열기. «제한 모드 끄기(커뮤니티 플러그인 켜기)»를 고르면 동봉 플러그인 **Brain Source**가 켜진다 — 원본(PDF·docx·pptx·xlsx·hwp·csv·html)을 옵시디언 안에서 보고 고치고, 엑셀식 `.sheet` 를 편집하고, 같은 이름 md 를 원본 아래 메모 칸으로 붙인다. 원본은 기본으로 보호(읽기 전용) 상태로 열린다.
    (선택) 옵시디언 설정 › 일반 › «명령줄 인터페이스» 켜기 — 파일을 옮길 때 옵시디언이 링크를 함께 고친다.
-6. 폴더에서 `claude` 실행 → 트러스트 수락(«Yes, proceed») → `/login` 으로 Claude 구독 계정 로그인(API 키 환경 변수는 두지 않는다).
+6. 폴더에서 `claude` 실행(윈도 11 기본 «터미널» = Windows Terminal 에서 — 영어 윈도의 옛 «Windows PowerShell» 창은 한글을 빈칸으로 그린다 · 윈도 10 이면 Microsoft Store 에서 «Windows Terminal») → 트러스트 수락(«Yes, proceed») → `/login` 으로 Claude 구독 계정 로그인(API 키 환경 변수는 두지 않는다).
+   `claude` 를 «찾을 수 없다»고 하면: Claude Code 설치 명령이 실행 파일을 `%USERPROFILE%\.local\bin` 에 두고 PATH 에는 안 넣은 것이다. 터미널에 아래 한 줄을 붙여 넣고 터미널을 다시 연다.
+   ```
+   [Environment]::SetEnvironmentVariable('Path', ([Environment]::GetEnvironmentVariable('Path', 'User') + ';' + $env:USERPROFILE + '\.local\bin'), 'User')
+   ```
 7. 첫 세션에 "⚠ 개인화 미완료" → `setup-interview` 실행(~10분). **네이티브 메모리 볼트 리다이렉트(옵션R)**·호칭·언어·톤·하드웨어(임베딩 모델 자동)·**개인 백업 repo 연결**.
    → **개인 repo를 연결하기 전까지 자동 push는 비활성**(개인정보 보호). 인터뷰가 `origin`을 개인 repo로 설정한다.
 8. **볼트 밖 설정 점검** — Claude 에게 «바깥 설정 점검». 빠진 설치·설정을 재서 Claude 가 할 수 있는 것은 묻고 대신 하고, 사람이 할 것(앱 화면·로그인·관리자 권한)은 한 단계씩 안내한다. 목록 = `.claude/skills/dist-sync/external.json`.

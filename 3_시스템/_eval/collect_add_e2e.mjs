@@ -1,6 +1,6 @@
 // 수집 추가 끝까지 시험(collect-add · 11-06) — 격리 옵시디언에서 «＋ 수집 추가» → 진짜 Claude 가 대화창에서 collect_desk:add 를 돈다.
 // ⚠ 진짜 모델 호출(구독 사용량) · 공개 사이트를 실제로 받는다(사이트당 1분 1회 이하는 스킬이 지킨다).
-// 볼트·C:\brain-base 에 쓰지 않는다 — 임시 폴더를 현재 폴더로 · 플러그인 = C:/brain-base/build · 포트 BB_PORT(기본 9394).
+// 볼트·빌더 저장소(BRAIN_BASE_DIR)에 쓰지 않는다 — 임시 폴더를 현재 폴더로 · 플러그인 = <BRAIN_BASE_DIR>/build · 포트 BB_PORT(기본 9394).
 //   node collect_add_e2e.mjs up          — 시험 볼트를 꾸미고 옵시디언을 띄운 채 둔다(백그라운드로 · `quit` 파일이 생기면 끈다)
 //   node collect_add_e2e.mjs do add      — 수집 창 «＋ 수집 추가»를 누르고 대화창을 보인다
 //   node collect_add_e2e.mjs do say "글"  — 입력 상자에 글을 넣고 보낸 뒤, 답이 끝나거나 승인 카드가 뜰 때까지 기다린다
@@ -10,16 +10,19 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+const HERE = path.dirname(decodeURIComponent(new URL(import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, "$1"));
+const REAL = path.resolve(HERE, "..", "..").replace(/\\/g, "/");   // 이 시험이 든 볼트(제 자리 기준)
+const BB = (process.env.BRAIN_BASE_DIR || "").replace(/\\/g, "/");   // 빌더 저장소(brain-base 소스) — 받은 사람에게는 없다
+if (!BB || !fs.existsSync(BB + "/test/obs_cdp.mjs")) { console.log("건너뜀: 빌더 저장소 도구 없음(BRAIN_BASE_DIR=" + BB + ")"); process.exit(0); }
 const cwd = path.resolve(".").replace(/\\/g, "/");
-if (cwd.startsWith("C:/Claude_Brain") || cwd.startsWith("C:/brain-base")) throw new Error("임시 폴더에서 돌릴 것");
+if (cwd.startsWith(REAL) || cwd.startsWith(BB)) throw new Error("임시 폴더에서 돌릴 것");
 const PORT = +(process.env.BB_PORT ?? 9394);
-const REAL = "C:/Claude_Brain";
 const MOD = ".claude/skills/collect_desk";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const [cmd, sub, ...rest] = process.argv.slice(2);
 
 if (cmd === "up") {
-  const { launch, TV } = await import("file:///C:/brain-base/test/obs_cdp.mjs");
+  const { launch, TV } = await import("file:///" + BB + "/test/obs_cdp.mjs");
   const cp = (rel) => {
     const a = path.join(REAL, rel);
     if (fs.existsSync(a)) fs.cpSync(a, path.join(TV, rel), { recursive: true });
@@ -35,7 +38,7 @@ if (cmd === "up") {
   fs.writeFileSync(path.join(TV, "3_시스템/actions.json"), JSON.stringify({ schema: 1, actions: JSON.parse(fs.readFileSync(path.join(REAL, "3_시스템/actions.json"), "utf8")).actions.filter((a) => a.id.startsWith("collect_desk.")) }));
   const PLUG = path.join(TV, ".obsidian/plugins/brain-base");
   fs.mkdirSync(PLUG, { recursive: true });
-  for (const f of ["main.js", "manifest.json", "styles.css"]) fs.copyFileSync(path.join("C:/brain-base/build", f), path.join(PLUG, f));
+  for (const f of ["main.js", "manifest.json", "styles.css"]) fs.copyFileSync(path.join(BB + "/build", f), path.join(PLUG, f));
   fs.writeFileSync(path.join(TV, ".obsidian/community-plugins.json"), '["brain-base"]');
   fs.rmSync(path.join(cwd, "quit"), { force: true });
   const { ev, close } = await launch(PORT);
