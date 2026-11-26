@@ -230,6 +230,19 @@ def log(path, msg):
         pass
 
 
+def new_notes(vault):
+    """git 이 아직 모르는(??)·막 더한(A) md 의 절대 경로(normcase) 집합 · git 을 못 읽으면 None(= 옛 동작 · 전부 본다).
+    MOC 등재는 새 노트의 규약이다 — 옛 노트·사람이 들여온 노트 전부를 매 턴 막으면 Claude 가 MOC 를 통째로 다시 쓴다(11-27 깨끗한 볼트에서 잼)."""
+    code, out = git(vault, "-c", "core.quotepath=off", "status", "--porcelain", "--untracked-files=all", timeout=20)
+    if code != 0:
+        return None
+    s = set()
+    for ln in out.decode("utf-8", "replace").splitlines():
+        if ln[:2] in ("??", "A ", "AM") and ln.rstrip('"').endswith(".md"):
+            s.add(os.path.normcase(os.path.join(vault, ln[3:].strip().strip('"'))))
+    return s
+
+
 def check(vault):
     """(위반 다섯 목록, 걸린 초, 센 파일 수) — PS 판 ①②③④ 와 같은 판정."""
     t0 = time.perf_counter()
@@ -240,6 +253,7 @@ def check(vault):
     rj = json.load(open(os.path.join(vault, "3_시스템", "roles.json"), encoding="utf-8-sig"))
     dirs = [rj["roles"][g].replace("/", "\\") for g in rj["groups"]["moc_notes"]]
     exempt = {rj["roles"]["modules"].replace("/", "\\")}
+    fresh = new_notes(vault)
     no_fm, no_moc, bad_links = [], [], []
     n = 0
     for d in dirs:
@@ -256,7 +270,7 @@ def check(vault):
             txt = read(f)
             if not (txt and txt.startswith("---")):
                 no_fm.append(name)
-            if d not in exempt and not re.search(r"\[\[" + re.escape(stem) + r"[\]|#]", moc_text, re.I):
+            if d not in exempt and (fresh is None or os.path.normcase(f) in fresh) and not re.search(r"\[\[" + re.escape(stem) + r"[\]|#]", moc_text, re.I):
                 no_moc.append(name)
             if txt:
                 fm = txt.split("\n---", 1)[0]
