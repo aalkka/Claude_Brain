@@ -70,10 +70,25 @@
   "brain-base": false,
   "brain-calendar": false,
   "graph": false,
-  "switcher": false,
+  "switcher": true,
   "templates": true,
   "command-palette": true,
   "canvas": true,
   "bases": true
- }
+ },
+ "ribbonOrder": [
+  "brain-base:외부뇌 홈",
+  "brain-base:외부뇌 주제",
+  "brain-base:외부뇌 대화",
+  "brain-base:수집",
+  "brain-calendar:캘린더",
+  "switcher",
+  "brain-base:모바일 연결",
+  "graph",
+  "brain-base:휴지통",
+  "templates",
+  "command-palette",
+  "canvas",
+  "bases"
+ ]
 }
