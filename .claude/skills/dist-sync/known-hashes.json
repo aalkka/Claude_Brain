@@ -220,6 +220,7 @@
 },
 ".claude/skills/dist-sync/ship.json": {
 "012744975a0c": "e4b808b59f35dfd6",
+"12589c0bf00c": "3270ca21a6284d07",
 "8983e89d4dc3": "5359f05160f2a823",
 "9d31409066bc": "a0cd0476b0ba6775",
 "a7f96d3235c2": "c1433ed91c2765d5",
@@ -238,6 +239,7 @@
 "98683c724762": "038464d1d9a94cb4",
 "99cd92e718bd": "b9770168d5698717",
 "a03cea231509": "1d3e9f6e1df1791c",
+"b2797aef2ddf": "d6d061760a1b527d",
 "be0593105623": "b4cb6b18fc4f8aef",
 "dc66e7abc1db": "98bbfbc4fc281932",
 "ec3bbfe21d8a": "c2420238b81cf4ea",
@@ -1789,6 +1791,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "2154fd7469e7",
+"rev": "bf0abbd9b155",
 "schema": 1
 }
