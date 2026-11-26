@@ -276,6 +276,7 @@
 "6ddcefa1fe88": "7229c8df15b8a041",
 "81eb4dcc0c2d": "23d7034c24865af2",
 "9cbfa41bd689": "49104b0ab5e4af3b",
+"de946bfe2fab": "26ebdcd5b3b40889",
 "fdc2bb7474ff": "8b443fd6212fd825"
 },
 ".claude/skills/dist-sync/tutorial/1-업데이트.md": {
@@ -1009,6 +1010,7 @@
 "b52041f87c26": "5ede3d0a97f39609"
 },
 "3_시스템/brain.py": {
+"0e4540accd79": "3bfcae182f6b0f70",
 "23d1202e355c": "5ba7c68ad87e70bd",
 "41b1095dbfc9": "f1288dbdd09d25c9",
 "77b7e449e309": "5f73b7d3904d0e95",
@@ -1879,6 +1881,7 @@
 "0cfebb38fa1d": "4212a12c5357609e",
 "0e612799b0bb": "2003dde3fdac4707",
 "136ef305fd34": "c434f01b70453b09",
+"1393d054cb2a": "3c5862aeb82afae1",
 "18dc1afe94a5": "b4137e3aa350c315",
 "1db6c3758cbd": "26bdcb0a4d6feabf",
 "309040ecf91a": "df7dea224ea5d9d0",
@@ -1898,6 +1901,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "5f116ff73cc8",
+"rev": "92aeb2b5774c",
 "schema": 1
 }
