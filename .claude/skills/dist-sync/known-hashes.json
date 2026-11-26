@@ -179,6 +179,7 @@
 "ffa4bdeb3f36": "17c825d593f0f861"
 },
 ".claude/skills/dist-sync/scripts/dist-diff.py": {
+"1547e609896b": "6c816c3fd8b6b127",
 "18421fabb136": "3d665993529d05a1",
 "2850f5376704": "9034358635ca9611",
 "45d52089c612": "ba6082eba5b5b741",
@@ -1903,6 +1904,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "6e00bb6d5b41",
+"rev": "e79032d7a6b3",
 "schema": 1
 }
