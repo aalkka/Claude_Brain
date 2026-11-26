@@ -46,7 +46,18 @@ if ($res -notmatch '"result"') {
 #    개인화(setup-interview 슬롯9)가 origin을 개인 repo로 돌린 뒤부터 자동 push 활성.
 $claudeMd = Join-Path $vault 'CLAUDE.md'
 $slotsLeft = (Get-Content $claudeMd -Raw) -match '\{\{[^}]'
-if (-not $slotsLeft -and (git remote)) { git push 2>$null | Out-Null }
+#    origin 이 아직 공개 배포 저장소면(개인 저장소 단계를 건너뜀) push 하지 않는다 — 권한이 없어 늘 실패하고,
+#    권한이 있는 사람(배포판 주인)에게는 개인 커밋이 공개 저장소로 간다(11-26). 배포 저장소 = dist 원격 · 받는 문 해시 표의 주소.
+$origin = git remote get-url origin 2>$null
+$pubUrls = @(git remote get-url dist 2>$null)
+$relJson = Join-Path $vault '3_시스템\door-app\release.json'
+if (Test-Path $relJson) {
+    $m = [regex]::Match((Get-Content $relJson -Raw), 'https://github\.com/[^/"\s]+/[^/"\s]+')
+    if ($m.Success) { $pubUrls += $m.Value }
+}
+$canon = { param($u) ("$u".Trim() -replace '\.git$', '' -replace '/+$', '').ToLower() }
+$originIsPub = $origin -and @($pubUrls | Where-Object { $_ -and ((& $canon $_) -eq (& $canon $origin)) }).Count -gt 0
+if (-not $slotsLeft -and $origin -and -not $originIsPub) { git push 2>$null | Out-Null }
 
 # 3.5 주인 장부(11-19) — 이 세션의 장부 항목·시험 프로세스(에뮬레이터·격리 옵시디언·머리 없는 크롬)를 끝낸다.
 #   왜: 세션이 끝나도 띄운 것이 남아 메모리를 쥐었다(에뮬레이터 이틀 · 11-15). 동기 0.5초 · 실패해도 계속 · 그 밖의 배경 작업은 예약 작업 tick 이 맡음.
