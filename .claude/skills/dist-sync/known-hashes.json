@@ -130,7 +130,8 @@
 "77e74afd57bd": "69f9c0ae6f0b2817",
 "9bbc2c1f7015": "2292a84b46421ed9",
 "d56f6baca481": "2dc7207dbd5b4e02",
-"df05975aac5c": "7914243986d6159c"
+"df05975aac5c": "7914243986d6159c",
+"f2cec7b63c48": "83df83a7c56ca3ef"
 },
 ".claude/skills/dist-sync/external.json": {
 "20cd292dc761": "ea8f5cf6ad0a9bf9",
@@ -464,6 +465,7 @@
 "54916c6a5d2c": "90524f0d7114b834",
 "675770cc96a3": "b18c0bbc5a42e3e4",
 "68841078166e": "d0a82e8d66c76ea7",
+"7f7ad0b4b9b0": "ee305b603b0dfba1",
 "d925086a5816": "f83c56f33dc02fb8"
 },
 ".claude/skills/setup-interview/SKILL.md": {
@@ -550,12 +552,14 @@
 "e656277cd5ea": "a73b6571162904f2"
 },
 "3_시스템/_eval/claude_login_check.py": {
-"8015f8918e7f": "ae8d3ceced879d2e"
+"8015f8918e7f": "ae8d3ceced879d2e",
+"dbbc3d758b04": "7b972951bbdb97c8"
 },
 "3_시스템/_eval/collect_add_check.py": {
 "12f51332a236": "744dd8162bb96a63",
 "1ca0adfbe228": "286259f1d88cc155",
 "41baf63ce7ba": "2c1ea5fe06292ee8",
+"8703e89c89be": "49080743074d42b4",
 "9b0c0cccb914": "c4b37c3d1fb5e3e6",
 "c5c5eb3391cb": "157b57ef57fa1ffe",
 "c7df2cdfc93c": "511b4432eb547c97",
@@ -589,6 +593,7 @@
 "3ee517b301f0": "b72c2ad04bd4afec",
 "4fb89357731a": "10da8f43f6900619",
 "4ff8babaf204": "12042ee0f12b2c63",
+"72dae16ab527": "715bc8f02758958c",
 "93f89aa22c57": "67b9d7335b1379b8",
 "950610571d0d": "cc04c7376680cd0c",
 "e33ed88c0592": "37fa75d63675a706"
@@ -598,10 +603,12 @@
 "3f45e7d51000": "5abd40df76fb5482"
 },
 "3_시스템/_eval/collect_desk_set_view_check.mjs": {
+"2074bc80e426": "1207c9a981a9a320",
 "6e914e6bfca3": "c3454b2d26ee6d50",
 "c4efef0d1fe0": "2ab3ed208ff9a431"
 },
 "3_시스템/_eval/collect_desk_sw_check.mjs": {
+"2c7142a7e603": "045f72178eeed663",
 "5d68a38a974b": "b68e33e9fa664be6",
 "9ad80162556a": "4cae0177a14edc17"
 },
@@ -617,6 +624,7 @@
 "c9ab4ee857d1": "07189a0a794c98ed",
 "d79a65b75247": "eaf8b4bbb5517aae",
 "dbc50edcd49d": "ade6d972baca834c",
+"e26007c27caf": "f39e5a2a32ca91f0",
 "f19471ff7d69": "a126d0433a49ea04"
 },
 "3_시스템/_eval/collect_ext_check.py": {
@@ -775,10 +783,12 @@
 "f60ee34abbe2": "25312792b6517290"
 },
 "3_시스템/_eval/sort_desk_check.py": {
+"479c2ef5b2c4": "0c2b009819bac95b",
 "a9679c105e86": "d60e0d1c47d93d8b",
 "fd44363202ff": "7c1e735eb96ecef7"
 },
 "3_시스템/_eval/sort_learn_check.py": {
+"6f8e4c7ddc0e": "cfd81811fb1f0ff3",
 "9e0fca77f725": "19f5e3ee51b2b331",
 "fca8113778eb": "42f65ab270e42d13"
 },
@@ -802,7 +812,8 @@
 "3_시스템/_eval/subguard_check.py": {
 "09e0b41ad763": "8916e045cdb5d1ba",
 "82c2830556b7": "9cc2e8cfd254205f",
-"8af89bd96f1e": "3de2b4717f795791"
+"8af89bd96f1e": "3de2b4717f795791",
+"b6f84d7ea507": "9c8c5681f74098bb"
 },
 "3_시스템/_eval/tag_alert_check.py": {
 "21c3657fb8fe": "679718fc96f69bbf"
@@ -827,7 +838,8 @@
 },
 "3_시스템/_eval/work_check.py": {
 "6845770ff73a": "a09aca9680058f62",
-"6abe46adea67": "edecb8f8e0c77aef"
+"6abe46adea67": "edecb8f8e0c77aef",
+"b37f4778e0cf": "b08812638b902f2d"
 },
 "3_시스템/_ref/.gitkeep": {
 "e3b0c44298fc": "e69de29bb2d1d643"
@@ -1291,6 +1303,7 @@
 "039c5748f526": "294da032967ad0fb"
 },
 "3_시스템/hooks/session-end.ps1": {
+"088970600e75": "50a55694dd5a65b2",
 "08ae4d0092bf": "815fea29e1822d6c",
 "20dac019e40a": "643cdf791bbc0567",
 "2a10b5e55718": "81e341272ebe3eca",
@@ -1318,6 +1331,7 @@
 "290ae9b5b822": "f80121090cbd354d",
 "2a6a0717d7b3": "6cac626a3dbe6eb0",
 "363b14cd891a": "ab40e8321a8667e9",
+"5b461c85b176": "aec92a6e8683c988",
 "69457d2cb681": "06ede6375dd3b1c1",
 "72719fc0e3be": "e8999a1a4b1d76e1",
 "728d5b6d9e2f": "ad1ef6d65072d5ed",
@@ -1529,6 +1543,7 @@
 "a10be66531a3": "7837ec57fcd34693",
 "abd2c462b195": "d1204c81e2485e43",
 "c02f6b2a614f": "7778467ff5d41d6c",
+"c505d2f3ff85": "ee39fa57309decc5",
 "c53afe68998a": "a69ceda8e0910886",
 "d0c1c9e0bc78": "94cd17f64d39ef6a",
 "eeb86caac9f5": "17e7695c526a53d8"
@@ -1629,7 +1644,8 @@
 },
 "3_시스템/tag.py": {
 "51e2cd08f216": "2c066a76728ea18a",
-"526268c49466": "92b5e0e0a44a57d8"
+"526268c49466": "92b5e0e0a44a57d8",
+"db07e172d7ad": "ecec3480f67d1d4a"
 },
 "3_시스템/tokens.py": {
 "33103785c1f0": "00ecd777817438df",
@@ -1771,6 +1787,7 @@
 "d9c512a89b33": "9acdfd7f61041131"
 },
 "3_시스템/설명서/설명서-모아보기.md": {
+"0e8a6fb0d130": "76e94e27f2e707d5",
 "4bb528282b69": "360844b1b01cfbe7",
 "6c702a009ac8": "8f3618282e525216",
 "861f31460484": "13bbfb40b09c6123",
@@ -1796,6 +1813,7 @@
 "a32d78ddb528": "f10dd53ca832794a"
 },
 "3_시스템/설명서/설명서-설정과-표.md": {
+"0f0928105840": "577ed8a2b87e4237",
 "33e99739e52e": "6caf5287217db0c6",
 "b2158ff97c1c": "002375efb2b2f26c",
 "e5e7b7323a3e": "a11af08f242ab483",
@@ -1876,9 +1894,10 @@
 "797189d72698": "b7b9f500d0692258",
 "82561a69123a": "d8c9ace8dfce0cfa",
 "8eb97a2da247": "37fb5daf58893a44",
-"a0dd5cb999f3": "23253beb6ac68742"
+"a0dd5cb999f3": "23253beb6ac68742",
+"ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "8b7d67d025aa",
+"rev": "5f116ff73cc8",
 "schema": 1
 }
