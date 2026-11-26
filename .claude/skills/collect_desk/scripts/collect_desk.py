@@ -765,6 +765,7 @@ class Refuse(Exception):
 
 def save_json(path, d):
     tmp = os.path.join(os.path.dirname(path), '.' + os.path.basename(path) + '.tmp')
+    os.makedirs(os.path.dirname(path), exist_ok=True)   # 새로 받은 볼트에는 3_시스템/collect 가 없다(첫 «수집 추가»)
     with open(tmp, 'w', encoding='utf-8', newline='\n') as f:
         json.dump(d, f, ensure_ascii=False, indent=2)
         f.write('\n')
@@ -1517,10 +1518,10 @@ MOA_SKIP = {'.git', '.obsidian', '.trash', '.claude', 'node_modules', '__pycache
 
 
 def moa_files():
-    """볼트의 .moa 전부(이름 순) · 점 폴더 · 0_작업(초안·격리 사본) · 1_수집(원본 층) 밖 · 연습 때는 VAULT 가 임시 폴더라 빈 목록."""
+    """볼트의 .moa 전부(이름 순) · 점 폴더 · 작업(초안·격리 사본) · 원본 층(roles) 밖 · 연습 때는 VAULT 가 임시 폴더라 빈 목록."""
     out = []
     for root, dirs, files in os.walk(VAULT):
-        dirs[:] = [x for x in dirs if x not in MOA_SKIP and not x.startswith('.') and not (root == VAULT and x in ('0_작업', '1_수집'))]
+        dirs[:] = [x for x in dirs if x not in MOA_SKIP and not x.startswith('.') and not (root == VAULT and x in (roles.path('work'), roles.path('sources')))]
         for f in files:
             if f.endswith('.moa'):
                 out.append({'name': f[:-4], 'path': os.path.relpath(os.path.join(root, f), VAULT).replace('\\', '/')})

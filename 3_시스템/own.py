@@ -170,7 +170,9 @@ def sessions():
                 alive = False
         sid = d.get("sessionId") or ""
         tx = os.path.join(_proj_dir(d.get("cwd")), sid + ".jsonl")
-        last = os.path.getmtime(tx) if os.path.exists(tx) else (d.get("updatedAt") or 0) / 1000
+        # 대화 기록이 없고 장부에도 시각이 없으면 시작 시각 · 그것도 없으면 «모름»(None) — 0 으로 두면 1970 년부터 쉰 것이 되어
+        # 살아 있는 세션을 R4 로 닫았다(11-26 20:45 «sort-43» 498803시간)
+        last = os.path.getmtime(tx) if os.path.exists(tx) else ((d.get("updatedAt") or d.get("startedAt") or 0) / 1000 or None)
         busy = d.get("status") == "busy"
         out[pid] = {"sid": sid, "short": sid[:8], "name": d.get("name") or "", "entry": d.get("entrypoint") or "", "busy": busy,
                     "last": _now() if busy else last, "alive": alive}
@@ -317,7 +319,7 @@ def judge(procs=None, sess=None, prev=None, now=None):
             continue
         o = owner_of(pid, procs, sess)
         s = sess.get(o) if o else None
-        idle_h = (now - s["last"]) / 3600 if s else None
+        idle_h = (now - s["last"]) / 3600 if s and s["last"] else None
         k = kind_of(r)
         core = None
         pv = prev.get("cpu", {}).get(str(pid))
@@ -333,20 +335,20 @@ def judge(procs=None, sess=None, prev=None, now=None):
                 why = ("R1", "장부 · " + ("주인 끝남" if dead else "수명 %.1f시간 넘음" % (e["ttl"] / 3600)))
         # 주인 없음 = 분리 실행(Start-Process 등)으로 부모 줄이 끊긴 것도 든다 — 쓰는 중일 수 있어 띄운 지 쉼 문턱만큼은 둔다
         # (11-20 01:45·01:55 잼: 하위 세션이 분리 실행해 쓰던 에뮬레이터를 띄운 지 4분·9분에 두 번 끔 · 시험 잠금도 없었음)
-        elif k and not locked and ((s is None and (now - r["start"]) / 3600 > t_idle) or (s is not None and not s["busy"] and idle_h > t_idle)):
+        elif k and not locked and ((s is None and (now - r["start"]) / 3600 > t_idle) or (s is not None and not s["busy"] and idle_h is not None and idle_h > t_idle)):
             why = ("R2", "%s · %s" % (k, "주인 없음" if s is None else "주인 %.1f시간 쉼" % idle_h))
-        elif s and not s["busy"] and idle_h > b_idle and core is not None and core > c["bg_core"] and not HOOK.search(r["cmd"]) and r["name"].lower() != "claude.exe":
+        elif s and not s["busy"] and idle_h is not None and idle_h > b_idle and core is not None and core > c["bg_core"] and not HOOK.search(r["cmd"]) and r["name"].lower() != "claude.exe":
             why = ("R3", "배경 작업 %.1f코어 · 주인 «%s» %.1f시간 일 없음" % (core, s["name"][:20], idle_h))
         if o or k or e:
             rows.append({"pid": pid, "name": r["name"], "kind": k or (e or {}).get("kind", ""), "owner": (s or {}).get("name", "")[:24],
                          "owner_short": (s or {}).get("short", ""), "idle_h": idle_h, "core": core, "priv_mb": r["priv"] >> 20,
                          "age_h": (now - r["start"]) / 3600, "rule": why[0] if why else "", "why": why[1] if why else "",
                          "keep": "" if why else ("시험 잠금 중" if locked else ("띄운 지 %.1f시간 < 문턱 %.1f시간" % ((now - r["start"]) / 3600, t_idle) if (k and s is None and (now - r["start"]) / 3600 <= t_idle)
-                                 else ("주인 %.1f시간 쉼 < 문턱 %.1fh" % (idle_h, t_idle) if (k and s is not None) else "해당 규칙 없음"))) + ("" if press else " · 압박 아님")})
+                                 else (("주인 %.1f시간 쉼 < 문턱 %.1fh" % (idle_h, t_idle) if idle_h is not None else "주인 일한 때 모름") if (k and s is not None) else "해당 규칙 없음"))) + ("" if press else " · 압박 아님")})
         if why:
             kill.append((pid, why[0], why[1], r))
     for pid, s in sess.items():
-        if s["alive"] and not s["busy"] and pid in procs and now - s["last"] > c["session_close_hours"] * 3600:
+        if s["alive"] and not s["busy"] and s["last"] and pid in procs and now - s["last"] > c["session_close_hours"] * 3600:
             kill.append((pid, "R4", "Claude 세션 «%s» %d시간 일 없음" % (s["name"][:30], (now - s["last"]) / 3600), procs[pid]))
     info_hold = [k for k in kill if not c["on"].get(k[1], True)]       # 꺼 둔 규칙 = 끄지 않고 보이기만
     kill = [k for k in kill if k not in info_hold]
@@ -644,7 +646,7 @@ def doctor_rows():
             mb = sum(sum(procs[q]["priv"] for q in family(p, procs) if q in procs) for p, *_ in kill) >> 20
             rows.append(("되찾기", "warn", "주인이 끝났거나 쉬는데 남은 프로세스 %d개(%dMB) — 되찾기 예약 작업 없음 · 미리 보기 `py -3 3_시스템/own.py tick --dry`" % (len(kill), mb)))
     now = _now()
-    idle = [(p, s) for p, s in sess.items() if s["alive"] and not s["busy"] and now - s["last"] > IDLE_SESSION_H * 3600]
+    idle = [(p, s) for p, s in sess.items() if s["alive"] and not s["busy"] and s["last"] and now - s["last"] > IDLE_SESSION_H * 3600]
     if idle:
         gb = sum(sum(procs[q]["priv"] for q in family(p, procs) if q in procs) for p, _s in idle) / 2 ** 30
         rows.append(("쉬는 세션", "warn", "하루 넘게 쉬는 Claude 세션 %d개(%.1fGB · %s) — %s" % (

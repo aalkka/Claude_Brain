@@ -5,7 +5,7 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 ## 필수 요건
 - **Windows** (훅이 PowerShell — 현재 Windows 전용. 타 OS는 훅 스크립트 포팅 필요)
 - **Git for Windows**(Git Bash 포함 — 훅 하나가 Bash 문법) · Claude Code v2.1.59+(구독 로그인) · Obsidian
-- 선택: Node.js(웹페이지 읽기 도구 `defuddle`) · MS Word(docx 를 PDF 로) · 크롬(수집 창이 글을 여는 브라우저)
+- 선택: Node.js(웹페이지 읽기 도구 `defuddle` · 삼성노트 `.sdocx` 색인) · MS Word(docx 를 PDF 로) · 크롬(수집 창이 글을 여는 브라우저)
 - **Python 3.10+** + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
   첫 검색 시 임베딩 모델(기본 `intfloat/multilingual-e5-small`, ~470MB)을 자동 내려받아 로컬 인덱스를 만든다.
 
@@ -26,9 +26,9 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
    (훅을 안 켜면 secret-scan 이 조용히 안 돈다 — 건강 줄이 «볼트 밖 설정 안 됨»으로 알린다.)
 3. **Python 의존성**:
    ```
-   py -3 -m pip install sentence-transformers "markitdown[docx,pptx,xlsx]" pypdfium2 pillow olefile
+   py -3 -m pip install sentence-transformers "markitdown[docx,pptx,xlsx]" pypdfium2 pillow olefile psutil
    ```
-   (`sentence-transformers`=하이브리드 검색 · 나머지 = `3_시스템/ingest.py` 원본 색인(PDF 글자·쪽 그림 · docx·pptx·xlsx · hwp). 그림 쪽 글자는 윈도우 내장 OCR 로 읽는다(한국어 윈도우면 설치 없음 · 아니면 설정 › 시간 및 언어 › 언어 추가 › 한국어 · «광학 문자 인식» 체크). 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
+   (`sentence-transformers`=하이브리드 검색 · `psutil` = 자동 재시작·되찾기가 프로세스를 읽음 · 나머지 = `3_시스템/ingest.py` 원본 색인(PDF 글자·쪽 그림 · docx·pptx·xlsx · hwp). 그림 쪽 글자는 윈도우 내장 OCR 로 읽는다(한국어 윈도우면 설치 없음 · 아니면 설정 › 시간 및 언어 › 언어 추가 › 한국어 · «광학 문자 인식» 체크). 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
    `py -3 -m pip install torch --index-url https://download.pytorch.org/whl/cu121`)
 4. **첫 인덱스 빌드**(최초 1회 수동 — 모델 ~470MB 다운로드 + 임베딩이 세션 훅 타임아웃을 넘길 수 있어 수동 권장):
    ```

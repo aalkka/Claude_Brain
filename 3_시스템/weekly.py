@@ -171,7 +171,9 @@ def health():
     wn = len(os.listdir(work)) if os.path.isdir(work) else 0
     last = git("log", "-1", "--format=%cr")
     mem = dir_size(os.path.join(HERE, "_claude-memory"))
-    out = [f"- 노트 {notes} · recent {t1['recent.md']}B · open-loops {t1['open-loops.md']}B(6KB까지) · 기억 색인 {os.path.getsize(os.path.join(HERE, '_claude-memory', 'MEMORY.md'))}B · 기억 {mem[1]}개",
+    idx = os.path.join(HERE, "_claude-memory", "MEMORY.md")   # 인터뷰 전·기억 끔이면 없다
+    idx_s = f"{os.path.getsize(idx)}B" if os.path.exists(idx) else "없음(인터뷰 전이거나 기억 끔)"
+    out = [f"- 노트 {notes} · recent {t1['recent.md']}B · open-loops {t1['open-loops.md']}B(6KB까지) · 기억 색인 {idx_s} · 기억 {mem[1]}개",
            f"- _index {size // 1048576}MB(200MB 넘으면 정리 제안) · work {wn}개(50개 넘으면) · 마지막 커밋 {last}"]
     return out
 
@@ -255,4 +257,9 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    import sys
+    if sys.argv[1:2] in (["-h"], ["--help"]):   # 쓰는 법만 — 기본 동작으로 빠지지 않는다
+        sys.stdout.reconfigure(encoding="utf-8")
+        print(__doc__)
+        sys.exit(0)
     sys.exit(main(sys.argv[1:]))

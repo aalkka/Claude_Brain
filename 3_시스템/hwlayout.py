@@ -209,6 +209,11 @@ def layout(img, boxes, texts):
 
 if __name__ == "__main__":
     import sys
+    if sys.argv[1:2] in (["-h"], ["--help"]):   # 쓰는 법만 — 기본 동작으로 빠지지 않는다
+        sys.stdout.reconfigure(encoding="utf-8")
+        print(__doc__)
+        sys.exit(0)
+    import sys
     from PIL import Image
     im = Image.open(sys.argv[1]).convert("RGB")
     m, lh = ink(im)

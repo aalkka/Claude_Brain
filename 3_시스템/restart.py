@@ -308,7 +308,7 @@ def gather(c):
     try:
         own = _own()
         sess = own.sessions()
-        f["claude"] = [{"name": s["name"], "short": s["short"], "busy": s["busy"], "idle_min": (now - s["last"]) / 60}
+        f["claude"] = [{"name": s["name"], "short": s["short"], "busy": s["busy"], "idle_min": (now - s["last"]) / 60 if s["last"] else None}
                        for s in sess.values() if s["alive"]]
         # own.py 판정: 되찾을 것 = 헛돎 · 장부에서 살아 있는 일
         kill, _rows, _m = own.judge()
@@ -406,6 +406,8 @@ def judge(f, c):
         for s in cl:
             if s["busy"]:
                 hold.append(("Claude", "«%s» 일하는 중" % (s["name"] or s["short"])[:30]))
+            elif s["idle_min"] is None:          # 일한 때 모름 = 일하는 중일 수 있어 미룸
+                hold.append(("Claude", "«%s» 일한 때 모름" % (s["name"] or s["short"])[:30]))
             elif s["idle_min"] < c["claude_idle_min"]:
                 hold.append(("Claude", "«%s» %d분 전 일함" % ((s["name"] or s["short"])[:30], s["idle_min"])))
             elif c["claude_open"] == "any":

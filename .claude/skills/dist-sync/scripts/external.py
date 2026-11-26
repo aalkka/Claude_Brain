@@ -195,7 +195,10 @@ def check(root=VAULT, everything=False):
         reps = dict(zip(need, ex.map(lambda a: report_of(a, root), need.values())))
         oks = list(ex.map(lambda it: run(it["확인"], cwd=root) if it.get("확인") else None, items))
         moks = list(ex.map(lambda it: measure(it, root, reps), mods))
-    rows = [row(it, ok) for it, ok in zip(items, oks)] + [row(it, ok) for it, ok in zip(mods, moks)]
+    # 여럿을 함께 띄우면 바쁜·느린 PC 에서 15초를 넘겨 «모름(?)»이 된다(11-26 잼: git 이 없는 셸에서 git 줄 넷이 «?» · 하나씩은 3~5초 «✗»).
+    # 확인 명령이 있는데 모름이 된 줄만 하나씩 길게 다시 잰다.
+    oks = [run(it["확인"], timeout=60, cwd=root) if ok is None and it.get("확인") else ok for it, ok in zip(items, oks)]
+    rows =[row(it, ok) for it, ok in zip(items, oks)] + [row(it, ok) for it, ok in zip(mods, moks)]
     return sorted(rows, key=lambda r: (not r["필수"], DEVICE_ORDER.get(r["기기"], 2) if r["필수"] else 0))
 
 

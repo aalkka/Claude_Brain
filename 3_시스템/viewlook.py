@@ -284,6 +284,11 @@ def selftest():
 
 
 if __name__ == "__main__":
+    import sys
+    if sys.argv[1:2] in (["-h"], ["--help"]):   # 쓰는 법만 — 기본 동작으로 빠지지 않는다
+        sys.stdout.reconfigure(encoding="utf-8")
+        print(__doc__)
+        sys.exit(0)
     a = sys.argv[1:]
     if not a or a[0] == "--selftest":
         selftest()

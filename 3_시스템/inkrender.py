@@ -181,6 +181,9 @@ def _pdf_size(rel, i):
 def load_sdocx(path):
     if not os.path.isfile(SDOCX_DUMP):
         raise RuntimeError(f".sdocx 풀이기 없음: {SDOCX_DUMP}")
+    import shutil
+    if not shutil.which("node"):  # 없으면 «[WinError 2] 파일을 찾을 수 없음»만 남아 까닭을 모른다(11-26 잼)
+        raise RuntimeError(".sdocx(삼성노트) 풀기에 Node.js 가 필요함 — 바깥 설정 «Node.js» 항목(nodejs.org LTS 설치 뒤 새 창)")
     with tempfile.TemporaryDirectory(prefix="inkrender-") as td:
         js = os.path.join(td, "d.json")
         r = subprocess.run(["node", SDOCX_DUMP, path, js], capture_output=True, timeout=300, creationflags=_NOWIN)

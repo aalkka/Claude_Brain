@@ -876,6 +876,11 @@ def op_restore(ctx, key, to=None, by_undo=None, core_ok=False):
     ev = find_event(ctx, key)
     if ev is not None and ev.get("op") != "rm":
         raise Stop("휴지통에 넣은 기록이 아님: %s (%s)" % (key, ev.get("op")))
+    if ev is None:                                          # 지우기가 알린 «묶음 id» 로도 — 그 묶음의 휴지통 기록이 하나면 그것(여럿이면 undo)
+        rms = [e for e in load_events(ctx) if e.get("batch") == key and e.get("op") == "rm"]
+        if len(rms) > 1 and not to:
+            raise Stop("묶음 %s 에 휴지통 기록이 %d개 — 한꺼번에 되살리기 = undo %s" % (key, len(rms), key))
+        ev = rms[0] if rms else None
     if ev is None:
         r = to_rel(ctx, key)[0]
         for e in reversed(load_events(ctx)):
@@ -1467,7 +1472,10 @@ def op_migrate(ctx, apply, undo=None, from_dir=None):
         rec = state["applied"].get(undo)
         if not rec:
             raise Stop("적용 기록 없는 이전: %s" % undo)
-        op_undo(ctx, rec["batch"])
+        if any(e.get("batch") == rec["batch"] for e in load_events(ctx)):
+            op_undo(ctx, rec["batch"])
+        else:                                   # 전부 «건너뜀(이미 됨)»·빈 자리 표시만 치운 이전 — 장부에 든 일이 없다(README «잘못됐을 때» 첫 줄이 여기서 죽었다)
+            print("되돌릴 파일 일 없음(이 이전은 옮긴 것이 없다 · 비운 옛 자리 표시는 다시 만들지 않는다)")
         del state["applied"][undo]
         save_json(state_p, state)
         print("이전 되돌림: %s" % undo)
