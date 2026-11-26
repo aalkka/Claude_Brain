@@ -249,7 +249,8 @@
 "a7f96d3235c2": "c1433ed91c2765d5",
 "bdd10f759839": "884248407e2ad13d",
 "c1646afcc03b": "0c4efbe01204a384",
-"ca7570b7d717": "0cf30c70c27c84fc"
+"ca7570b7d717": "0cf30c70c27c84fc",
+"f455082c1e81": "f51c979ac54cc32d"
 },
 ".claude/skills/dist-sync/skills/outside/SKILL.md": {
 "27e3e266651d": "9227a2376d943c55",
@@ -1237,6 +1238,9 @@
 "3_시스템/holidays.py": {
 "3856a0091741": "eeb08459d717e93c"
 },
+"3_시스템/hooks/approve/approve.py": {
+"9be020678550": "e95ae5044e5edbd0"
+},
 "3_시스템/hooks/core-gate-decide.ps1": {
 "12596851f03d": "292437424e154bbf",
 "477e80eb0923": "414b468fd58b246a",
@@ -1905,6 +1909,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "7d7b6bcca9a0",
+"rev": "a1582d8b1f7a",
 "schema": 1
 }
