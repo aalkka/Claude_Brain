@@ -270,7 +270,7 @@ CORE = [
     # 모듈 계약 코어(module.json uses_core · 11-18 mobility 범용화 10단계 잼) — 깨끗한 배포판에서 폰 서버가 `import nowin` 으로 못 떴다.
     # nowin = 창 없이 부르기 · autocommit = 기록 보존 순찰(M8) · sort·tag = 분류·태그 도구(알림 alert.py 가 부름)
     "3_시스템/nowin.py", "3_시스템/autocommit.py", "3_시스템/sort.py", "3_시스템/tag.py",  # mf:allow-path
-    # 수집 엔진 범용화(LMS 범용화 S1~S7 · 11-16~17) — 공통 엔진·로그인 가족·예약·받은 파일·15분 확인 · 플랫폼 어댑터·크롬 확장·개인 파일 빈 틀(사용자 결정: 가족·어댑터는 배포판 실음)
+    # 수집 엔진 범용화(LMS 범용화 S1~S7 · 11-16~17) — 공통 엔진·로그인 가족·예약·받은 파일·15분 확인 · 플랫폼 어댑터·크롬 확장·개인 파일 빈 틀(사용자: 가족·어댑터는 배포판 실음)
     # 새 web-collect·collect_desk 가 collectlib 를 부른다 — 빠지면 배포판 수집이 안 뜬다(11-19 publish 때 «층 미정»으로 남아 있었음)
     "3_시스템/collectlib.py", "3_시스템/collect-browser.py", "3_시스템/collect-file.py", "3_시스템/collect-schedule.py", "3_시스템/collect-tick.py",  # mf:allow-path
     "3_시스템/collect-adapters/*", "3_시스템/collect-ext/*", "3_시스템/collect-examples/*",  # mf:allow-path
@@ -286,6 +286,10 @@ LEAK = [
     (r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}(?![\w.-])", "이메일"),     # 끝이 글자 2+ — npm 꾸러미@판(1.2.3)은 아님(11-22)
     (r"C--[\w-]+", "Claude 프로젝트 폴더 이름"),
     (r"C:[\\/]Users[\\/](?![<{%$])[^\s\"')]+", "사용자 홈 경로"),     # <사용자>·%USERNAME% 같은 자리표는 아님(11-22)
+    # 11-26 유출 심기 시험(G104) — 위 꼴이 못 잡은 꼴 둘: JSON·파이썬 글 속 이스케이프(역슬래시 두 개)와 다른 드라이브 글자 · Git Bash·WSL 꼴(드라이브 글자를 폴더로)
+    #   한 글자 이름은 시험 자료의 자리표라 뺀다({2,} · 게이트 시험 표의 두 줄이 걸렸음)
+    (r"\b[A-Za-z]:\\\\Users\\\\(?![<{%$])[^\s\"')\\]{2,}|\b[D-Zd-z]:[\\/]Users[\\/](?![<{%$])[^\s\"')]{2,}", "사용자 홈 경로"),
+    (r"/[A-Za-z]/Users/(?![<{%$])[^\s\"')/]{2,}", "사용자 홈 경로"),
     (r"\b[0-9a-f]{8}\b(?![0-9a-f])", "세션 id 후보(⚠ PubMed·DOI 오탐 가능)"),
     # 11-22 — 11-21 손으로 걷은 것의 꼴(값 없음 · 모양만)
     (r"session_(?<!\wsession_)[0-9A-Za-z]{24}(?![0-9A-Za-z])", "원격 세션 id"),     # 낱말 먼저(앞 \b 는 빨리 찾기를 끔)
@@ -625,12 +629,13 @@ def dist_rules(vault):
 
 def load_local_leaks(vault):
     """볼트 전용 패턴 — leak-patterns.txt(실명·호칭·개인 저장소 이름) + mobility-leak.txt + 바꿈 짝의 찾을 글 + 자동 꼴.
-    leak-patterns.txt 가 없으면 None(«실명·호칭 검사 안 함» 경고 · 다른 볼트)."""
+    leak-patterns.txt 가 없어도 자동 꼴(숨긴 노트 경로·과목·작업 폴더·수집 id)과 이름 꼴(git 이름·메일 · profile 호칭)은 낸다 —
+    11-26 유출 심기 시험: 패턴 파일이 없는 볼트(다른 사용자)에서 None 을 돌려 자동 꼴까지 통째로 꺼져 심은 16가지 중 3가지만 잡았다.
+    «실명·호칭 검사 안 함» 경고는 has_name_patterns() 로 따로 묻는다."""
     d = os.path.join(vault, os.path.dirname(LEAK_LOCAL))
     p = os.path.join(vault, LEAK_LOCAL)
-    if not os.path.exists(p):
-        return None
-    out = _tab_rules(p, "개인 패턴")
+    out = _tab_rules(p, "개인 패턴") if os.path.exists(p) else []
+    out += identity_leaks(vault)
     for name in LEAK_EXTRA:
         out += _tab_rules(os.path.join(d, name), "개인 값")
     out += [(re.escape(a), "익명화 안 된 글") for a, _ in _tab_rules(os.path.join(d, ANON_PAIRS), "") if a]
@@ -641,6 +646,53 @@ def load_local_leaks(vault):
             seen.add(rx)
             uniq.append((rx, lb))
     return uniq
+
+
+def has_name_patterns(vault):
+    """실명·호칭 꼴 파일(leak-patterns.txt)이 있나 — 없으면 git 이름·profile 호칭만으로 잰다(publish 보고가 알린다)."""
+    return os.path.exists(os.path.join(vault, LEAK_LOCAL))
+
+
+def identity_leaks(vault):
+    """이 볼트 주인의 이름 꼴 — git user.name·user.email(배포 익명 작성자·noreply 빼고) · profile 호칭(슬롯 그대로면 뺌).
+    leak-patterns.txt 를 손으로 적지 않은 사용자(모듈을 내보내는 다른 사람)도 제 이름·메일·호칭이 배포물에 들어가면 걸리게(11-26 G104)."""
+    out = []
+    allow = load_allow(vault)
+    for key, lb in (("user.name", "git 이름"), ("user.email", "git 메일")):
+        try:
+            v = subprocess.run(["git", "-C", vault, "config", key], capture_output=True, timeout=15).stdout.decode("utf-8", "replace").strip()
+        except (OSError, subprocess.SubprocessError):
+            v = ""
+        if len(v) >= 2 and v != ANON_AUTHOR and "noreply" not in v.lower() and v.lower() not in allow:
+            out.append((re.escape(v), lb))
+    # 개인 저장소 이름 — origin 이 배포판 원격(dist)과 다를 때만(인터뷰가 origin 을 개인 저장소로 바꾼다) · 계정 이름은 공개 주소에도 있어 뺀다
+    try:
+        urls = {r: subprocess.run(["git", "-C", vault, "remote", "get-url", r], capture_output=True, timeout=15).stdout.decode("utf-8", "replace").strip()
+                for r in ("origin", "dist")}
+    except (OSError, subprocess.SubprocessError):
+        urls = {}
+    o = urls.get("origin") or ""
+    if o and urls.get("dist") and o != urls["dist"]:
+        v = re.sub(r"\.git$", "", o.rstrip("/").replace("\\", "/").rsplit("/", 1)[-1])
+        if len(v) >= 4 and v.lower() not in allow and v.lower() != re.sub(r"\.git$", "", urls["dist"].rstrip("/").rsplit("/", 1)[-1]).lower():
+            out.append((_edge(v), "개인 저장소 이름"))
+    # 볼트 절대 경로 — 배포물에 박히면 그 PC 의 폴더 이름(사람 이름·별명이 든 일이 많다)이 샌다(11-26 G104 P7).
+    #   드라이브 글자와 제품 이름(배포 원격 저장소 이름)뿐인 경로는 개인 값이 아니라 뺀다 · 홈 아래는 홈 경로 꼴이 잡는다
+    prod = {re.sub(r"\.git$", "", (urls.get("dist") or o).rstrip("/").replace("\\", "/").rsplit("/", 1)[-1]).lower()} - {""}
+    segs = [x for x in re.split(r"[\\/]+", os.path.abspath(vault)) if x][1:]
+    if segs and not all(x.lower() in prod for x in segs) and os.path.abspath(vault).lower() not in allow:
+        sep = r"(?:\\\\|[\\/])"
+        drive = re.escape(os.path.abspath(vault)[:2])
+        out.append((drive + sep + sep.join(re.escape(x) for x in segs) + r"(?![^\s\"'`)\]|»\\/])", "볼트 절대 경로"))
+    try:
+        with open(os.path.join(vault, "2_지식", "profile.md"), encoding="utf-8") as f:
+            m = re.search(r"^\s*-\s*(?:\*\*)?호칭(?:\*\*)?\s*:\s*([^.\n{*]+)", f.read(), re.M)
+        v = m.group(1).strip() if m else ""
+        if len(v) >= 2 and v not in ("사용자", "<호칭>") and v.lower() not in allow:
+            out.append((re.escape(v), "profile 호칭"))
+    except OSError:
+        pass
+    return out
 
 
 def author_hits(B):
@@ -793,8 +845,8 @@ def report(A, B, mode, plan=None, ship_path=None):
                            LEAK + [r for r in (local or []) if r not in LEAK], allow)
         w("## 익명화 후보 — %d건" % len(leaks))
         w("")
-        if local is None:
-            w("⚠ `%s` 가 없어 **실명·호칭은 검사하지 않았다.** «정규식<TAB>이름» 을 한 줄씩 적고 다시 돌린다."
+        if not has_name_patterns(A):
+            w("⚠ `%s` 가 없어 **실명·호칭은 git 이름·메일과 profile 호칭으로만 쟀다.** 다른 이름(별명·저장소 이름)은 «정규식<TAB>이름» 을 한 줄씩 적고 다시 돌린다."
               % LEAK_LOCAL.replace(os.sep, "/"))
             w("")
         w("스크립트는 **찾기만** 한다. 실제 문구는 사람·Claude 가 쓴다 —")
