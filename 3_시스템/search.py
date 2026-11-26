@@ -514,6 +514,7 @@ def _encoder(model_name, n):
 def _reindex(full=False):
     model_name = config_model_name()   # 모델명만(로드 X). 실제 모델은 to_embed 있을 때만 지연로드.
     idx = {} if full else load_index()
+    first = not notes(idx)                 # 색인이 비었다 = 새 볼트의 첫 색인(모델 받기 포함)
     if not full and idx.get("_model") not in (None, model_name):
         print(f"model changed ({idx.get('_model')} -> {model_name}): forcing full rebuild (차원혼합 방지)", file=sys.stderr)
         idx = {}
@@ -544,7 +545,7 @@ def _reindex(full=False):
             save_sidecar(idx)            # 곁 파일이 처음 생기거나 낡았을 때(원본은 그대로 · 11-16)
         return idx
     if to_embed:
-        loud = full or len(to_embed) >= 500          # 전체 재색인·큰 변경 = 몇 분 — 말없이 돌면 멈춘 줄 안다(11-26 새 설치 첫 색인)
+        loud = full or first or len(to_embed) >= 500   # 전체 재색인·첫 색인·큰 변경 = 몇 분 — 말없이 돌면 멈춘 줄 안다(11-26 새 설치 첫 색인 · 코어 2개 PC 12분+)
         if loud:
             print(f"색인 만드는 중 — 노트 {len(meta)} · 조각 {len(to_embed)} · 모델을 처음 받으면 몇 분 더(약 470MB)", file=sys.stderr, flush=True)
         model = _encoder(model_name, len(to_embed))   # 지연로드: 임베딩할 변경분 있을 때만 · 증분은 torch 없이
