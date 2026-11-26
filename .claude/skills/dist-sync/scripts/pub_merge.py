@@ -27,7 +27,7 @@ sys.stdout.reconfigure(encoding="utf-8")
 HERE = os.path.dirname(os.path.abspath(__file__))
 V = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
 TEXT = (".md", ".py", ".ps1", ".psm1", ".json", ".mjs", ".cjs", ".js", ".ts", ".tsv", ".txt", ".html", ".css", ".sh", ".yml", ".yaml",
-        ".gitattributes", ".gitignore", ".tmpl", ".toml", ".ini", ".cfg")
+        ".gitattributes", ".gitignore", ".tmpl", ".toml", ".ini", ".cfg")  # mf:allow-path  (글 파일 끝 이름 — 읽기만)
 SEM = re.compile(r"\n*>[ \t]*\[!info\]-[ \t]*관련 노트[ \t]*%%sl%%(?:\n>[^\n]*)*".encode("utf-8"))   # 찾기 색인이 쓰는 칸 — 싣지 않는다
 
 
