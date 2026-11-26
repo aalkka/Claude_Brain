@@ -23,6 +23,6 @@ py -3 .claude/skills/dist-sync/scripts/dist-diff.py --a <원본볼트> --b <대�
 
 ## 왜 `git pull`이 아닌가
 
-배포판이 추적하는 75파일 중 **사용자가 매일 쓰는 6개가 함께 추적된다**(`recent.md`·`open-loops.md`·`MOC.md`·`profile.md`·`CLAUDE.md`·`config.json`). git은 로컬 수정이 있으면 덮어쓰지 않고 **충돌을 낸다** → 업데이트가 멈추고 사용자는 초판에 갇힌다.
+배포판이 추적하는 파일 중 **사용자가 매일 쓰는 6개가 함께 추적된다**(`recent.md`·`open-loops.md`·`MOC.md`·`profile.md`·`CLAUDE.md`·`config.json`). git은 로컬 수정이 있으면 덮어쓰지 않고 **충돌을 낸다** → 업데이트가 멈추고 사용자는 초판에 갇힌다.
 
 > 문서-코드 쌍둥이: 스펙과 코드가 어긋나면 **코드가 진실원본**. module-forge로 생성(2026-09-12).

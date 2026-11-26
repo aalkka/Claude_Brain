@@ -57,7 +57,14 @@ if (Test-Path $relJson) {
 }
 $canon = { param($u) ("$u".Trim() -replace '\.git$', '' -replace '/+$', '').ToLower() }
 $originIsPub = $origin -and @($pubUrls | Where-Object { $_ -and ((& $canon $_) -eq (& $canon $origin)) }).Count -gt 0
-if (-not $slotsLeft -and $origin -and -not $originIsPub) { git push 2>$null | Out-Null }
+#    11-26: 주소가 달라도 공개 갈래 저장소(fork)를 받은 사람은 origin 이 배포판 내용 그대로다 — origin HEAD 커밋 제목이 sync(dist)… 면 안 올림
+#    (external.json «git-remote» 확인과 같은 규칙 · 시험 볼트에서 배포판 origin 으로 세션 커밋이 올라간 것을 재현함).
+$distHead = $false
+if (-not $slotsLeft -and $origin -and -not $originIsPub) {
+    $oh = (git ls-remote origin HEAD 2>$null) -split '\s+' | Select-Object -First 1
+    if ($oh) { $distHead = ((git log -1 --format=%s $oh 2>$null) -like 'sync(dist)*') }
+}
+if (-not $slotsLeft -and $origin -and -not $originIsPub -and -not $distHead) { git push 2>$null | Out-Null }
 
 # 3.5 주인 장부(11-19) — 이 세션의 장부 항목·시험 프로세스(에뮬레이터·격리 옵시디언·머리 없는 크롬)를 끝낸다.
 #   왜: 세션이 끝나도 띄운 것이 남아 메모리를 쥐었다(에뮬레이터 이틀 · 11-15). 동기 0.5초 · 실패해도 계속 · 그 밖의 배경 작업은 예약 작업 tick 이 맡음.

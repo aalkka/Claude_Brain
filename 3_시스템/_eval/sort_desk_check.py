@@ -113,6 +113,9 @@ def run(T, a):
     import draft
     # ── 사본 체계 + 시험용 자동 규칙 · sort.run(장부 = 임시) · 시험용 사건 ──
     sdir, ix = os.path.join(T, 'sort'), os.path.join(T, 'idx')
+    if not os.path.isdir(sort.SYSTEMS):     # 새로 받은 볼트 = 분류 체계 0(빈 틀은 sort-examples) — 잴 체계가 없다
+        print('건너뜀: 분류 체계 폴더 없음(%s) — 체계를 하나 만든 볼트에서 돈다' % sort.SYSTEMS)
+        raise SystemExit(0)
     shutil.copytree(sort.SYSTEMS, sdir)
     p = os.path.join(sdir, '공지-들이기.json')
     s = json.load(open(p, encoding='utf-8'))

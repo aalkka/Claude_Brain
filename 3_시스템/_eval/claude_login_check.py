@@ -50,16 +50,21 @@ ok('L6 기록 폴더 없음 = 모름', cl.state(os.path.join(tempfile.gettempdir
 
 # 11-20 실제 기록 되풀이 — 12:00 까지 자르면 풀림(07:11:20) · 통째면 되찾음
 real = cl.logs_dir()
+cut = None
 if real and os.path.exists(os.path.join(real, 'main.log')):
     cut = {}
     for name in ('main.log', 'remote-control.log'):
         ls = cl._lines(os.path.join(real, name), cl.TAIL if name == 'main.log' else 0) or []
         cut[name] = [ln for ln in ls if cl.TS.match(ln) and ln[:16] <= '2026-11-20 12:00']
+    if not any('2026-11-20 07:11' in ln for ln in cut['main.log']):
+        print('건너뜀 R1·R2 — 11-20 기록이 이 PC 에 없음(기록은 돌며 지워진다)')
+        cut = False
+if cut:
     st = cl.state(logs(cut['main.log'], cut['remote-control.log']))
     ok('R1 실제 기록 12:00 까지 = 풀림 07:11:20', st['state'] == 'stale' and st['since'] == '2026-11-20 07:11:20', st)
     st = cl.state(real)
     ok('R2 실제 기록 지금 = 되찾음(13:02 다시 로그인)', st['state'] == 'ok', st)
-else:
+elif cut is None:
     print('건너뜀 R1·R2 — 이 PC 에 데스크톱 앱 기록 없음')
 
 # 건강 줄

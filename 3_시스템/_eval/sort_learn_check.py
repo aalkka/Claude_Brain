@@ -232,25 +232,28 @@ try:
 
     # ════ C S7 evalcls 재생 ════
     M = os.path.join(VAULT, '0_작업', '일', '외부뇌', '범용도구', '측정')
-    R = json.load(open(os.path.join(M, 'result.json'), encoding='utf-8'))
-    N = [r for r in json.load(open(os.path.join(M, 'notice.json'), encoding='utf-8')) if r['verdict'] != '지남']
-    ny = ['keep' if r['verdict'] in ('해당', '확인 필요', '관심') else 'drop' for r in N]
-    nt = [(r['title'] or '') + '\n' + re.sub(r'\s+', ' ', r['body'])[:600] for r in N]
-    t0 = time.time()
-    n, tot, acc, thr = L.cover(L.prequential(nt, ny, start=10, step=1), ny)
-    B = R['notice']['B']
-    ok('S7 evalcls 재생 — 공지 B 덮음·판정 수·문턱 같음', (n, tot) == (B['cover_n'], B['total']) and abs(thr - B['thr']) < 1e-9,
-       f'{n}/{tot} 문턱 {thr:.4f} (측정 {B["cover_n"]}/{B["total"]} {B["thr"]:.4f}) · {time.time() - t0:.1f}초')
-    F = json.load(open(os.path.join(M, 'folder.json'), encoding='utf-8'))
-    fy, ft = [r['course'] for r in F], [r['fn'] + '\n' + r['body'][:600] for r in F]
-    t0 = time.time()
-    n, tot, acc, thr = L.cover(L.prequential(ft, fy, start=10, step=6), fy)
-    B = R['folder']['B']
-    ok('S7 evalcls 재생 — 폴더 B(6건마다 다시 배움) 덮음·판정 수·문턱·정확 같음',
-       (n, tot) == (B['cover_n'], B['total']) and abs(thr - B['thr']) < 1e-9 and abs(acc - B['acc_at_thr']) < 1e-9,
-       f'{n}/{tot} 정확 {acc:.3f} 문턱 {thr:.4f} (측정 {B["cover_n"]}/{B["total"]} {B["acc_at_thr"]:.3f}) · {time.time() - t0:.1f}초')
-    n2, tot2, _, _ = L.cover(L.prequential(ft, fy, start=10), fy)
-    print(f'   (참고) 폴더 B 엔진 기본(다시 배우기 ≤ {L.MAX_FITS}번): {n2}/{tot2}')
+    if not os.path.exists(os.path.join(M, 'result.json')):     # 제작자 측정(evalcls) 파일 — 받은 볼트에는 없다
+        print('건너뜀 S7 evalcls 재생 — 측정 파일 없음(%s)' % M)
+    else:
+        R = json.load(open(os.path.join(M, 'result.json'), encoding='utf-8'))
+        N = [r for r in json.load(open(os.path.join(M, 'notice.json'), encoding='utf-8')) if r['verdict'] != '지남']
+        ny = ['keep' if r['verdict'] in ('해당', '확인 필요', '관심') else 'drop' for r in N]
+        nt = [(r['title'] or '') + '\n' + re.sub(r'\s+', ' ', r['body'])[:600] for r in N]
+        t0 = time.time()
+        n, tot, acc, thr = L.cover(L.prequential(nt, ny, start=10, step=1), ny)
+        B = R['notice']['B']
+        ok('S7 evalcls 재생 — 공지 B 덮음·판정 수·문턱 같음', (n, tot) == (B['cover_n'], B['total']) and abs(thr - B['thr']) < 1e-9,
+           f'{n}/{tot} 문턱 {thr:.4f} (측정 {B["cover_n"]}/{B["total"]} {B["thr"]:.4f}) · {time.time() - t0:.1f}초')
+        F = json.load(open(os.path.join(M, 'folder.json'), encoding='utf-8'))
+        fy, ft = [r['course'] for r in F], [r['fn'] + '\n' + r['body'][:600] for r in F]
+        t0 = time.time()
+        n, tot, acc, thr = L.cover(L.prequential(ft, fy, start=10, step=6), fy)
+        B = R['folder']['B']
+        ok('S7 evalcls 재생 — 폴더 B(6건마다 다시 배움) 덮음·판정 수·문턱·정확 같음',
+           (n, tot) == (B['cover_n'], B['total']) and abs(thr - B['thr']) < 1e-9 and abs(acc - B['acc_at_thr']) < 1e-9,
+           f'{n}/{tot} 정확 {acc:.3f} 문턱 {thr:.4f} (측정 {B["cover_n"]}/{B["total"]} {B["acc_at_thr"]:.3f}) · {time.time() - t0:.1f}초')
+        n2, tot2, _, _ = L.cover(L.prequential(ft, fy, start=10), fy)
+        print(f'   (참고) 폴더 B 엔진 기본(다시 배우기 ≤ {L.MAX_FITS}번): {n2}/{tot2}')
 
     # ════ F S6 흉내 ════
     FD = os.path.join(T, 'F')
@@ -299,37 +302,40 @@ try:
     ok('S6 장부·받은함 안 바뀜(옮기는 코드 없음)', open(led, 'rb').read() == before and os.listdir(inbox) == ['열역학 과제77.pdf'])
     # 진짜 장부 재생(읽기만)
     real_led = SI.LEDGER
-    m0 = (os.path.getsize(real_led), os.path.getmtime(real_led))
+    m0 = (os.path.getsize(real_led), os.path.getmtime(real_led)) if os.path.exists(real_led) else None   # 새 볼트 = 장부 아직 없음
     t0 = time.time()
     rr = SI.shadow(replay=True, index=os.path.join(FD, 'never'))
-    ok('S6 진짜 장부 재생 — 읽기만(장부 크기·시각 그대로 · 상태 안 씀)', (os.path.getsize(real_led), os.path.getmtime(real_led)) == m0
+    ok('S6 진짜 장부 재생 — 읽기만(장부 크기·시각 그대로 · 상태 안 씀)', ((os.path.getsize(real_led), os.path.getmtime(real_led)) if os.path.exists(real_led) else None) == m0
        and not os.path.exists(os.path.join(FD, 'never')),
        f'배움 {rr["배움 줄"]} · 사람 대조 {rr["사람 대조"]} · 맞음 {rr["맞음"]} 틀림 {rr["틀림"]} 모름 {rr["모름"]} · {time.time() - t0:.1f}초')
 
     # ════ B S5 76건 재생(진짜 · 읽기만) ════
-    sort.SYSTEMS, sort.INDEX = REAL_SYSTEMS, REAL_INDEX
-    L.QUEUE = None
-    sort.reset()
-    snap = {f: (os.path.getsize(os.path.join(REAL_INDEX, f)), os.path.getmtime(os.path.join(REAL_INDEX, f))) for f in os.listdir(REAL_INDEX)}
-    t0 = time.time()
-    rp = L.replay('공지-들이기')
-    ok('S5 76건 재생 — 보기 76 · 통과 0(그림자 10건을 못 채움)', rp['보기'] == 76 and not rp['통과'],
-       f'후보 {rp["일"].get("후보", 0)} · 맞음 {rp["일"].get("맞음", 0)} · 탈락 {rp["일"].get("탈락", 0)} · 최고 연속 {rp["최고 연속"]} · '
-       f'③ {rp.get("③")} · {time.time() - t0:.1f}초')
-    print('   자리 없이 후보(포함 꼴):', rp['자리 없이 후보'])
-    ok('엔진 기본 끔 — «자동채택»·«사다리.통계» 칸이 없는 체계는 배우기 0', not sort.learn_on({'사다리': {}}) and L.modes({}) == (False, None))
-    snap2 = {f: (os.path.getsize(os.path.join(REAL_INDEX, f)), os.path.getmtime(os.path.join(REAL_INDEX, f))) for f in os.listdir(REAL_INDEX)}
-    ok('S5 재생은 진짜 장부·상태를 안 씀', snap == snap2, str(set(snap2) ^ set(snap)))
-    # 낱말 꼴 대조 — 설계 §6 측정(«낱말 w 가 있으면» = 낱말 단위)과 같은 셈이면 «겨울계절수업»·«전형»
-    s0 = sort.systems()['공지-들이기']
-    exs = L.examples('공지-들이기', s0, sort.adapter('수집글'), sort.DECIDED['공지-들이기'])
-    words = {}
-    for e in exs:
-        for w in set(L.tok(e['칸']['제목'])):
-            words.setdefault(w, []).append(e['갈래'])
-    tokw = sorted((w, g[0]) for w, g in words.items() if len(g) >= 3 and len(set(g)) == 1)
-    ok('S5 낱말 단위로 세면 설계 §6 측정의 두 낱말(겨울계절수업·전형 → 확인 필요)이 나옴',
-       {('겨울계절수업', '확인 필요'), ('전형', '확인 필요')} <= set(tokw), f'지금 판정으로 {tokw}')
+    if not os.path.exists(os.path.join(REAL_SYSTEMS, '공지-들이기.json')):     # 제작자 볼트의 분류 체계·장부를 되풀이 — 받은 볼트에는 없다
+        print('건너뜀 B S5 76건 재생 — 체계 «공지-들이기» 없음')
+    else:
+        sort.SYSTEMS, sort.INDEX = REAL_SYSTEMS, REAL_INDEX
+        L.QUEUE = None
+        sort.reset()
+        snap = {f: (os.path.getsize(os.path.join(REAL_INDEX, f)), os.path.getmtime(os.path.join(REAL_INDEX, f))) for f in (os.listdir(REAL_INDEX) if os.path.isdir(REAL_INDEX) else [])}   # 새 볼트 = 분류 색인 아직 없음
+        t0 = time.time()
+        rp = L.replay('공지-들이기')
+        ok('S5 76건 재생 — 보기 76 · 통과 0(그림자 10건을 못 채움)', rp['보기'] == 76 and not rp['통과'],
+           f'후보 {rp["일"].get("후보", 0)} · 맞음 {rp["일"].get("맞음", 0)} · 탈락 {rp["일"].get("탈락", 0)} · 최고 연속 {rp["최고 연속"]} · '
+           f'③ {rp.get("③")} · {time.time() - t0:.1f}초')
+        print('   자리 없이 후보(포함 꼴):', rp['자리 없이 후보'])
+        ok('엔진 기본 끔 — «자동채택»·«사다리.통계» 칸이 없는 체계는 배우기 0', not sort.learn_on({'사다리': {}}) and L.modes({}) == (False, None))
+        snap2 = {f: (os.path.getsize(os.path.join(REAL_INDEX, f)), os.path.getmtime(os.path.join(REAL_INDEX, f))) for f in (os.listdir(REAL_INDEX) if os.path.isdir(REAL_INDEX) else [])}   # 새 볼트 = 분류 색인 아직 없음
+        ok('S5 재생은 진짜 장부·상태를 안 씀', snap == snap2, str(set(snap2) ^ set(snap)))
+        # 낱말 꼴 대조 — 설계 §6 측정(«낱말 w 가 있으면» = 낱말 단위)과 같은 셈이면 «겨울계절수업»·«전형»
+        s0 = sort.systems()['공지-들이기']
+        exs = L.examples('공지-들이기', s0, sort.adapter('수집글'), sort.DECIDED['공지-들이기'])
+        words = {}
+        for e in exs:
+            for w in set(L.tok(e['칸']['제목'])):
+                words.setdefault(w, []).append(e['갈래'])
+        tokw = sorted((w, g[0]) for w, g in words.items() if len(g) >= 3 and len(set(g)) == 1)
+        ok('S5 낱말 단위로 세면 설계 §6 측정의 두 낱말(겨울계절수업·전형 → 확인 필요)이 나옴',
+           {('겨울계절수업', '확인 필요'), ('전형', '확인 필요')} <= set(tokw), f'지금 판정으로 {tokw}')
 finally:
     sort.SYSTEMS, sort.INDEX = REAL_SYSTEMS, REAL_INDEX
     sort.reset()

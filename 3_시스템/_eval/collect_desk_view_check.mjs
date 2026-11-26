@@ -4,19 +4,23 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { launch, sleep, TV, OUT } from "file:///C:/brain-base/test/obs_cdp.mjs";
+import { fileURLToPath } from "node:url";
+const CDP = process.env.BRAIN_BASE_DIR ? process.env.BRAIN_BASE_DIR.replace(/\\/g, "/") + "/test/obs_cdp.mjs" : "";   // 빌더 저장소(BRAIN_BASE_DIR)의 격리 옵시디언 도구 — 받은 사람에게는 없다
+if (!CDP || !fs.existsSync(CDP)) { console.log("건너뜀: 빌더 저장소 도구 없음(BRAIN_BASE_DIR=" + (process.env.BRAIN_BASE_DIR || "") + ")"); process.exit(0); }
+const { launch, sleep, TV, OUT } = await import("file:///" + CDP);
 
 const cwd = path.resolve(".").replace(/\\/g, "/");
 if (cwd.startsWith("C:/Claude_Brain") || cwd.startsWith("C:/brain-base")) throw new Error("임시 폴더에서 돌릴 것");
 process.env.DESK_NO_OPEN = "1"; // 시험에서는 브라우저를 안 띄운다
-const PORT = +(process.env.BB_PORT ?? 9377);   // 시험마다 다른 포트를 줄 수 있다(동시에 도는 시험끼리 겹치지 않게)
-const REAL = "C:/Claude_Brain";
+const PORT = +(process.env.BB_PORT ?? 9377);   // 시험마다 다른 디버그 포트(BB_PORT · 기본 9377)
+const REAL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..").split(path.sep).join("/");
 const MOD = ".claude/skills/collect_desk";
 const SWF = "3_시스템/collect.local.json"; // 전체 스위치 all_off·auto_judge(수집 본체 통합 11-07) — 진짜 볼트 것은 안 옮긴다(기본 = 없음)
 const cp = (rel) => {
   const a = path.join(REAL, rel);
   if (fs.existsSync(a)) fs.cpSync(a, path.join(TV, rel), { recursive: true });
 };
+if (!fs.existsSync(path.join(REAL, "3_시스템/_index/collect"))) { console.log("건너뜀: 수집 기록 없음(3_시스템/_index/collect) — 출처를 받아 본 볼트에서 돈다"); process.exit(0); }
 fs.rmSync(TV, { recursive: true, force: true });
 for (const r of [MOD, "3_시스템/views.json", "3_시스템/collect", "3_시스템/tutorial", "3_시스템/lms/courses.json", "3_시스템/lms/candidates.json", "3_시스템/collect-ext/manifest.json", "3_시스템/_index/collect/web.log", "3_시스템/_index/collect/평가.json", "3_시스템/_index/lms/manifest.json", "3_시스템/_index/lms/auto.log", "3_시스템/_index/lms/runs", "3_시스템/_index/수집-대기열.md", "2_지식/modules/mobility/알림-설정.md", "2_지식/일/외부뇌/자격-카드.md", "2_지식/일정"]) cp(r);
 for (const f of ["brain.py", "roles.py", "roles.json", "collectlib.py", "collect-schedule.py", "fileops.py", "claude_bin.py", "schedule.py", "lms-schedule.py", "web-collect.py", "notice-filter.py"]) cp("3_시스템/" + f);

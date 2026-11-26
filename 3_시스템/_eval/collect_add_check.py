@@ -18,7 +18,7 @@ V = os.path.join(root, 'vault')
 S = os.path.join(V, '3_시스템')
 for d in (os.path.join(S, 'collect'), os.path.join(S, 'lms'), os.path.join(S, '_index', 'collect', 'draft')):
     os.makedirs(d)
-for f in ('fileops.py', 'roles.py', 'roles.json', 'collectlib.py', 'web-collect.py', 'brain.py', 'actions.json', 'claude_bin.py'):
+for f in ('fileops.py', 'roles.py', 'roles.json', 'collectlib.py', 'web-collect.py', 'brain.py', 'actions.json', 'claude_bin.py', 'nowin.py'):
     shutil.copy2(os.path.join(REAL, f), os.path.join(S, f))
 os.makedirs(os.path.join(V, '2_지식'))
 with open(os.path.join(V, '2_지식', 'profile.md'), 'w', encoding='utf-8') as f:
@@ -276,7 +276,7 @@ code, out = br('collect_desk.try', 'id=t-long')
 ok('미리보기 표: 20줄 전부 · 긴 제목 전체', code == 0 and '20. 2026-10-20' in out and all(t in out for _, _, t in LONG), out[-500:])
 
 # ── 같은 사이트 1분 간격(시험은 5초 · 파이썬 세 겹 기동이 1~2초라 그보다 길게) — 행위가 남은 만큼 기다렸다 받는다 ──
-GAPENV = dict(ENV, COLLECT_SITE_GAP='5')
+GAPENV = dict(ENV, COLLECT_SITE_GAP='20')
 br('collect_desk.try', 'id=t-long', env=GAPENV)
 n_long = sum(1 for h in hits if h.startswith('/long'))
 t_a = __import__('time').time()

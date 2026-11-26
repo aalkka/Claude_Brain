@@ -133,9 +133,8 @@ def attached():
 
 
 def problems():
+    # 사전이 없는 것은 문제가 아니다 — 새로 받은 볼트는 처음 태그를 정할 때 생긴다(11-26 · 받은 사람에게 ✗ 가 보였음). listing() 의 «사전 있음» 으로 안내.
     D, out = dictionary(), []
-    if not os.path.exists(dict_path()):
-        out.append(f'사전 없음 — {os.path.relpath(dict_path(), VAULT)} (빈 틀 = 3_시스템/sort-examples/태그/사전.json)')
     for name, e in D.items():
         if not isinstance(e, dict):
             out.append(f'{name}: 칸은 {{뜻, 순서, 가족, 보임}}')
@@ -182,7 +181,7 @@ def listing():
                                  '노트에 쓰기': (S.get(sid) or {}).get('노트에 쓰기') is True, '갈래': sorted(gs)} for sid, gs in sorted(sysw.items())],
                      '지금 붙음': {t: len(A.get(t, [])) for t in mine}})
     st = load_state()
-    return {'사전': os.path.relpath(dict_path(), VAULT).replace(os.sep, '/'), '태그': rows,
+    return {'사전': os.path.relpath(dict_path(), VAULT).replace(os.sep, '/'), '사전 있음': os.path.exists(dict_path()), '태그': rows,
             '노트에 붙인 것': sum(len(v) for v in st['붙임'].values()), '문제': problems()}
 
 
@@ -529,6 +528,8 @@ def main():
             print(json.dumps(d, ensure_ascii=False, indent=1))
             return 0
         print(f'태그 사전 {d["사전"]}')
+        if not d['사전 있음']:
+            print('○ 사전 아직 없음 — 처음 태그 뜻을 정하면 생긴다(«이 태그는 ~라는 뜻이야» · 빈 틀 = 3_시스템/sort-examples/태그/사전.json)')
         for r in d['태그']:
             fam = f' (가족 {" > ".join(r["가족"])})' if r['가족'] else ''
             sw = ' · '.join(f'{x["체계"]}{"" if x["켬"] else "(끔)"}{" · 노트에 씀" if x["노트에 쓰기"] else ""}' for x in r['쓰는 체계']) or '없음'

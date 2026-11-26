@@ -544,9 +544,18 @@ def _reindex(full=False):
             save_sidecar(idx)            # 곁 파일이 처음 생기거나 낡았을 때(원본은 그대로 · 11-16)
         return idx
     if to_embed:
+        loud = full or len(to_embed) >= 500          # 전체 재색인·큰 변경 = 몇 분 — 말없이 돌면 멈춘 줄 안다(11-26 새 설치 첫 색인)
+        if loud:
+            print(f"색인 만드는 중 — 노트 {len(meta)} · 조각 {len(to_embed)} · 모델을 처음 받으면 몇 분 더(약 470MB)", file=sys.stderr, flush=True)
         model = _encoder(model_name, len(to_embed))   # 지연로드: 임베딩할 변경분 있을 때만 · 증분은 torch 없이
         docs = [pdoc(model_name, c) for _, c in to_embed]
-        vecs = model.encode(docs, normalize_embeddings=True, show_progress_bar=False, batch_size=32)
+        if not loud:
+            vecs = model.encode(docs, normalize_embeddings=True, show_progress_bar=False, batch_size=32)
+        else:
+            vecs, step, t0 = [], 64, time.time()
+            for i in range(0, len(docs), step):
+                vecs.extend(model.encode(docs[i:i + step], normalize_embeddings=True, show_progress_bar=False, batch_size=32))
+                print(f"  {min(i + step, len(docs))}/{len(docs)} 조각 · {int(time.time() - t0)}초", file=sys.stderr, flush=True)
         by = {}
         for (rp, _), v in zip(to_embed, vecs):
             by.setdefault(rp, []).append([round(float(x), 6) for x in v])
@@ -898,6 +907,16 @@ def write_links(dry=True):
     return changed
 
 
+def _why(e):
+    """예외를 사람 말 한 줄로 — 망 문제면 그렇게 말한다."""
+    t = "%s: %s" % (type(e).__name__, e)
+    if any(k in t for k in ("ConnectError", "ConnectionError", "client has been closed", "ProxyError", "Max retries", "getaddrinfo", "offline", "OfflineModeIsEnabled", "LocalEntryNotFound")):
+        return "인터넷에 닿지 못함"
+    if isinstance(e, ImportError):
+        return "꾸러미 없음 — %s" % e
+    return t[:160]
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--reindex", action="store_true")
@@ -914,8 +933,16 @@ def main():
     auto = args.auto or os.environ.get("BRAIN_AUTO") == "1"   # 훅은 환경 변수로 준다(옛 search.py 가 모르는 인자로 죽지 않게)
 
     ran = None
-    if args.rebuild: ran = reindex(full=True)
-    elif args.reindex: ran = reindex(full=False, auto=auto)
+    try:
+        if args.rebuild: ran = reindex(full=True)
+        elif args.reindex: ran = reindex(full=False, auto=auto)
+    except Exception as e:  # noqa: BLE001 — 첫 색인이 모델을 못 받으면 Traceback 대신 까닭과 다음 걸음(11-26 G113 · 오프라인)
+        if not (args.rebuild or args.reindex):
+            raise
+        print("색인을 못 만듦 — %s. 첫 색인은 검색 모델(~470MB)을 받아야 한다: 인터넷·프록시를 확인하고 `py -3 3_시스템/search.py --rebuild` 를 다시 친다. "
+              "그동안 `--q` 는 낱말 찾기로 돈다." % _why(e), file=sys.stderr)
+        if not args.q:
+            sys.exit(1)
 
     if args.link_write:
         if auto and options.level("search.links") == "off":
@@ -939,9 +966,13 @@ def main():
         lvl = options.level("search.reindex")               # 세션마다가 아니면 색인이 묵을 수 있어 낱말 점수는 디스크에서 읽는다
         model, model_name = (None, None)
         if mode != "lexical":
-            model, model_name = load_query_model()
+            try:
+                model, model_name = load_query_model()
+            except Exception as e:  # noqa: BLE001 — 모델을 못 받음(인터넷 없음·막힌 망·꾸러미 없음): 죽지 않고 낱말 찾기로(11-26 G113)
+                print("뜻 찾기 모델을 못 띄움(%s) — 이번은 낱말 찾기만. 인터넷이 될 때 `py -3 3_시스템/search.py --rebuild`" % _why(e), file=sys.stderr)
+                mode, model, model_name = "lexical", None, None
         idx = load_query_index()        # 곁 파일(11-16) — 낱말만이어도 노트 목록·gist 는 meta 로 충분
-        for sc, rp in ranked(args.q, idx, mode, model, model_name, disk=lvl != "high")[:(args.k or 8)]:
+        for sc, rp in ranked(args.q, idx, mode, model, model_name, disk=lvl != "high" or not notes(idx))[:(args.k or 8)]:   # 색인이 없으면(첫 색인 실패) 노트를 디스크에서
             e = idx.get(rp)
             g = e.get("gist", "") if e else gist(read_text(os.path.join(VAULT, rp)))   # 색인에 아직 없는 새 노트
             print(json.dumps({"path": rp, "score": round(sc, 4), "gist": g}, ensure_ascii=False))

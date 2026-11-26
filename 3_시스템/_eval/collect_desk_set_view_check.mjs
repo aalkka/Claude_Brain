@@ -5,8 +5,9 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const VAULT = "C:/Claude_Brain";
+const VAULT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..").split(path.sep).join("/");   // 이 시험이 든 볼트(박힌 경로 대신)
 const VIEW = `${VAULT}/.claude/skills/collect_desk/view/index.html`;
 const PORT = +(process.env.BB_PORT ?? 9311);
 const exe = execFileSync("reg", ["query", "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe", "/ve"], { encoding: "utf8" }).match(/REG_SZ\s+(.+)/)[1].trim();
@@ -50,6 +51,7 @@ const ok = (name, cond, detail) => { res.push(!!cond); console.log((cond ? "통�
 await cdp("Emulation.setDeviceMetricsOverride", { width: 1100, height: 760, deviceScaleFactor: 1, mobile: false });
 await sleep(1200);
 const web = D0.sources.find((s) => s.family === "regex" && s.mode === "every" && s.rec && s.rec.length === 2) || D0.sources.find((s) => s.family === "regex" && s.mode === "every");
+if (!web) { console.log("건너뜀: 등록된 웹 수집 출처(regex) 없음 — 출처를 하나 넣은 볼트에서 돈다"); process.exit(0); }
 const W = web.id, H = web.hours, REC = web.rec.join(",");
 let r = await run(`await click('[data-sel="${W}"]');const x=row();return [x.innerText.replace(/[0-9:+\\s]/g,''),!!x.querySelector('[data-follow]'),x.querySelector('[data-follow]')?.textContent,!!x.querySelector('[data-edit]'),[...d.querySelectorAll('.ed>label')].map(l=>l.textContent).join('·')]`);
 await run(`const e=q('.ed [data-follow]');e.parentElement.dispatchEvent(new MouseEvent('mouseover',{bubbles:true}));return 1`);

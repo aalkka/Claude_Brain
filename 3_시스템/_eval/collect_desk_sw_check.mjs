@@ -5,6 +5,7 @@ import path from "node:path";
 import vm from "node:vm";
 
 const DIR = process.argv[2];
+if (!DIR) { console.log("건너뜀: 확장 폴더를 인자로 — node collect_desk_sw_check.mjs <collect-ext 폴더>"); process.exit(0); }
 const man = JSON.parse(fs.readFileSync(path.join(DIR, "manifest.json"), "utf8"));
 const boot = man.background.service_worker;
 const bootSrc = fs.readFileSync(path.join(DIR, boot), "utf8");

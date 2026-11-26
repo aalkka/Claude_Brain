@@ -534,3 +534,22 @@ body.bb-nospin.bb-noshimmer [class*="bb-"], body.bb-nospin.bb-noshimmer [class*=
 .bb-setup-q { display: flex; gap: 6px; justify-content: flex-end; }
 .bb-setup-ib { padding: 0 6px; }
 .bb-setup-ib svg { width: 14px; height: 14px; }
+/* 기본 세팅 덮개(setupcover.ts · 11-26 초안 A «창 전체 덮개») — 모달 아래·그 밖의 위 · 뚫는 자리는 clip-path 로 도려냄 */
+.bb-gate { position: fixed; inset: 0; z-index: 40; background: var(--background-primary); display: flex; flex-direction: column; align-items: center; overflow-y: auto; outline: none; box-sizing: border-box; }
+body.bb-gating .status-bar { display: none; }
+.bb-gate-drag { flex: none; align-self: stretch; height: var(--header-height, 40px); -webkit-app-region: drag; }
+.bb-gate-box { width: 100%; max-width: 460px; padding: 24px 12px 20px; box-sizing: border-box; -webkit-app-region: no-drag; }
+.bb-gate-hd { display: flex; align-items: center; gap: 6px; font-size: var(--font-ui-medium); font-weight: var(--font-semibold); margin-bottom: 12px; }
+.bb-gate-ic { display: flex; color: var(--interactive-accent); }
+.bb-gate-ic svg { width: 18px; height: 18px; }
+.bb-gate-sp { flex: 1; }
+.bb-gate-n { font-size: var(--font-ui-smaller); color: var(--text-faint); font-weight: var(--font-normal); font-variant-numeric: tabular-nums; }
+.bb-gate-re.is-spinning svg { animation: bb-spin 0.8s linear infinite; }
+.bb-gate-body { padding: 0; max-width: none; overflow: visible; flex: none; }
+.bb-setup-wait.is-busy { display: flex; justify-content: center; padding: 24px 0; }
+.bb-setup-wait.is-busy::before { content: ""; width: 14px; height: 14px; box-sizing: border-box; border: 1.5px solid var(--text-faint); border-top-color: transparent; border-radius: 50%; animation: bb-spin 0.8s linear infinite; }
+.bb-gate-ft { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; margin-top: 16px; }
+.bb-gate-defer { display: inline-flex; align-items: center; gap: 6px; }
+.bb-gate-defer-ic { display: flex; }
+.bb-gate-defer-ic svg { width: 14px; height: 14px; }
+.bb-gate-defer.is-busy { opacity: 0.6; }

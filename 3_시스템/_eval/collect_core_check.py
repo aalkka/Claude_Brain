@@ -27,7 +27,7 @@ VAULT = os.path.dirname(SYS)
 MOD = os.path.join(VAULT, '.claude', 'skills', 'collect_desk')
 DESK_PY = os.path.join(MOD, 'scripts', 'collect_desk.py')
 OWNER = 'collect_desk'
-IDS = [OWNER + '.' + x for x in ('set', 'fetch', 'judge', 'item', 'open', 'contract', 'probe', 'try', 'add', 'fix', 'reject', 'new')]
+IDS = [OWNER + '.' + x for x in ('set', 'fetch', 'judge', 'item', 'open', 'contract', 'probe', 'try', 'add', 'fix', 'reject', 'new', 'sort')]
 KEEP = ('collect.tick', 'collect.wake', 'collect.at', 'collect.web')     # 예약·홈 «수집» 칸이 부르는 id — 바뀌면 15분 확인·아침 깨우기가 선다(옛 넘김 collect.lms* = S7 걷음)
 SWITCH = '3_시스템/collect.local.json'
 res = []
@@ -187,7 +187,7 @@ def temp_vault(root):
     for d in ('lms', 'collect', os.path.join('_index', 'lms'), os.path.join('_index', 'collect')):
         os.makedirs(os.path.join(ts, d), exist_ok=True)
     for f in ('web-collect.py', 'filter-learn.py', 'notice-filter.py', 'fileops.py', 'roles.py', 'roles.json', 'collectlib.py', 'collect-schedule.py', 'claude_bin.py', 'schedule.py', 'lms-schedule.py',
-              'options.py', 'options.registry.json', 'collect-browser.py', 'collect-tick.py'):    # lms-tasks.ps1 은 옮기지 않는다 — 예약은 PC 전체 것이라 시험 볼트에서 진짜 대본이 돌면 안 된다
+              'options.py', 'options.registry.json', 'collect-browser.py', 'collect-tick.py', 'sort.py'):    # lms-tasks.ps1 은 옮기지 않는다 — 예약은 PC 전체 것이라 시험 볼트에서 진짜 대본이 돌면 안 된다
         if os.path.exists(os.path.join(SYS, f)):
             shutil.copy2(os.path.join(SYS, f), ts)
     if os.path.isdir(os.path.join(SYS, 'collect-adapters')):     # 로그인 가족 어댑터 · 조리법(개인 층 · 배포판엔 조리법 없음 · 11-16 S4)

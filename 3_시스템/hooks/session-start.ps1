@@ -99,4 +99,17 @@ if ((Test-Path $searchPy) -and $semantic -ne 'off') {
 # 4. 원격 push — 밀린 커밋을 디태치로(셧다운이 SessionEnd를 kill해도 다음 세션 시작 때 push · 기다리지 않음 · 동기 때 2~3초).
 #    개인화 완료(미치환 슬롯 없음)+원격 존재 시만. stdout 무출력(주입 컨텍스트 오염 없음). 실패 무시.
 #    경로는 -WorkingDirectory 로 준다 — -ArgumentList 는 빈칸 든 경로를 따옴표 없이 이어 붙여 push 가 조용히 실패한다(사본 실측).
-if ((Get-Content $claudeMd -Raw) -notmatch '\{\{[^}]' -and (git -C $vault remote)) { Start-Process -FilePath 'git' -ArgumentList 'push', '-q' -WorkingDirectory $vault -WindowStyle Hidden -ErrorAction SilentlyContinue }
+#    11-26: session-end 와 같은 두 규칙 — origin 주소가 배포 저장소(dist 원격·release.json 주소)거나 origin HEAD 제목이 sync(dist)… 면 안 올림.
+#    전엔 슬롯만 보고 올려 개인 저장소를 건너뛴 새 볼트가 세션 시작마다 배포판으로 push 했다(시험 볼트 재현). HEAD 판정은 떼어 낸 PowerShell 안에서(시작을 안 늦춤).
+if ((Get-Content $claudeMd -Raw) -notmatch '\{\{[^}]' -and (git -C $vault remote)) {
+    $origin = git -C $vault remote get-url origin 2>$null
+    $pubUrls = @(git -C $vault remote get-url dist 2>$null)
+    $relJson = Join-Path $vault '3_시스템\door-app\release.json'
+    if (Test-Path $relJson) { $m = [regex]::Match((Get-Content $relJson -Raw), 'https://github\.com/[^/"\s]+/[^/"\s]+'); if ($m.Success) { $pubUrls += $m.Value } }
+    $canon = { param($u) ("$u".Trim() -replace '\.git$', '' -replace '/+$', '').ToLower() }
+    $originIsPub = $origin -and @($pubUrls | Where-Object { $_ -and ((& $canon $_) -eq (& $canon $origin)) }).Count -gt 0
+    if ($origin -and -not $originIsPub) {
+        $pushCmd = "`$h = (git ls-remote origin HEAD 2>`$null) -split '\s+' | Select-Object -First 1; if (`$h -and ((git log -1 --format=%s `$h 2>`$null) -like 'sync(dist)*')) { exit 0 }; git push -q"
+        Start-Process -FilePath 'powershell' -ArgumentList '-NoProfile', '-NonInteractive', '-Command', $pushCmd -WorkingDirectory $vault -WindowStyle Hidden -ErrorAction SilentlyContinue
+    }
+}

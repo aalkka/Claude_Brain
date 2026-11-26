@@ -83,11 +83,12 @@ put(W + "/생활/여행/비자/메모.md", "# 비자")
 put(W + "/분야/컴퓨터·AI/읽을거리.md", "---\n단계: 끝\n---\n# 읽을거리")
 # W10 학교 과제 — LMS 내 제출 · 결과물이 작업 안에 → «제출/»(종류 학교)
 put("3_시스템/lms/courses.json", json.dumps({"111": "시험과목"}))
-put(R["sources"] + "/_lms/lms-canvas-1.json", json.dumps({"courses": [{"id": 111, "assignments": [{"id": 1, "name": "보고서 1", "submission": {
-    "workflow_state": "submitted", "submitted_at": "2026-10-20T00:00:00Z", "attachments": [{"display_name": "보고서1_결과_학번.pdf"}]}}]}]}))
+put("3_시스템/_index/collect/제출/lms.json", json.dumps({"name": "lms", "by": {"시험과목": [{"과제": "보고서 1", "파일": ["보고서1_결과_학번.pdf"], "때": (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")}]}}, ensure_ascii=False))   # 제출 기록 자리·꼴(11-16 S3 · work.submissions)
 put(R["school"] + "/시험과목/강의자료/1주.pdf", b"%PDF")
 put(W + "/배움/시험과목/보고서1/보고서1_결과_학번.pdf", b"%PDF-R")
 put(W + "/배움/시험과목/보고서1/측정값.xlsx", b"PKX")
+for _f in ("보고서1_결과_학번.pdf", "측정값.xlsx"):   # 제출(어제) 앞에 만든 파일 — 제출 뒤에 고친 파일은 «진행»(11-15 work.py)
+    os.utime(os.path.join(V, W, "배움/시험과목/보고서1", _f), (time.time() - 2 * 86400,) * 2)
 # W11~W14 보고서(사용자 11-03 «재료도 휴지통 · docx 는 PDF 변환해 PDF 만») — 진짜 docx(Word 로 변환)
 
 
@@ -168,7 +169,7 @@ ok("P2 보냄 = 결과물 → 1_수집/생활/여행/보냄/ · 사진 → 보�
    w2.get("신청서.pdf") == ("mv", "1_수집/생활/여행/보냄/신청서.pdf") and w2.get("여권사진.jpg") == ("mv", "1_수집/생활/여행/보냄/항공권/여권사진.jpg")
    and w2.get("메모.md") == ("mv", "2_지식/생활/여행/항공권/메모.md") and w2.get("작업.md", ("",))[0] == "rm", w2)
 w3 = where("일/부업/지원서")
-ok("P3 결과물만 보냄/ · 초안 docx → 휴지통", w3.get("지원서_최종.docx") == ("mv", "1_수집/일/부업/보냄/지원서_최종.docx") and w3.get("지원서_초안.docx", ("",))[0] == "rm", w3)
+ok("P3 결과물만 보냄/ · 이름이 짧게만 닮은 초안 → 2_지식(11-15 · 판으로 못 보면 남기고 사람이 지움)", w3.get("지원서_최종.docx") == ("mv", "1_수집/일/부업/보냄/지원서_최종.docx") and w3.get("지원서_초안.docx") == ("mv", "2_지식/일/부업/지원서/지원서_초안.docx"), w3)
 w5 = where("일/외부뇌/기능")
 ok("P5 저장소로 보냄 = 앎 꼴(메모 → 지식)", w5.get("메모.md") == ("mv", "2_지식/일/외부뇌/기능/메모.md"), w5)
 ok("P8 결과물 없음 = 계획 없음(지우지 않음)", not plans.get("생활/여행/비자", {}).get("plan") and "결과물 없음" in plans.get("생활/여행/비자", {}).get("note", ""), plans.get("생활/여행/비자"))

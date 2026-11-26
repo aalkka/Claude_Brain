@@ -67,10 +67,13 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 
 **1단계 — 지금 상태를 저장한다**
 
-```bash
-cd <내볼트경로>
-git add -A && git commit -m "update 전 상태 저장" || echo "커밋할 변경 없음 — 그대로 진행"
 ```
+cd <내볼트경로>
+git add -A
+git commit -m "update 전 상태 저장"
+```
+
+`nothing to commit` 이 나오면 저장할 변경이 없는 것이다 — 그대로 다음 단계로. (한 줄씩 치면 윈도 PowerShell·Git Bash 어디서나 된다.)
 
 **2단계 — 배포판을 내 볼트 옆 폴더에 펼친다 (내 파일은 안 바뀐다)**
 

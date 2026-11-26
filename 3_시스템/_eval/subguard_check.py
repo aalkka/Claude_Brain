@@ -188,7 +188,8 @@ def main():
     c, o = py("import runpy; sys.argv=['schedule.py','week','7']; runpy.run_path('3_시스템/schedule.py', run_name='__main__')")
     ok("일정(schedule.py week) 돎", c == 0, o[-200:])
     r = subprocess.run([sys.executable, "-X", "utf8", os.path.join(SYS, "search.py"), "--q", "장학", "--k", "3"], cwd=VAULT, env=env, capture_output=True, timeout=180)
-    ok("찾기(search.py · 진짜 볼트 읽기만) 돎", r.returncode == 0 and len(r.stdout) > 50, r.stdout.decode("utf-8", "replace")[-200:])
+    # 첫 색인 전 새 볼트(embeddings.json 없음)는 빈 결과가 바르다
+    ok("찾기(search.py · 진짜 볼트 읽기만) 돎", r.returncode == 0 and (len(r.stdout) > 50 or not os.path.exists(os.path.join(SYS, "_index", "embeddings.json"))), r.stdout.decode("utf-8", "replace")[-200:])
     c, o = py("import runpy; sys.argv=['ingest.py','1_수집/시험/그림.png','--force']; runpy.run_path('3_시스템/ingest.py', run_name='__main__')", 300)
     ok("원본 색인(OCR · --vision 없이) 돎", c == 0 and "그림 읽기" not in o, o[-200:])
     ok("위 넷이 claude 를 안 부름", ncalls("") == n0, f"{ncalls('') - n0}번")
