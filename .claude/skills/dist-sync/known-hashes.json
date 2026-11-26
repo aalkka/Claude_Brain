@@ -39,6 +39,7 @@
 },
 ".claude/skills/collect_desk/scripts/collect_desk.py": {
 "2679ecd411cf": "2da29fb18fb4c145",
+"3e875d8d8faf": "1d5122a857185535",
 "47eba9e0e411": "3dca320f3c0b37f5",
 "550df6050b16": "8dc80de98e4016f7",
 "556e8fd6a1ab": "1656807b721e316f",
@@ -226,6 +227,7 @@
 ".claude/skills/dist-sync/ship.json": {
 "012744975a0c": "e4b808b59f35dfd6",
 "12589c0bf00c": "3270ca21a6284d07",
+"4e8bd0860602": "263b3194f10b00ef",
 "8983e89d4dc3": "5359f05160f2a823",
 "8dac8086b01f": "9fdf2c92338b832c",
 "9d31409066bc": "a0cd0476b0ba6775",
@@ -464,6 +466,7 @@
 },
 ".claude/skills/sort/SKILL.md": {
 "2c652483a9dd": "cbbcc79013fcf3b6",
+"33aa9cafa853": "39a9535b893f2fb2",
 "afb0fc7a9b78": "98d9d36708e05ba5",
 "ce711818b454": "070273f62202b7c0"
 },
@@ -762,11 +765,13 @@
 },
 "3_시스템/_eval/sort_notice_golden.py": {
 "6276c0faf121": "383e5826b3852c0d",
-"62772cc779c7": "5ac91d18e5f9fe1f"
+"62772cc779c7": "5ac91d18e5f9fe1f",
+"cc39b7f06590": "87ba9ff7800dd644"
 },
 "3_시스템/_eval/stop_inbox_check.py": {
 "352669aa6ba9": "7f589f82336c1ceb",
 "4d5cd1874c54": "446b6ac0a07c0f2a",
+"5654455b1d10": "78c758ac460f1b4f",
 "90f371913c09": "c98fb02a9d3ad392"
 },
 "3_시스템/_eval/subguard/fake_claude.cs": {
@@ -779,6 +784,9 @@
 "09e0b41ad763": "8916e045cdb5d1ba",
 "82c2830556b7": "9cc2e8cfd254205f",
 "8af89bd96f1e": "3de2b4717f795791"
+},
+"3_시스템/_eval/tag_alert_check.py": {
+"21c3657fb8fe": "679718fc96f69bbf"
 },
 "3_시스템/_eval/tutorial_lint_check.py": {
 "425e3eb9703c": "8b95c4b08932ed88"
@@ -1060,7 +1068,8 @@
 "3_시스템/collect-tick.py": {
 "1bb7e8fa244b": "edb2d45ebed9c973",
 "95592a4e9fb1": "2fa5f38b186a07f0",
-"b78b73b89621": "9432b610f18d181f"
+"b78b73b89621": "9432b610f18d181f",
+"d4cdf4ae928c": "8fa4146118373b61"
 },
 "3_시스템/collect_price.py": {
 "d88c76abccdc": "dcd6d3d52b37a45c",
@@ -1564,7 +1573,8 @@
 },
 "3_시스템/sort_collect.py": {
 "37c95649a516": "88a6eb33ab4b785a",
-"639769b9907e": "b4d9028a67463113"
+"639769b9907e": "b4d9028a67463113",
+"e4d286c3b445": "452b7d6980f61fd6"
 },
 "3_시스템/sort_inbox.py": {
 "a9948496adc1": "12e9c2236c323a7d"
@@ -1737,6 +1747,7 @@
 "f2fc54b111a7": "70633d029a65fb1e"
 },
 "3_시스템/설명서/설명서-분류와-알림.md": {
+"0688b05c3952": "8e98328f2fb3d15f",
 "346b075fb285": "d51740308681cc46",
 "9b183a24d9f1": "923315eaf8e39645"
 },
@@ -1828,6 +1839,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "6b8d4df32299",
+"rev": "296ccfeb6521",
 "schema": 1
 }
