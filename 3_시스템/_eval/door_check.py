@@ -1,7 +1,7 @@
 # 받는 문 회귀 시험(11-03 · 설계안 §13.3 B2) · 실행: py -3 3_시스템/_eval/door_check.py — 격리 볼트 + 가짜 내려받기 · 등록(install)·실행 파일은 안 건드림
 import json, os, shutil, subprocess, sys, tempfile, time
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="door-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """JSON Canvas 기하·스키마 검사기.
-사용: python 3_시스템/canvas-check.py "2_지식/_canvas/x.canvas"
+사용: py -3 .claude/skills/canvas/scripts/canvas-check.py "2_지식/_canvas/x.canvas"
 좌표를 눈으로 찍지 않기 위한 도구. 겹침·그룹포함·행열정렬·20스냅·스키마·엣지관통을 본다.
 엣지 관통은 직선 근사(Obsidian은 베지어) — 참고치.
 """

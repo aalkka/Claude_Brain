@@ -1,7 +1,7 @@
 # 볼트 개혁 R9 받은함 정리 회귀 시험(10-30 · 11-02 재료·폴더·잠금 개정) · 실행: py -3 3_시스템/_eval/r9_inbox_check.py — 격리 볼트에 받은 것을 심고 inbox.py 가 가르는지 · --apply 가 확실한 것만 하는지 · 잠긴 폴더를 옮기면 아무것도 안 변하는지
 import json, os, shutil, subprocess, sys, tempfile, time
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="r9in-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")

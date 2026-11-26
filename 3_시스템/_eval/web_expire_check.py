@@ -1,7 +1,7 @@
 # 웹 공지 보존 회귀 시험(11-03 · ADR-029) · 실행: py -3 3_시스템/_eval/web_expire_check.py — 격리 볼트에서 마감 + 30일 지난 글만 휴지통으로 가는지 · 두는 경우(마감 모름·쓸모 표시·노트가 가리킴·표 처리 바꿈)를 건드리지 않는지
 import datetime, json, os, shutil, subprocess, sys, tempfile
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="wexp-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")

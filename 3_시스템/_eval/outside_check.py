@@ -1,7 +1,7 @@
 # 볼트 밖 후보 회귀 시험(11-03 · 설계안 §13.3 B2②) · 실행: py -3 3_시스템/_eval/outside_check.py — 격리 볼트 + 가짜 내려받기 폴더에서 볼트에 없는 문서만 보이는지 · 들이기가 복사이고 경로를 안 남기는지
 import json, os, shutil, subprocess, sys, tempfile, time
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="outside-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")

@@ -1350,7 +1350,27 @@ def run_ops(ctx, ops, lenient):
     for i, o in enumerate(ops, 1):
         k = o.get("op")
         try:
-            if k == "mv":
+            if k == "mv" and o.get("merge") and os.path.isdir(ctx.abs(o["src"])) and os.path.isdir(ctx.abs(o["dst"])):
+                # 합치기(이전 파일 «merge»: 새 자리가 이미 있는 폴더) — 통째로 넣으면 새 자리 안에 옛 폴더가 한 겹 생긴다(받은함/_inbox · 11-26).
+                # 옛 폴더에 든 것을 하나씩 새 자리로 옮기고, 같은 이름이 이미 있으면 그대로 두고 알린다. 빈 자리 표시(.gitkeep)는 옮길 것이 아니다.
+                src_a = ctx.abs(o["src"])
+                for name in sorted(os.listdir(src_a)):
+                    child = o["src"].rstrip("/") + "/" + name
+                    if name == ".gitkeep":
+                        if ctx.dry:
+                            print("미리 보기 · 자리 표시 치움 %s" % child)
+                        else:
+                            os.remove(os.path.join(src_a, name))
+                        continue
+                    op_mv(ctx, child, o["dst"].rstrip("/") + "/", o.get("why", ""), lenient=True)
+                if ctx.dry:
+                    print("미리 보기 · 옛 폴더가 비면 치움 %s" % o["src"])
+                elif not os.listdir(src_a):
+                    os.rmdir(src_a)
+                    print("빈 옛 폴더 치움 %s" % o["src"])
+                else:
+                    print("  ⚠ 옛 폴더에 남은 것이 있다(새 자리에 같은 이름) — 사람이 본다: %s" % o["src"])
+            elif k == "mv":
                 op_mv(ctx, o["src"], o["dst"], o.get("why", ""), lenient=lenient)
             elif k == "rm":
                 # quiet = 링크 세기를 건너뜀(아무도 링크하지 않는 기계 자국 — 파일마다 볼트 전체를 훑어 1초씩 걸림 · 11-19 잼)
@@ -1470,7 +1490,7 @@ def op_migrate(ctx, apply, undo=None, from_dir=None):
             moved = []
             for o in ops:
                 if o.get("op") == "mv" and os.path.exists(ctx.abs(o["src"])):
-                    t = o["dst"] + "/" + posixpath.basename(o["src"]) if os.path.isdir(ctx.abs(o["dst"])) else o["dst"]
+                    t = o["dst"] + "/" + posixpath.basename(o["src"]) if os.path.isdir(ctx.abs(o["dst"])) and not o.get("merge") else o["dst"]
                     moved.append((o["src"], t))
         fix_obsidian_settings(sub, moved, mid)
         table = os.path.join(os.path.abspath(from_dir), "..", "..", *KNOWN_TABLE.split("/")) if from_dir else ctx.abs(KNOWN_TABLE)

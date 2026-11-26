@@ -4,7 +4,7 @@
 import datetime as dt
 import io, json, os, shutil, subprocess, sys, tempfile, time, zipfile
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="work-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")

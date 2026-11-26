@@ -2,7 +2,7 @@
 # 훅 입력은 실제처럼 UTF-8 바이트 · 세션 기록은 한글 경로(사용자 이름)에 둔다 — 시스템 코드 페이지가 65001 이 아닌 PC(cp949)에서 돌리면 경로가 깨져 되먹임이 조용히 안 걸린다(ADR-028 한계).
 import json, os, shutil, subprocess, sys, tempfile
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="stopib-")
 V = os.path.join(root, "vault")
 H = os.path.join(V, "3_시스템", "hooks")

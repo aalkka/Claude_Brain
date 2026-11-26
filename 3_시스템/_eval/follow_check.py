@@ -1,7 +1,7 @@
 # 따라가기 회귀 시험(11-03 · 설계안 §19.3) · 실행: py -3 3_시스템/_eval/follow_check.py — 격리 볼트에서 바깥 이동·지움을 일으켜 follow.py 가 장부·링크·색인·짝 메모·LMS 목록을 맞추는지 · 장부 안 일을 두 번 적지 않는지 · 못 고르는 것·떼로 사라짐을 건드리지 않는지
 import json, os, shutil, subprocess, sys, tempfile
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="follow-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")

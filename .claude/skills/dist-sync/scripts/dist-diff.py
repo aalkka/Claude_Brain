@@ -865,6 +865,21 @@ def obsidian_running():
     return "obsidian.exe" in out.lower()
 
 
+def obsidian_has_open(vault):
+    """옵시디언이 «이 볼트»를 열어 두었나 — 플러그인 교체를 막을 까닭은 그때뿐이다(다른 볼트만 연 옵시디언은 이 볼트의 플러그인 목록을 다시 쓰지 않는다).
+    옵시디언 설정(obsidian.json)의 볼트 목록에서 «open» 표시를 본다. 못 읽으면 조심하는 쪽 = 켜져 있으면 열었다고 본다."""
+    if not obsidian_running():
+        return False
+    cfg = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "obsidian", "obsidian.json")
+    try:
+        with open(cfg, encoding="utf-8") as f:
+            vaults = (json.load(f).get("vaults") or {}).values()
+    except (OSError, ValueError):
+        return True
+    me = os.path.normcase(os.path.normpath(os.path.abspath(vault)))
+    return any(v.get("open") and os.path.normcase(os.path.normpath(v.get("path") or "")) == me for v in vaults if isinstance(v, dict))
+
+
 def plugins(A, B, dry):
     """배포 플러그인 교체 — 들이기(DIST_PLUGINS 폴더를 A 와 같게) + 거두기(RETIRED_PLUGINS 지우기) + 켜짐 목록.
     data.json 은 어느 쪽도 건드리지 않는다. 돌려주는 것 = [(표시, 설명)], 실행 여부."""
@@ -1280,8 +1295,8 @@ def main():
         return 1 if blocked else 0
 
     if a.apply_plugins:
-        if obsidian_running():
-            print("옵시디언이 켜져 있다 — 닫고 다시 돌린다(켜 둔 옵시디언은 플러그인 목록을 자기 기억으로 다시 쓴다).",
+        if obsidian_has_open(a.b):
+            print("옵시디언이 이 볼트를 열어 두었다 — 옵시디언을 닫고 이 명령만 다시 돌린다(켜 둔 옵시디언은 플러그인 목록을 자기 기억으로 다시 쓴다). 코어·이전은 이미 끝났으면 다시 안 한다.",
                   file=sys.stderr)
             return 3
         log, ok = plugins(os.path.abspath(a.a), os.path.abspath(a.b), dry=False)

@@ -1,7 +1,7 @@
 # 볼트 개혁 R8 회귀 시험(10-30) · 실행: py -3 3_시스템/_eval/r8_cleanup_check.py — — 격리 볼트에 사례를 심고 cleanup.py 가 가르는지 · 계획이 fileops plan 미리 보기를 통과하는지
 import json, os, shutil, subprocess, sys, tempfile, time
 
-REAL = r"C:\Claude_Brain\3_시스템"
+REAL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 이 시험이 든 볼트의 3_시스템(박힌 경로 대신 — 받은 볼트에서도 제 대본을 잰다)
 root = tempfile.mkdtemp(prefix="r8-")
 V = os.path.join(root, "vault")
 S = os.path.join(V, "3_시스템")
@@ -46,7 +46,7 @@ a = subprocess.run([sys.executable, os.path.join(S, "fileops.py"), "plan", plan,
 led = [json.loads(l) for l in open(os.path.join(S, "ledger", "ops.jsonl"), encoding="utf-8")] if os.path.exists(os.path.join(S, "ledger", "ops.jsonl")) else []
 ok("승인 뒤 적용 = 휴지통 4건 · 장부 4줄 · 남길 것은 그대로", a.returncode == 0 and len(led) == 4 and all(e["op"] == "rm" for e in led) and os.path.exists(os.path.join(V, "1_수집", "학교", "과목", "강의자료", "a.pdf")), "%d줄 %s" % (len(led), a.stdout.strip().splitlines()[-1:] if a.stdout else a.stderr[-200:]))
 # 보존 표 칸(11-03) — 강의자료·공지(학기 끝 + 날) · 보관 칸(학기 끝) · 고아 첨부
-shutil.copy2(os.path.join(os.path.dirname(REAL) if False else r"C:\Claude_Brain\2_지식", "보존.md"), os.path.join(V, "2_지식", "보존.md")) if os.path.isdir(os.path.join(V, "2_지식")) else (os.makedirs(os.path.join(V, "2_지식")), shutil.copy2(r"C:\Claude_Brain\2_지식\보존.md", os.path.join(V, "2_지식", "보존.md")))
+shutil.copy2(os.path.join(os.path.dirname(REAL), "2_지식", "보존.md"), os.path.join(V, "2_지식", "보존.md")) if os.path.isdir(os.path.join(V, "2_지식")) else (os.makedirs(os.path.join(V, "2_지식")), shutil.copy2(os.path.join(os.path.dirname(REAL), "2_지식", "보존.md"), os.path.join(V, "2_지식", "보존.md")))
 put("2_지식/주제.md", ("```json\n" + json.dumps({"topics": [{"이름": "옛과목", "영역": "배움", "학기": "2020-1"}, {"이름": "새과목", "영역": "배움", "학기": "2099-2"}]}, ensure_ascii=False) + "\n```\n").encode("utf-8"))
 for r_ in ("옛과목/강의자료/x.pdf", "옛과목/공지/y.md", "옛과목/과제/z.pdf", "새과목/강의자료/n.pdf"):
     put("1_수집/배움/" + r_, ("내용 " + r_).encode("utf-8"))
