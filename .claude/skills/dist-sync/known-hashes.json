@@ -127,7 +127,8 @@
 "305539f715d0": "28566e58489d909e",
 "77e74afd57bd": "69f9c0ae6f0b2817",
 "9bbc2c1f7015": "2292a84b46421ed9",
-"d56f6baca481": "2dc7207dbd5b4e02"
+"d56f6baca481": "2dc7207dbd5b4e02",
+"df05975aac5c": "7914243986d6159c"
 },
 ".claude/skills/dist-sync/external.json": {
 "20cd292dc761": "ea8f5cf6ad0a9bf9",
@@ -176,6 +177,7 @@
 ".claude/skills/dist-sync/scripts/dist-diff.py": {
 "18421fabb136": "3d665993529d05a1",
 "2850f5376704": "9034358635ca9611",
+"45d52089c612": "ba6082eba5b5b741",
 "4de506ccb99f": "c7c2dcca5cf95dc1",
 "5354177f4ee7": "785d1723d014c665",
 "53f385250367": "bb025a9f6340895a",
@@ -241,6 +243,7 @@
 "2d4e37f082b6": "cd9d7038070e721c"
 },
 ".claude/skills/dist-sync/skills/publish/SKILL.md": {
+"179b537f4991": "5d7739c4f7ba6714",
 "2b4af894f663": "644b8e53821ad2a4",
 "51c7af4b5d9f": "173ffda0da20c277",
 "7d3aca584536": "3de822b39fd05f21",
@@ -257,6 +260,7 @@
 "157b92d6a016": "424a4f35ce08ebe0",
 "17cfb9f8b2a4": "82431770b0737e8a",
 "353286b86633": "431e11de8d1b93a3",
+"424d59169e9b": "754993be3832fdd5",
 "5a8cabbb97d0": "a238fdfc7cd2ae2a",
 "6ddcefa1fe88": "7229c8df15b8a041",
 "81eb4dcc0c2d": "23d7034c24865af2",
@@ -337,6 +341,7 @@
 "ff25b76b825f": "5da7a7554fafa58c"
 },
 ".claude/skills/module-forge/skills/check/SKILL.md": {
+"30dc8f4c578d": "0e5f94b2b843116a",
 "3c2153428327": "325f96fbd9a29012",
 "6e73db5fea8d": "a59182c158df22c2",
 "aa504828a317": "b1f5db558a14954b",
@@ -447,6 +452,7 @@
 },
 ".claude/skills/session-record/SKILL.md": {
 "54916c6a5d2c": "90524f0d7114b834",
+"675770cc96a3": "b18c0bbc5a42e3e4",
 "68841078166e": "d0a82e8d66c76ea7",
 "d925086a5816": "f83c56f33dc02fb8"
 },
@@ -482,6 +488,7 @@
 "63aee8bc756c": "b4240b622a68ae50",
 "8c3af7c500f6": "b6b417511642c9c7",
 "9d48a43eb04d": "a8630758c84599d4",
+"a81f04b3ce61": "6b6c3c1a1a7d228d",
 "abc7a724bb07": "be4b801c9286f3d4",
 "b06c0fd81dd6": "f481387188de2d0f",
 "bb6aa0b85088": "2899845c991b8230",
@@ -661,6 +668,7 @@
 "fca3daf38d68": "6104765bdd0735aa"
 },
 "3_시스템/_eval/hardpaths.py": {
+"004944ad3b62": "c17768a05d9bd98b",
 "762b61ffd338": "86b821dbe1f617db",
 "7a2bf8337480": "4c87ec78afe7890c",
 "ed4cff6e3ba0": "ecdd1e7bc3be080d"
@@ -941,6 +949,7 @@
 "9f9587bb6749": "d046556142600d94"
 },
 "3_시스템/_ref/코어수정-준수사항-체크리스트.md": {
+"1b6fcef9fbc9": "2e37ccd49f1abee0",
 "1eaaa4df65d7": "22b15c753443ddad",
 "71f708707bce": "a485cab7f44fd4a3",
 "72a13a533fc7": "f81912df95c79430",
@@ -1134,6 +1143,7 @@
 "4db1c7e50a44": "ca5ccd194886135d",
 "50fb8c941fd1": "746231363aaf1cb4",
 "6623b867c14e": "5488e6458763a79f",
+"6bdc1103d8f7": "09ec7ff709334479",
 "70dc49bf7051": "02a2205b80295b71",
 "7c59d28451e6": "355f2e1eb09f44e7",
 "7fa6f53ad52a": "f86ddaacae849244",
@@ -1190,6 +1200,7 @@
 "1d51c17d4852": "bdcf1e152970acd9",
 "215c4c2a9255": "56d00bb51b61c6de",
 "238b4f58c1e2": "efed9b63750b35cf",
+"951a83263534": "7de9d3f25c71a07f",
 "f7e7d091159a": "aed4a80872a623d5"
 },
 "3_시스템/holidays.py": {
@@ -1343,6 +1354,7 @@
 "9bde91b6e63c": "5f6757c897f9c6cf",
 "b20b281bae23": "a8ce4518a16f8bce",
 "b5b5685cafb1": "d10b7589a1f02b4c",
+"bedcf431350f": "c0b27687d2e9a859",
 "d95cc01ea80f": "fd3dfaecd6c77a86",
 "e4c985f1ae5b": "13f7f6e3063f5a09",
 "ef2b18c3639e": "ef4fd74a7cd6b7a2"
@@ -1448,6 +1460,7 @@
 "3_시스템/restructure.py": {
 "10db9a02e01b": "46a6eb6d6730f1b2",
 "24faac601950": "a36efc61fd17c2eb",
+"4165538cf0df": "c296fffc2abee750",
 "5985499443cb": "1fddf219c08dab63",
 "6d0b8cc46cff": "0e8fa62154c8a18d",
 "7ac4381f8e98": "0d477a0dcdd9d4df",
@@ -1839,6 +1852,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "296ccfeb6521",
+"rev": "aae0e8d97d39",
 "schema": 1
 }
