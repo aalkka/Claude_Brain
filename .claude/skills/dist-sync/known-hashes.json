@@ -244,6 +244,7 @@
 ".claude/skills/dist-sync/ship.json": {
 "012744975a0c": "e4b808b59f35dfd6",
 "12589c0bf00c": "3270ca21a6284d07",
+"4ac3824a5d96": "fff9b7f12c4886ce",
 "4e8bd0860602": "263b3194f10b00ef",
 "8983e89d4dc3": "5359f05160f2a823",
 "8dac8086b01f": "9fdf2c92338b832c",
@@ -282,6 +283,7 @@
 "5a8cabbb97d0": "a238fdfc7cd2ae2a",
 "6ddcefa1fe88": "7229c8df15b8a041",
 "81eb4dcc0c2d": "23d7034c24865af2",
+"9bb33d81f954": "37c5ef97adb481c9",
 "9cbfa41bd689": "49104b0ab5e4af3b",
 "de946bfe2fab": "26ebdcd5b3b40889",
 "fdc2bb7474ff": "8b443fd6212fd825"
@@ -480,6 +482,7 @@
 "051a05b042b4": "5788d1a9a132fa65",
 "05262b970ea0": "15fe096f281f7132",
 "1c246b209275": "38e5f7756d0b4028",
+"219d2b0047a3": "7b93806eee8c6c2f",
 "26058fadcb04": "b5140865dce79bdf",
 "3a3af8d5de84": "5fcb691e2b60b293",
 "742154106af7": "4935e72b5b1b62c1",
@@ -1682,6 +1685,9 @@
 "98e9cc1f4837": "f3cfdc7e4cfeb179",
 "d7f1a2e3cdac": "e153818e5208c533"
 },
+"3_시스템/topic_register.py": {
+"a1978827c444": "e1c1196aed1b5610"
+},
 "3_시스템/tutorial/1-세-자리.md": {
 "712a467fa62f": "9c6148113638f1a6",
 "73fb496afb63": "1609ff6251b212f1"
@@ -1924,6 +1930,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "924f51c9d5a7",
+"rev": "add5b0360265",
 "schema": 1
 }
