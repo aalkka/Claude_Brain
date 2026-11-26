@@ -17,17 +17,20 @@ description: 배포판 최신판을 이 볼트로 들인다. "업데이트 있�
 ### 1. 배포판을 가져온다 (읽기만)
 
 ```bash
-git fetch dist && git worktree add <임시경로> dist/main
+git fetch dist
+git worktree add ../brain-dist dist/main
 ```
+
+임시 자리는 늘 `../brain-dist`(볼트 옆) · 명령은 한 줄에 하나씩, 셸 변수(`D=…`) 없이 글자 그대로 쓴다 — 볼트 설정이 이 글자 그대로의 읽기·미리 보기 명령만 묻지 않고 허용한다(사용자 승인 창을 줄이려고). 적용(`--apply`)·플러그인 교체는 여전히 묻는다.
 
 원격이 없으면 사용자에게 배포판 위치를 묻는다. **`git pull`·`git merge`를 이 볼트에 실행하지 않는다.**
 
 ### 2. 진단 + 계획 + 미리 보기 (아무것도 안 바뀐다)
 
 ```bash
-py -3 <배포판>/.claude/skills/dist-sync/scripts/dist-diff.py --a <배포판> --b . --mode update --out 3_시스템/_index/dist-sync/update-<날짜>.md --plan-out 3_시스템/_index/dist-sync/update-plan.json
-py -3 <배포판>/3_시스템/fileops.py --vault . update 3_시스템/_index/dist-sync/update-plan.json
-py -3 <배포판>/3_시스템/fileops.py --vault . migrate --from <배포판>/3_시스템/migrations
+py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --mode update --out 3_시스템/_index/dist-sync/update.md --plan-out 3_시스템/_index/dist-sync/update-plan.json
+py -3 ../brain-dist/3_시스템/fileops.py --vault . update 3_시스템/_index/dist-sync/update-plan.json
+py -3 ../brain-dist/3_시스템/fileops.py --vault . migrate --from ../brain-dist/3_시스템/migrations
 ```
 
 **배포판 쪽 대본을 돌린다.** 이 볼트의 대본은 옛 판이라 새 판이 들인 규칙(거둔 플러그인·새 층 분류·새 이전)을 모른다.
@@ -59,15 +62,15 @@ py -3 <배포판>/3_시스템/fileops.py --vault . migrate --from <배포판>/3_
 ### 4. 승인 1번 → 적용 (옵시디언을 닫고)
 
 ```bash
-py -3 <배포판>/3_시스템/fileops.py --vault . update 3_시스템/_index/dist-sync/update-plan.json --apply
-py -3 <배포판>/.claude/skills/dist-sync/scripts/dist-diff.py --a <배포판> --b . --apply-plugins
+py -3 ../brain-dist/3_시스템/fileops.py --vault . update 3_시스템/_index/dist-sync/update-plan.json --apply
+py -3 ../brain-dist/.claude/skills/dist-sync/scripts/dist-diff.py --a ../brain-dist --b . --apply-plugins
 py -3 3_시스템/fileops.py migrate --apply
 ```
 
 - 첫 줄에서 코어 게이트가 **한 번** 묻는다(파일마다 묻지 않는다 — 승인 피로 해소). 승인은 3단계 요약을 본 사람이 한다.
 - 플러그인 교체: 배포 플러그인 폴더를 배포판과 같게 · 거둔 플러그인 파일 지우기 · 켜짐 목록 조정. **있는 `data.json`(사용자 설정)은 건드리지 않는다.** 없는 brain-base 에는 처음 설정을 만들어 지금 배치·기본 탐색기를 지킨다. 배포판에 들일 플러그인이 없으면 거두기도 하지 않는다. 옵시디언이 켜져 있으면 멈춘다(종료 코드 3). 금고 층 2(플러그인 폴더 관리자 전용)가 있는 볼트는 관리자 설치기로.
 - 이전은 업데이트로 들어온 `3_시스템/migrations/` 의 밀린 것만 돈다 · 이미 된 행위는 건너뛴다 · 새 자리에 같은 이름 폴더가 있으면 덮지 않고 그 안으로 들어간다.
-- 못 합친 파일을 사람이 정했으면: `{"version": "손으로", "ops": [{"op": "put", "rel": "<경로>", "src": "<새 판 또는 합친 파일>", "why": "사람이 고름"}]}` 을 저장하고 `py -3 <배포판>/3_시스템/fileops.py --vault . update <그 파일> --apply`(옛 판 = 휴지통).
+- 못 합친 파일을 사람이 정했으면: `{"version": "손으로", "ops": [{"op": "put", "rel": "<경로>", "src": "<새 판 또는 합친 파일>", "why": "사람이 고름"}]}` 을 저장하고 `py -3 ../brain-dist/3_시스템/fileops.py --vault . update <그 파일> --apply`(옛 판 = 휴지통).
 - 다시 돌려도 같다 — 두 번째 진단의 계획은 0건이다(못 합친 파일은 계속 `conflicts` 로 뜬다).
 - **적용 뒤 = 모듈 계약**(먼저): 새 코어가 모듈이 부르는 이름을 빼거나 바꿨을 수 있다 — `py -3 -u .claude/skills/dist-sync/scripts/contracts.py run`. 켜진 모듈의 `uses_core`(코어 이름 · ast 로 읽음) → 켜진 모듈의 `contributes.update_check`(그 모듈 시험 · 하나 상한 10분 · 창 없음) 차례다. 깨지면(«⛔ <모듈> 계약 깨짐» 줄 · 종료 1) **업데이트 보고 맨 위**에 그 줄과 되돌리기 명령(5단계 undo)을 올리고, 되돌릴지 모듈을 고칠지 사람에게 묻는다. 대본 출력이 원본이다 — 통과를 Claude 가 짐작으로 적지 않는다.
 - **적용 뒤 = 볼트 밖 설정 점검**: 새 판이 볼트 밖 설정(꾸러미·프로그램·윈도우·옵시디언 설정)을 더했을 수 있다 — `dist-sync:outside` 절차(`py -3 .claude/skills/dist-sync/scripts/external.py check` → 안 된 필수 항목을 Claude 가 하거나 사람을 한 단계씩 안내). 업데이트 보고에 남은 항목을 적는다.
@@ -75,10 +78,10 @@ py -3 3_시스템/fileops.py migrate --apply
 
 ### 5. 보고
 
-- 업데이트 묶음 id · **되돌리기 = 이전 먼저, 그다음 업데이트**: `py -3 3_시스템/fileops.py migrate --undo <이전 id>` → `py -3 <배포판>/3_시스템/fileops.py --vault . undo <묶음 id>`(바뀐 코어를 옛 판으로 · 새 파일은 휴지통). 되돌린 노트의 경로 링크는 표기만 긴 경로로 남을 수 있다(링크는 유효).
+- 업데이트 묶음 id · **되돌리기 = 이전 먼저, 그다음 업데이트**: `py -3 3_시스템/fileops.py migrate --undo <이전 id>` → `py -3 ../brain-dist/3_시스템/fileops.py --vault . undo <묶음 id>`(바뀐 코어를 옛 판으로 · 새 파일은 휴지통). 되돌린 노트의 경로 링크는 표기만 긴 경로로 남을 수 있다(링크는 유효).
 - **`git reset --hard` 로 되돌리지 않는다** — md 아닌 원본은 git 밖이라 안 돌아오고 노트만 돌아가 어긋난다. 이전 뒤 `git status` 에 개인 층 경로가 보이는 것은 정상이다.
 - 찾기 색인은 옛 자리를 가리킨다 — `py -3 3_시스템/brain.py run search.reindex` 를 권한다(몇 분 걸림 · 사람에게 묻고).
-- 손으로 할 것 목록 · 임시 worktree 정리(`git worktree remove <임시경로>`).
+- 손으로 할 것 목록 · 임시 worktree 정리(`git worktree remove ../brain-dist`).
 
 ## 층 (근거 = ADR-012)
 

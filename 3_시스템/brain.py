@@ -253,6 +253,11 @@ def weight_rows():
 
 def doctor_checks():
     res = []
+    # 훅·대본은 `py -3` 으로 부른다 — py 실행기가 없으면(Microsoft Store 판·python 만 깐 PC) 훅 절반이 조용히 안 돈다(11-26 G112)
+    if shutil.which("py"):
+        res.append(chk("파이썬", "ok", "py 실행기 · %d.%d.%d" % sys.version_info[:3]))
+    else:
+        res.append(chk("파이썬", "bad", "py 실행기 없음 — 훅·대본이 `py -3` 으로 불러 절반이 안 돈다 · python.org 설치판(py 실행기 포함)을 깐다(Microsoft Store 판은 py 가 없다)"))
     try:
         sys.path.insert(0, HERE)
         import claude_bin

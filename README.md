@@ -6,8 +6,8 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 - **Windows** (훅이 PowerShell — 현재 Windows 전용. 타 OS는 훅 스크립트 포팅 필요)
 - **Git for Windows**(Git Bash 포함 — 훅 하나가 Bash 문법) · Claude Code v2.1.59+(구독 로그인) · Obsidian
 - 선택: Node.js(웹페이지 읽기 도구 `defuddle` · 삼성노트 `.sdocx` 색인) · MS Word(docx 를 PDF 로) · 크롬(수집 창이 글을 여는 브라우저)
-- **Python 3.10+** + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
-  첫 검색 시 임베딩 모델(기본 `intfloat/multilingual-e5-small`, ~470MB)을 자동 내려받아 로컬 인덱스를 만든다.
+- **Python 3.10+ — python.org 설치판**(`py` 실행기가 함께 깔린다 · 훅·대본이 `py -3` 으로 부른다 · Microsoft Store 판은 `py` 가 없어 훅 절반이 안 돈다 — `brain.py doctor` 의 «파이썬» 줄로 확인) + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
+  첫 검색 시 임베딩 모델(기본 `intfloat/multilingual-e5-small`, ~470MB)을 자동 내려받아 로컬 인덱스를 만든다. 첫 색인은 PC 에 따라 몇 분에서 십여 분(코어 2개 PC 에서 12분 넘게 잼) — 도는 동안 «색인 만드는 중 · k/N 조각» 줄이 나온다.
 
 ## 설치
 1. 이 저장소를 받는다(주소 = 이 페이지 초록 «Code» 단추 › HTTPS · 태그를 붙이지 않는다 — 옛 태그는 옛 판이다):
