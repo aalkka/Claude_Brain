@@ -498,3 +498,39 @@ body.bb-nospin.bb-noshimmer [class*="bb-"], body.bb-nospin.bb-noshimmer [class*=
 .bb-mk-add { flex: none; }
 .bb-mk-gap { height: 8px; }
 .bb-mk-row .bb-tp-start .clickable-icon { padding: 2px; }
+
+/* 기본 세팅 탭(setupview.ts · 11-21 초안 A) — 바깥 프로그램 칸(점선 · 프로그램 그림 · 누를 글)과 이 화면 단추(옵시디언 단추)를 꼴로 가름 */
+.bb-setup { display: flex; flex-direction: column; height: 100%; padding: 0 !important; }
+.bb-setup > .nav-header { flex: none; }
+.bb-setup > .nav-header .nav-buttons-container { justify-content: flex-end; }
+.bb-setup-body { flex: 1; overflow-y: auto; padding: 8px 8px 16px; width: 100%; max-width: 640px; margin: 0 auto; }
+.bb-setup-sec { margin-bottom: 12px; }
+.bb-setup-body.is-busy { opacity: 0.6; }
+.bb-setup-err { padding: 8px; font-size: var(--font-ui-small); color: var(--text-error); }
+.bb-setup-sec.is-bad > .bb-tp-sec-head .bb-tp-sec-ic { color: var(--text-error); }
+.bb-setup-sec.is-ask > .bb-tp-sec-head .bb-tp-sec-ic { color: var(--text-warning); }
+.bb-setup-sec.is-ok > .bb-tp-sec-head .bb-tp-sec-ic { color: var(--text-success); }
+.bb-setup-fold { cursor: pointer; }
+.bb-setup-chev { display: flex; color: var(--text-faint); }
+.bb-setup-chev svg { width: 14px; height: 14px; }
+.bb-setup-row.is-bad .bb-tp-flair { color: var(--text-error); }
+.bb-setup-row .bb-setup-who { color: var(--text-muted); }
+.bb-setup-row.is-static { cursor: default; }
+.bb-setup-step { margin: 2px 6px 8px 22px; display: flex; flex-direction: column; gap: 6px; }
+.bb-setup-n { font-size: var(--font-ui-smaller); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.bb-setup-out { border: 1px dashed var(--background-modifier-border-hover); border-radius: var(--radius-s); padding: 6px 8px; display: flex; flex-direction: column; gap: 6px; font-size: var(--font-ui-small); }
+.bb-setup-path { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 4px; color: var(--text-muted); }
+.bb-setup-appic, .bb-setup-sep, .bb-setup-pressic { display: flex; flex: none; }
+.bb-setup-appic svg, .bb-setup-pressic svg { width: 14px; height: 14px; }
+.bb-setup-sep { color: var(--text-faint); }
+.bb-setup-sep svg { width: 12px; height: 12px; }
+.bb-setup-app { font-weight: var(--font-medium); color: var(--text-normal); }
+.bb-setup-crumb { overflow-wrap: anywhere; }
+.bb-setup-pressrow { display: flex; align-items: center; gap: 6px; }
+.bb-setup-press { padding: 2px 8px; border: 1px solid var(--background-modifier-border-hover); border-radius: var(--radius-s); color: var(--text-normal); font-weight: var(--font-semibold); overflow-wrap: anywhere; }
+.bb-setup-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; color: var(--text-warning); font-size: var(--font-ui-smaller); }
+.bb-setup-ask svg { width: 12px; height: 12px; }
+.bb-setup-askwhy { color: var(--text-faint); }
+.bb-setup-q { display: flex; gap: 6px; justify-content: flex-end; }
+.bb-setup-ib { padding: 0 6px; }
+.bb-setup-ib svg { width: 14px; height: 14px; }

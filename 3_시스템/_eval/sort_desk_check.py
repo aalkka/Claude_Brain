@@ -130,6 +130,12 @@ def run(T, a):
     cd = load('collect_desk_t', os.path.join(DESK, 'scripts', 'collect_desk.py'))
     cd.SORT_SYS, cd.SORT_IX = sdir, ix
     data = cd.view('check')
+    # 출처를 안 주면 수집 창 기능의 개인화 파트 «시험 출처»(볼트마다 출처 id 가 다름 · 시험에 개인 출처 id 를 박지 않음 · incident-2026-11-22)
+    if not a.source:
+        try:
+            a.source = json.load(open(os.path.join(DESK, 'personal', 'values.json'), encoding='utf-8')).get('시험 출처') or ''
+        except (OSError, ValueError):
+            a.source = ''
     src = next((x for x in data['sources'] if x['id'] == a.source), None)
     if not src:
         print(f'출처 없음: {a.source}')

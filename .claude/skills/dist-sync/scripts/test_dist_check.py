@@ -10,6 +10,7 @@
 """
 import importlib.util
 import json
+import re
 import os
 import shutil
 import subprocess
@@ -23,6 +24,7 @@ dc = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(dc)
 
 FAIL = []
+VAULT_REAL = dc.VAULT          # 진짜 볼트 — 읽기만(ingest OCR·module_ship·자동 꼴 하나 고르기)
 TASK = "3_시스템/demo-task.ps1"  # mf:allow-path  (임시 저장소 안 · 볼트 밖 설정 추적 시험)
 PY = "3_시스템/search.py"  # mf:allow-path  (임시 사본 안의 코어 자리 — 진짜 볼트는 안 건드림)
 OBS_APP = ".obsidian/app.json"  # mf:allow-path  (임시 사본 안 — 배포판에 손으로 넣은 옵시디언 설정 자리)
@@ -30,7 +32,8 @@ OBS_APP = ".obsidian/app.json"  # mf:allow-path  (임시 사본 안 — 배포�
 
 def run(cwd, *args, env=None):
     e = dict(os.environ, **(env or {}))
-    r = subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", "-c", "init.defaultBranch=main", *args],
+    # 작성자 = 배포판 익명 이름(⑩ 이 익명 아닌 커밋을 «올릴 커밋의 개인 값»으로 센다 · 11-22)
+    r = subprocess.run(["git", "-c", "user.name=" + dc.dd.ANON_AUTHOR, "-c", "user.email=t@t", "-c", "init.defaultBranch=main", *args],
                        cwd=cwd, capture_output=True, env=e)
     if r.returncode:
         raise RuntimeError("git %s: %s" % (" ".join(args), r.stderr.decode("utf-8", "replace")))
@@ -86,13 +89,18 @@ def external_tests(A, E):
     run(E, "init")
     put(E, TASK, "Register-ScheduledTask -TaskName demo\n")
     run(E, "add", ".")
-    item = {"id": "demo-task", "이름": "예약", "종류": ["작업 스케줄러"], "쓰는 곳": [TASK], "확인": "exit 0", "안내": ["하나", "둘"]}
+    item = {"id": "demo-task", "이름": "예약", "종류": ["작업 스케줄러"], "쓰는 곳": [TASK], "확인": "exit 0", "안내": ["하나", "둘"],
+            "누름": [{"앱": "데모", "길": ["화면"], "누름": "단추", "근거": "시험"}]}
     gaps, _ = ex.scan([E], items=[])
     ok = [g[:2] for g in gaps] == [(TASK, "작업 스케줄러")]
     gaps2, bad2 = ex.scan([E], items=[item])
     gaps3, bad3 = ex.scan([E], items=[dict(item, 종류=["레지스트리"])])
     _, bad4 = ex.scan([E], items=[dict(item, 확인="", 안내=["하나"])])
-    ok = ok and not gaps2 and not bad2 and len(gaps3) == 1 and len(bad4) == 2
+    _, bad5 = ex.scan([E], items=[{k: v for k, v in item.items() if k != "누름"}])                       # 사람 단계인데 누름 칸 없음
+    _, bad6 = ex.scan([E], items=[dict(item, 누름=[{"앱": "데모", "누름": None, "근거": "시험"}])])     # 못 잰 글인데 «확인 필요» 없음(지어내기 막음)
+    _, bad7 = ex.scan([E], items=[dict(item, 누름=[{"앱": "데모", "누름": None, "근거": "시험", "확인 필요": "단추 글"}])])
+    ok = ok and not gaps2 and not bad2 and len(gaps3) == 1 and len(bad4) == 2 and len(bad5) == 1 and len(bad6) == 1 and not bad7
+    print("%s 누름 칸 — 없음 %d · 못 잰 글 까닭 없음 %d · 확인 필요 적음 %d" % ("✓" if (len(bad5), len(bad6), len(bad7)) == (1, 1, 0) else "✗", len(bad5), len(bad6), len(bad7)))
     print("%s 바깥 설정 추적 — 목록 없음 %d · 덮음 %d · 종류 다름 %d · 항목 결함 %d" % ("✓" if ok else "✗", len(gaps), len(gaps2), len(gaps3), len(bad4)))
     if not ok:
         FAIL.append("바깥 설정 추적")
@@ -142,17 +150,17 @@ def module_outside_tests(root):
     count = os.path.join(root, "reports.txt")
     rep = "import sys,json; open(sys.argv[1],'a').write('1'); print(json.dumps({'a1': True, 'a2': False}))"
     items = [
-        {"id": "demo-out.opt", "이름": "선택", "기기": "pc", "필수": False, "재기": {"명령": "exit 0"}, "안내": ["하나", "둘"]},
-        {"id": "demo-out.ph1", "이름": "폰 됨", "기기": "폰", "필수": True, "재기": {"앱": "a1"}, "안내": ["하나", "둘"]},
-        {"id": "demo-out.ph2", "이름": "폰 안 됨", "기기": "폰", "필수": True, "재기": {"앱": "a2"}, "안내": ["하나", "둘"]},
-        {"id": "demo-out.ph3", "이름": "폰 보고 없음", "기기": "폰", "필수": True, "재기": {"앱": "a3"}, "안내": ["하나", "둘"]},
+        {"id": "demo-out.opt", "이름": "선택", "기기": "pc", "필수": False, "재기": {"명령": "exit 0"}, "안내": ["하나", "둘"], "누름": [{"앱": "데모", "누름": "단추", "근거": "시험"}]},
+        {"id": "demo-out.ph1", "이름": "폰 됨", "기기": "폰", "필수": True, "재기": {"앱": "a1"}, "안내": ["하나", "둘"], "누름": [{"앱": "데모", "누름": "단추", "근거": "시험"}]},
+        {"id": "demo-out.ph2", "이름": "폰 안 됨", "기기": "폰", "필수": True, "재기": {"앱": "a2"}, "안내": ["하나", "둘"], "누름": [{"앱": "데모", "누름": "단추", "근거": "시험"}]},
+        {"id": "demo-out.ph3", "이름": "폰 보고 없음", "기기": "폰", "필수": True, "재기": {"앱": "a3"}, "안내": ["하나", "둘"], "누름": [{"앱": "데모", "누름": "단추", "근거": "시험"}]},
         {"id": "demo-out.c0", "이름": "명령 됨", "기기": "pc", "필수": True, "재기": {"명령": "exit 0"}, "하기": "x"},
         {"id": "demo-out.c1", "이름": "명령 안 됨", "기기": "pc", "필수": True, "재기": {"명령": "exit 1"}, "하기": "x"},
         {"id": "demo-out.c2", "이름": "명령 모름", "기기": "pc", "필수": True, "재기": {"명령": "exit 2"}, "하기": "x"},
         {"id": "demo-out.f1", "이름": "파일 있음", "기기": "pc", "필수": True, "재기": {"파일": M + "/here.txt"}, "하기": "x"},
         {"id": "demo-out.f0", "이름": "파일 없음", "기기": "pc", "필수": True, "재기": {"파일": M + "/none.txt"}, "하기": "x"},
         {"id": "demo-out.r0", "이름": "레지스트리 없음", "기기": "pc", "필수": True, "재기": {"레지스트리": {"키": "HKCU\\Software\\demo-out-xyz", "값": "v"}}, "하기": "x"},
-        {"id": "demo-out.eye", "이름": "화면", "기기": "폰", "필수": True, "재기": {"화면": "폰에서 본다"}, "안내": ["하나", "둘"]},
+        {"id": "demo-out.eye", "이름": "화면", "기기": "폰", "필수": True, "재기": {"화면": "폰에서 본다"}, "안내": ["하나", "둘"], "누름": [{"앱": "데모", "누름": "단추", "근거": "시험"}]},
     ]
     put(root, M + "/outside.json", json.dumps({"이름": "데모", "report": ["{py}", "-c", rep, count], "항목": items}, ensure_ascii=False))
     rows = ex.check(root)
@@ -174,6 +182,23 @@ def module_outside_tests(root):
     if gone:
         FAIL.append("모듈 끄면 사라짐")
     put(root, ".claude/settings.json", "{}")  # mf:allow-path  (임시 볼트 안 — 모듈 켬·끔 흉내)
+    # 기본 세팅 화면 한 벌(view) — 처음 연 볼트는 «새» 없음 · 뒤에 생긴 줄만 «새»(7일) · «했어요»는 잰 «됨»을 안 바꿈 · 승인 = 내려받기·예약 하기
+    hp, sp_ = os.path.join(root, "h.json"), os.path.join(root, "s.json")
+    v1 = ex.view(root, now=1000.0, human_path=hp, seen_path=sp_)["rows"]
+    seen = json.load(open(sp_, encoding="utf-8"))
+    seen.pop("demo-out.eye")
+    json.dump(seen, open(sp_, "w", encoding="utf-8"))
+    ex.did("demo-out.eye", human_path=hp)
+    ex.did("demo-out.c0", human_path=hp)
+    v2 = {r["id"]: r for r in ex.view(root, now=2000.0, human_path=hp, seen_path=sp_)["rows"]}
+    v3 = {r["id"]: r for r in ex.view(root, now=2000.0 + 8 * 86400, human_path=hp, seen_path=sp_)["rows"]}
+    ok = (not any(r["새"] for r in v1) and v2["demo-out.eye"]["새"] and not v2["demo-out.opt"]["새"] and not v3["demo-out.eye"]["새"]
+          and v2["demo-out.eye"]["했어요"] and v2["demo-out.eye"]["됨"] is None and v2["demo-out.c0"]["했어요"] is None
+          and ex.ASK.search("winget install x") and not ex.ASK.search("git switch -c main"))
+    print("%s 기본 세팅 view — 처음 새 %d · 뒤에 생긴 줄 새 %s · 7일 뒤 %s · 했어요 %s(됨 %s)" % ("✓" if ok else "✗", sum(r["새"] for r in v1),
+          v2["demo-out.eye"]["새"], v3["demo-out.eye"]["새"], bool(v2["demo-out.eye"]["했어요"]), v2["demo-out.eye"]["됨"]))
+    if not ok:
+        FAIL.append("기본 세팅 view")
     put(root, M + "/scripts/reg.ps1", "Register-ScheduledTask -TaskName demo\n")
     gaps, bad = ex.scan_module("demo-out", root)
     items[4]["종류"] = ["작업 스케줄러"]
@@ -221,6 +246,32 @@ def contract_tests(root):
     say("꺼진 모듈도 잼(배포판 기준)", len(dc.contract_gaps(A, B)) == 1)
     say("꺼진 모듈 시험은 안 돎", ct.run_checks(A) == [])
     return ok
+
+
+def personal_part_tests(root):
+    """기능 옆 개인화 파트(분리 꼴 · incident-2026-11-22) — 경로 마디 personal/ 와 매니페스트 "personal" glob 은 배포판·모듈 저장소에 안 실린다."""
+    put(root, ".claude/skills/demo/SKILL.md", "x\n")
+    put(root, ".claude/skills/demo/personal/values.json", "{}\n")
+    put(root, ".claude/skills/demo2/module.json", '{"schema": 1, "personal": ["mine/**"]}\n')
+    put(root, ".claude/skills/demo2/mine/v.json", "{}\n")
+    put(root, ".claude/skills/demo2/run.py", "x\n")
+    got = dc.dd.walk(root)
+    ok = (".claude/skills/demo/SKILL.md" in got and ".claude/skills/demo2/run.py" in got
+          and ".claude/skills/demo/personal/values.json" not in got and ".claude/skills/demo2/mine/v.json" not in got
+          and dc.dd.layer(".obsidian/plugins/brain-base/personal/a.json") == "개인")
+    print("개인화 파트 안 실림(배포판):", "ok" if ok else "FAIL %s" % sorted(got))
+    if not ok:
+        FAIL.append("개인화 파트 배포판")
+    spec = importlib.util.spec_from_file_location("module_ship", os.path.join(VAULT_REAL, "3_시스템", "module_ship.py"))
+    ms = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ms)
+    src = os.path.join(root, ".claude", "skills", "demo2")
+    got2 = ms.walk(src, ms.ignores(src))
+    got3 = ms.walk(os.path.join(root, ".claude", "skills", "demo"), ms.ignores(os.path.join(root, ".claude", "skills", "demo")))
+    ok2 = "run.py" in got2 and "mine/v.json" not in got2 and "SKILL.md" in got3 and "personal/values.json" not in got3
+    print("개인화 파트 안 실림(모듈 저장소):", "ok" if ok2 else "FAIL %s %s" % (sorted(got2), sorted(got3)))
+    if not ok2:
+        FAIL.append("개인화 파트 모듈 저장소")
 
 
 def ship_tests(root):
@@ -361,6 +412,135 @@ def blind_spot_tests(root):
         FAIL.append("글 파일이면 다 봄")
 
 
+def guard_tests(root):
+    """11-22 — ① 자동 꼴(세션 이름·세션 id·출처 id·과목·작업 경로) 잡음·흔한 낱말 안 잡음 · 꼴 파일이 실리면 셈
+    ② 이력: 공개 이력(목록만 · 처음 커밋) · 올릴 커밋(셈 · 커밋 글·작성자) · 본 blob 은 다시 안 읽음
+    ③ 개인 맥락 읽기의 줄 고르기(부르지 않음 · 사용량 0) ④ 그림 글자(OCR · 배터리·PIL 없으면 안 잼) ⑤ module_ship 도 자동 꼴을 탐.
+    견본 값은 실행 때 이어 붙인다 — 이 파일도 배포판에 실려 ⑨ 가 이 줄들을 읽는다(글자 그대로면 자기를 잡음)."""
+    A, B, R = (os.path.join(root, x) for x in ("vault", "dist", "remote.git"))
+    dd = dc.dd
+    put(A, "3_시스템/_index/dist-sync/leak-patterns.txt", "홍길" + "동\t시험 실명\n")  # mf:allow-path  (임시 볼트 안)
+    s1, s2 = "zq" + "-alpha", "qx" + "77"                       # 세션 이름 꼴(- 또는 숫자) · 흔한 낱말 main·check 는 안 만듦
+    put(A, "3_시스템/_index/bigboss/rx-0101/roster.json",  # mf:allow-path
+        json.dumps({"sessions": [{"name": n} for n in (s1, s2, "main", "check", "dist-check", "tiny")]}))
+    put(A, "3_시스템/collect/zz-board.json", "{}")  # mf:allow-path  (출처 id = 조리법 이름)
+    put(A, "3_시스템/collect-examples/demo-board.json", "{}")  # mf:allow-path  (공개 예시 = 안 만듦)
+    put(A, "3_시스템/collect/demo-board.json", "{}")  # mf:allow-path
+    os.makedirs(os.path.join(A, "2_지식", "배움", "가상과목특론(이론)"))  # mf:allow-path
+    os.makedirs(os.path.join(A, "0_작업", "일", "비밀주제"))  # mf:allow-path
+    put(A, ".claude/skills/dist-sync/scripts/dist-check.py", "#\n")
+    run(A, "init")
+    run(A, "add", ".")
+    sid = "session_" + "01" + "Ab" * 11
+    lid = "local_" + "0a" * 4 + "-1111-2222-3333-444455556666"
+    seeded = [s1 + " 11-21 잼", "고침(" + s2 + ")", sid, lid, "zz" + "-board 조리법", "가상과목" + "특론 보고서", "0_작업/일/" + "비밀주제/설계.md"]
+    clean = ["main check 둘", "dist-check.py 를 부른다", "0_작업/일/x/a.md", "0_작업/<영역>/<주제>", s2 + "x 는 다른 낱말", "pkg" + "@1.2.3",
+             "C:\\Users\\<사용자>\\x", "demo-board 예시", "tiny"]
+    put(A, "s/seed.md", "\n".join(seeded + clean) + "\n")
+    hits = dd.scan_leaks({"s/seed.md": os.path.join(A, "s", "seed.md")}, dd.dist_rules(A), dd.load_allow(A))
+    got = [h[1] for h in hits]
+    ok1 = got == list(range(1, len(seeded) + 1))
+    print("%s ① 자동 꼴 — 견본 %d 중 잡음 %d · 거짓 표시 %d%s" % ("✓" if ok1 else "✗", len(seeded), sum(1 for g in got if g <= len(seeded)),
+                                                       sum(1 for g in got if g > len(seeded)), "" if ok1 else " %s" % hits))
+    # 꼴 파일이 배포판에 실리면 ⑨ 가 센다
+    run(tmp_parent(R), "init", "--bare", R)
+    os.makedirs(B)
+    run(B, "init")
+    s3 = "zr" + "-beta"                                          # 나중에 더할 세션 이름 — 처음엔 꼴 없음
+    put(B, "a.md", "처음 " + s3 + "\n" + "홍길" + "동 안내\n")
+    run(B, "add", ".")
+    run(B, "commit", "-m", "c1")
+    c1 = run(B, "rev-parse", "HEAD")
+    put(B, "a.md", "처음\n사용자 안내\n")
+    run(B, "commit", "-am", "c2")
+    run(B, "remote", "add", "dist", R)
+    run(B, "push", "-q", "dist", "HEAD:main")
+    run(B, "fetch", "-q", "dist")
+    run(B, "branch", "--set-upstream-to=dist/main")
+    lk0 = dc.tree_leaks(A, B)
+    put(B, "3_시스템/_index/dist-sync/leak-patterns.txt", "x\ty\n")  # mf:allow-path  (임시 배포판 안 — 실리면 안 되는 자리)
+    run(B, "add", "-f", ".")
+    run(B, "commit", "-m", "꼴 파일 실음 " + s1)
+    put(B, "b.md", "올릴 것: " + sid + "\n")
+    run(B, "add", ".")
+    run(B, "commit", "-m", "c4", "--author", "Real Name <r" + "@example.org>")
+    lk1 = dc.tree_leaks(A, B)
+    ok2 = lk0 == [] and any(x["label"] == "개인 꼴 파일이 배포판에 실림" for x in lk1) and any(x["path"] == "b.md" for x in lk1)
+    print("%s ① 꼴 파일·트리 — 깨끗할 때 %d · 실은 뒤 %s" % ("✓" if ok2 else "✗", len(lk0), sorted({(x['path'], x['label']) for x in lk1})))
+    h = dc.history_leaks(A, B, "dist/main")
+    pub, pend = h["published"], h["pending"]
+    cp = sorted({x["label"] for x in h["commits_pending"]})
+    ok3 = (len(pub) == 1 and pub[0]["path"] == "a.md" and not pub[0]["now"] and c1.startswith(pub[0]["commit"] or "-")
+           and {x["path"] for x in pend} == {"b.md"} and set(cp) == {"작업 세션 이름", "작성자가 익명 아님", "이메일"} and not h["commits_published"])
+    h2 = dc.history_leaks(A, B, "dist/main")
+    ok3 = ok3 and h["new"] > 0 and h2["new"] == 0
+    roster = os.path.join(A, "3_시스템", "_index", "bigboss", "rx-0101", "roster.json")  # mf:allow-path  (임시 볼트 안)
+    d = json.load(open(roster, encoding="utf-8"))
+    d["sessions"].append({"name": s3})
+    put(A, "3_시스템/_index/bigboss/rx-0101/roster.json", json.dumps(d))  # mf:allow-path
+    h3 = dc.history_leaks(A, B, "dist/main")                    # 꼴 하나 늚 → 새 꼴만 대 봄(통째로 다시 안 읽음)
+    d["sessions"].pop()
+    put(A, "3_시스템/_index/bigboss/rx-0101/roster.json", json.dumps(d))  # mf:allow-path
+    h4 = dc.history_leaks(A, B, "dist/main")                    # 꼴 하나 줆 → 그 꼴에 걸렸던 blob 만 다시
+    inc = (len(h3["published"]), h3["new"], h3["partial"] > 0, len(h4["published"]), h4["new"])
+    ok3 = ok3 and inc == (2, 0, True, 1, 1)
+    print("%s ② 꼴 늘고 줆 — 공개 걸림·새로 읽음·새 꼴만 댐·뺀 뒤 걸림·다시 읽음 = %s" % ("✓" if inc == (2, 0, True, 1, 1) else "✗", inc))
+    print("%s ② 이력 — 공개 %s · 올릴 파일 %s · 올릴 커밋 %s · 처음 읽음 %d → 다시 %d · %.1f초" % (
+        "✓" if ok3 else "✗", [(x["path"], x["commit"], x["now"]) for x in pub], [x["path"] for x in pend], cp, h["new"], h2["new"], h["secs"]))
+    # ③ 개인 맥락 읽기 — 읽을 줄 고르기만(부르지 않음)
+    spec = importlib.util.spec_from_file_location("context_read", os.path.join(HERE, "context_read.py"))
+    cr = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(cr)
+    diff = ("+++ b/x.py\n@@ -1,0 +5,3 @@\n+# 한글 주석 하나\n+code = 1\n+# 둘째 주석\n"
+            "+++ b/.obsidian/plugins/p/main.js\n@@ -0,0 +1 @@\n+// 번들 한글\n+++ /dev/null\n")
+    al = cr.added_lines(diff)
+    marks = cr.parse('[{"id": 2, "kind": "일정", "why": "x"}, {"id": 9, "kind": "?"}]', 2)
+    ok4 = al == [("x.py", 5, "# 한글 주석 하나"), ("x.py", 7, "# 둘째 주석")] and marks == [{"id": 2, "kind": "일정", "why": "x"}]
+    print("%s ③ 개인 맥락 읽기 줄 고르기 — %s · 답 읽기 %s" % ("✓" if ok4 else "✗", al, marks))
+    # ④ 그림 글자
+    ok5 = True
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        font = ImageFont.truetype(os.path.join(os.environ.get("WINDIR", "C:/Windows"), "Fonts", "arial.ttf"), 48)
+    except (ImportError, OSError):
+        font = None
+    if font is None or dc.on_battery():
+        print("· ④ 그림 글자 — 안 잼(%s)" % ("PIL·글꼴 없음" if font is None else "배터리"))
+    else:
+        put(A, "3_시스템/_index/dist-sync/leak-patterns.txt", "SECRET" + "NAME\t시험 그림 이름\n")  # mf:allow-path
+        im = Image.new("RGB", (900, 160), "white")
+        ImageDraw.Draw(im).text((30, 50), "made by SECRET" + "NAME 2026", fill="black", font=font)
+        im.save(os.path.join(B, "pic.png"))
+        Image.new("RGB", (300, 120), "white").save(os.path.join(B, "blank.png"))
+        run(B, "add", "pic.png", "blank.png")
+        run(B, "commit", "-m", "그림")
+        lk = [x for x in dc.tree_leaks(A, B) if x["path"].endswith(".png")]
+        ok5 = [(x["path"], x["label"]) for x in lk] == [("pic.png", "시험 그림 이름 (그림 글자)")]
+        print("%s ④ 그림 글자 — 잡음 %s" % ("✓" if ok5 else "✗", [(x["path"], x["label"], x["text"]) for x in lk]))
+    # ⑤ module_ship 도 같은 꼴(진짜 볼트의 자동 꼴 하나를 실행 때 골라 심음 — 값은 이 파일에 없다)
+    spec = importlib.util.spec_from_file_location("module_ship", os.path.join(VAULT_REAL, "3_시스템", "module_ship.py"))
+    ms = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ms)
+    auto = [rx for rx, lb in dd.auto_leaks(VAULT_REAL, write=False) if lb == "작업 세션 이름"]
+    ok6 = True
+    if auto:
+        name = re.sub(r"\\(.)", r"\1", auto[0].split("(?<!")[0])
+        repo = os.path.join(root, "mod")
+        put(repo, "notes.md", "만든 세션 %s\n" % name)
+        _, hard, _, _ = ms.check(repo)
+        ok6 = [h[2] for h in hard] == ["작업 세션 이름"]
+        print("%s ⑤ module_ship 도 자동 꼴 — 걸림 %s" % ("✓" if ok6 else "✗", [h[2] for h in hard]))
+    else:
+        print("· ⑤ module_ship — 진짜 볼트에 세션 이름 꼴 없음(안 잼)")
+    for n, okx in (("자동 꼴", ok1), ("꼴 파일·트리", ok2), ("이력 검사", ok3), ("개인 맥락 줄", ok4), ("그림 글자", ok5), ("module_ship 꼴", ok6)):
+        if not okx:
+            FAIL.append(n)
+
+
+def tmp_parent(p):
+    return os.path.dirname(p)
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -479,7 +659,9 @@ def main():
             FAIL.append("안 보던 자리")
 
         blind_spot_tests(os.path.join(tmp, "blind"))
+        guard_tests(os.path.join(tmp, "guard"))
         ship_tests(os.path.join(tmp, "ship"))
+        personal_part_tests(os.path.join(tmp, "personal"))
         contract_tests(os.path.join(tmp, "contract"))
         module_outside_tests(os.path.join(tmp, "outside"))
     finally:

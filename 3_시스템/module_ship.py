@@ -12,6 +12,7 @@
 - git 커밋·push 는 하지 않는다(사람 몫).
 """
 import fnmatch
+import json
 import importlib.util
 import os
 import re
@@ -21,7 +22,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 VAULT = os.path.dirname(HERE)
 LOCAL = os.path.join(HERE, "_index", "dist-sync")
-ALWAYS_OUT = ("__pycache__/", "*.pyc")
+ALWAYS_OUT = ("__pycache__/", "*.pyc", "personal/")   # personal/ = 기능 옆 개인화 파트(분리 꼴 · incident-2026-11-22) — 모듈 저장소에 안 실림
 
 
 def dist_diff():
@@ -47,6 +48,11 @@ def tab_file(name):
 
 def ignores(src):
     pats = list(ALWAYS_OUT)
+    try:                                     # 매니페스트가 밝힌 개인화 파트 자리도 뺀다
+        with open(os.path.join(src, "module.json"), encoding="utf-8") as f:
+            pats += [g if not g.endswith("/**") else g[:-2] for g in (json.load(f).get("personal") or [])]
+    except (OSError, ValueError, AttributeError):
+        pass
     gi = os.path.join(src, ".gitignore")
     if os.path.exists(gi):
         with open(gi, encoding="utf-8") as f:

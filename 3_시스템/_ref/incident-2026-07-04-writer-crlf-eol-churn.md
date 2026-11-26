@@ -51,6 +51,3 @@ source: session
 `Write` 도구=LF · `Edit` 도구=기존 EOL 유지 · `search.py --link-write`=전체 LF · **Obsidian**=LF 파일 편집 후 LF 유지 · **git**=`.md`엔 LF 강제, `.ps1`엔 무변환. **CRLF 생성이 확인된 것은 PowerShell `Set-Content`와 위 파이썬 `newline="\r\n"`뿐.**
 
 **미확정 잔여**: 개인 노트 2개의 **혼합 EOL**(본문 CRLF + `%%sl%%` 블록 2줄만 LF). `newline=''`(EOL 보존)로 읽어 일부만 치환한 스크립트가 유력하나 미검증. 실피해 0(`.gitattributes`가 커밋본을 LF로 정규화)이라 추적 중단.
-
-> [!info]- 관련 노트 %%sl%%
-> [[incident-2026-08-08-StartProcess-디태치-569ms]]

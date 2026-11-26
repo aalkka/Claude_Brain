@@ -40,7 +40,9 @@ _SYSDOCS = [roles.find_note("설계노트") or roles.path("notes", "설계노트
 # 개인: 읽지도 않는다. 목록조차 만들지 않는다.
 KNOWLEDGE = "2_지식"  # mf:allow-path  (뿌리의 씨앗·원본 목록만 보러 들어가는 칸)
 PERSONAL = [
-    "1_수집/*", *_CONTENT, "3_시스템/_index/*", "3_시스템/door-app/*",  # mf:allow-path
+    "1_수집/*", *_CONTENT, "3_시스템/_index/*",  # mf:allow-path
+    "3_시스템/door-app/door.cfg", "3_시스템/door-app/install-menu.log",  # mf:allow-path  — 받는 문 설치가 이 PC 값으로 쓰는 둘
+    "3_시스템/door-app/*.exe", "3_시스템/door-app/*.dll", "3_시스템/door-app/*.msix", "3_시스템/door-app/*.part",  # mf:allow-path  — 구동부 실행 파일 = 릴리스 첨부(저장소 밖 · 11-26 사용자) · 해시 표 release.json 만 싣는다
     "3_시스템/_claude-memory/*", ".obsidian/*", ".git/*", "__pycache__/*",  # mf:allow-path
     "3_시스템/hooks/approve/used/*",  # mf:allow-path  — 폰 명령 승인 쓴 기록(git 밖 · 실행 기록) · 11-21 새 기록마다 ⑤ 에 뜸
     # DoD 검증(2026-09-12)이 잡은 결함 — settings.local.json 은 개인 권한 설정이고
@@ -143,6 +145,49 @@ def shipped(ship, rel):
     return None
 
 
+KEEP = ".gitkeep"
+SKELETON_ROOTS = ("0_작업/", "1_수집/")  # mf:allow-path  뼈대가 놓이는 개인 층 — 이 안의 .gitkeep 만 뼈대로 센다
+
+
+def skeleton(A, B, apply=False):
+    """폴더 뼈대 — 새 설치에 있어야 하는 빈 폴더(ship.json «뼈대» · 역할 이름)가 배포판에 `<자리>/.gitkeep` 으로 있는지 잰다.
+    개인 층은 층 비교가 들어가지 않아 자리를 옮겨도 배포판에 옛 폴더가 남는다(2026-11-26: 받은함을 옮긴 뒤에도 배포판에 옛 받은함이 남아
+    새 설치에서 받은함이 없었고 튜토리얼 2장이 막혔다). 돌려줌 = (없는 자리, 남은 옛 자리) · apply 면 배포판 작업 폴더를 맞춘다(커밋은 안 함)."""
+    try:
+        with open(os.path.join(A, *SHIP_REL.split("/")), encoding="utf-8") as f:
+            names = (json.load(f).get("뼈대") or {}).get("역할") or []
+    except (OSError, ValueError):
+        names = []
+    want = {roles.path(n, vault=A).replace("\\", "/").strip("/") + "/" + KEEP for n in names}
+    have = set()
+    # 받는 사람에게 가는 것은 «추적 파일»이다 — 작업 폴더에 있어도 무시 목록이 막으면 안 실린다(11-26: 만들고도 무시 목록 때문에 커밋에서 빠져 새로 받은 볼트에 폴더가 없었다)
+    tracked = git_out(B, "ls-files", "-z")
+    if tracked is not None and not apply:
+        for p in tracked.split(b"\0"):
+            rel = p.decode("utf-8", "replace")
+            if rel.endswith("/" + KEEP) and rel.startswith(SKELETON_ROOTS):
+                have.add(rel)
+    else:
+        for root in SKELETON_ROOTS:
+            for dp, _, fns in os.walk(os.path.join(B, root.rstrip("/"))):
+                if KEEP in fns:
+                    have.add(os.path.relpath(os.path.join(dp, KEEP), B).replace("\\", "/"))
+    missing, stale = sorted(want - have), sorted(have - want)
+    if apply:
+        for rel in missing:
+            p = os.path.join(B, *rel.split("/"))
+            os.makedirs(os.path.dirname(p), exist_ok=True)
+            open(p, "wb").close()
+        for rel in stale:
+            p = os.path.join(B, *rel.split("/"))
+            os.remove(p)
+            try:
+                os.rmdir(os.path.dirname(p))   # 빈 폴더만 지워진다
+            except OSError:
+                pass
+    return missing, stale
+
+
 def ship_problems(ship):
     """목록 자체의 잘못 — 여러 기능이 같이 쓰는 자리를 폴더째 적은 줄."""
     return sorted(x for x in (ship or {}) if x in SHIP_NO_FOLDER)
@@ -152,6 +197,8 @@ LINE_FILES = {".gitignore", ".gitattributes"}  # mf:allow-path  줄 모음 — �
 KEEP_IF_MODIFIED = {"3_시스템/default-layout.json"}  # mf:allow-path  사용자가 «지금 배치를 기본으로» 한 결과 — 합칠 것이 아니다
 RX_S0 = re.compile(r"^## §0.*?(?=^## )", re.S | re.M)
 S0_MARK = "<!-- §0 -->\n"
+# 찾기 색인(search.py)의 관리 칸 — 제목줄 + 이어지는 인용 줄. 색인을 만든 PC 마다 내용이 달라 판 비교에서 뺀다(2026-11-26: 첫 색인 뒤 진단 기록 26개가 «고친 파일»로 잡힘)
+RX_SEMLINK = re.compile(r"\n*>[ \t]*\[!info\]-[ \t]*관련 노트[ \t]*%%sl%%(?:\n>[^\n]*)*".encode("utf-8"))
 MISSING = object()
 ANON_AUTHOR = "External Brain"  # 배포판 커밋 작성자 — 배포판 worktree 는 제작자 저장소와 설정을 나눠 쓴다
 MIN_LIKENESS = 0.3  # 과거 판과 이보다 덜 닮으면 합치지 않고 묻는다(줄 비율 · 낮을수록 사용자가 통째로 다시 쓴 것)
@@ -207,6 +254,12 @@ CORE = [
     "3_시스템/gather/*",  # mf:allow-path
     # 초안 비교 한 장(스킬 draft · 11-13) — 스킬이 부르는 그리기·검사 대본과 바탕 꼴. 빠지면 배포판의 draft 가 안 돈다
     "3_시스템/draft.py", "3_시스템/draft/*",  # mf:allow-path
+    # 받는 문 구동부 자리(11-26) — 그림·첫 메뉴 설치 대본·릴리스 첨부 해시 표(release.json). 실행 파일 셋은 위 개인 칸(릴리스 첨부) · 표가 빠지면 새 설치가 구동부를 못 받는다
+    "3_시스템/door-app/*",  # mf:allow-path
+    # 필기 읽기·보는 화면 읽개(11-26) — ingest.py(필기 쪽 조각)·brain-base 대화창 look 도구·brain-source 가 부른다. 빠지면 필기 색인과 «보는 화면» 읽기가 죽는다
+    "3_시스템/inkrender.py", "3_시스템/viewlook.py", "3_시스템/ink/*",  # mf:allow-path
+    # 링크 파이프 주인 재기 — 창 숨겨 띄우기(quietwin.mjs)가 격리 옵시디언을 띄우기 전에 부른다(11-26 · 빠지면 그 확인이 죽는다)
+    "3_시스템/obs_pipe.py",  # mf:allow-path
     # 모듈 계약 코어(module.json uses_core · 11-18 mobility 범용화 10단계 잼) — 깨끗한 배포판에서 폰 서버가 `import nowin` 으로 못 떴다.
     # nowin = 창 없이 부르기 · autocommit = 기록 보존 순찰(M8) · sort·tag = 분류·태그 도구(알림 alert.py 가 부름)
     "3_시스템/nowin.py", "3_시스템/autocommit.py", "3_시스템/sort.py", "3_시스템/tag.py",  # mf:allow-path
@@ -223,10 +276,13 @@ CORE = [
 # 볼트마다 LEAK_LOCAL(gitignore)에 «정규식<TAB>이름» 을 한 줄씩 적는다. 없으면 리포트가 경고한다.
 LEAK_LOCAL = os.path.join("3_시스템", "_index", "dist-sync", "leak-patterns.txt")
 LEAK = [
-    (r"[\w.+-]+@[\w-]+\.[\w.-]+", "이메일"),
+    (r"[\w.+-]+@[\w-]+(?:\.[\w-]+)*\.[A-Za-z]{2,}(?![\w.-])", "이메일"),     # 끝이 글자 2+ — npm 꾸러미@판(1.2.3)은 아님(11-22)
     (r"C--[\w-]+", "Claude 프로젝트 폴더 이름"),
-    (r"C:[\\/]Users[\\/][^\s\"')]+", "사용자 홈 경로"),
+    (r"C:[\\/]Users[\\/](?![<{%$])[^\s\"')]+", "사용자 홈 경로"),     # <사용자>·%USERNAME% 같은 자리표는 아님(11-22)
     (r"\b[0-9a-f]{8}\b(?![0-9a-f])", "세션 id 후보(⚠ PubMed·DOI 오탐 가능)"),
+    # 11-22 — 11-21 손으로 걷은 것의 꼴(값 없음 · 모양만)
+    (r"session_(?<!\wsession_)[0-9A-Za-z]{24}(?![0-9A-Za-z])", "원격 세션 id"),     # 낱말 먼저(앞 \b 는 빨리 찾기를 끔)
+    (r"local_(?<!\wlocal_)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-", "로컬 세션 id"),
 ]
 # 기계 치환이 깬 흔적 (2026-08-03 일괄치환이 남긴 `사용자이` 계열)
 BROKEN = [r"사용자이\s", r"사용자은\s", r"사용자을\s", r"사용자가가", r"사용자이가"]
@@ -239,10 +295,34 @@ BROKEN = [r"사용자이\s", r"사용자은\s", r"사용자을\s", r"사용자�
 #      module-forge 가드레일과의 충돌을 정면으로 푼다(ADR-012 미결).
 
 
+PERSONAL_PART = "personal"   # 기능이 밝힌 개인화 파트 폴더 이름(경로 마디) · 매니페스트 "personal" glob 은 manifest_personal()
+
+
+def manifest_personal(root, rel):
+    """rel 이 가까운 module.json·manifest.json 의 "personal" glob(그 기능 뿌리 기준)에 드는가."""
+    segs = rel.replace("\\", "/").split("/")
+    for i in range(len(segs) - 1, 0, -1):
+        base = "/".join(segs[:i])
+        for mf in ("module.json", "manifest.json"):
+            mp = os.path.join(root, *base.split("/"), mf)
+            if os.path.isfile(mp):
+                try:
+                    with open(mp, encoding="utf-8") as f:
+                        pats = json.load(f).get("personal") or []
+                except (OSError, ValueError, AttributeError):
+                    pats = []
+                sub = "/".join(segs[i:])
+                if any(fnmatch.fnmatch(sub, g) or sub.startswith(g.rstrip("*").rstrip("/") + "/") for g in pats):
+                    return True
+    return False
+
+
 def layer(rel):
     """경로 → 층. 제외가 가장 강하고, 그다음 개인, 예외가 개인보다 강하다."""
     p = rel.replace("\\", "/")
     segs = p.split("/")
+    if PERSONAL_PART in segs[:-1]:       # 기능 옆 개인화 파트(분리 꼴 · incident-2026-11-22) — 어느 층 안에 있어도 싣지 않는다
+        return "개인"
     for d in DIST_PLUGINS:
         if p.startswith(d):
             if p.endswith(EXCLUDE_EXT):
@@ -294,7 +374,7 @@ def walk(root):
                   or layer((rel_dir + "/" + d).lstrip("/") + "/x") not in ("개인", "제외")]
         for fn in fns:
             rel = (rel_dir + "/" + fn).lstrip("/")
-            if layer(rel) in ("개인", "제외"):
+            if layer(rel) in ("개인", "제외") or manifest_personal(root, rel):
                 continue
             out[rel] = os.path.join(dp, fn)
     return out
@@ -323,29 +403,70 @@ def text_encoding(path, head=65536):
     return "utf-8-sig"
 
 
-def scan_leaks(files, rules=None):
+def load_allow(vault):
+    """배포판이 일부러 쓰는 값(개인 층 leak-allow.txt · 한 줄에 하나 · # 뒤는 까닭) — 걸린 글이 이 값과 같으면(대소문자 무시) 안 센다."""
+    p = os.path.join(vault, LEAK_ALLOW)
+    if not os.path.exists(p):
+        return set()
+    with open(p, encoding="utf-8") as f:
+        return ALLOW_ALWAYS | {ln.split("#")[0].strip().lower() for ln in f if ln.split("#")[0].strip()}
+
+
+ALLOW_ALWAYS = {"noreply@anthropic.com"}       # 커밋 꼬리 Co-Authored-By (11-22 이력 검사 거짓 표시)
+BUNDLE = re.compile(r"^\.obsidian/plugins/[^/]+/[^/]+\.(js|mjs|css)$|\.min\.(js|css)$")
+PLUGIN_TOP = re.compile(r"^\.obsidian/plugins/[^/]+/[^/]+$")     # 플러그인 폴더 맨 위 — 번들·manifest(남의 플러그인 작성자 메일)
+NOTICE = re.compile(r"(^|/)(THIRD_PARTY_NOTICES|LICENSE|NOTICE|COPYING)[^/]*$", re.I)
+# 꼴 이름(머리) → 안 대 보는 파일 — 번들·마크업의 16진 8자 · 번들 안의 기능 이름(세션 이름이 곧 기능 이름인 때가 많다) ·
+# 남의 꾸러미 저작권 줄의 메일(11-22 잼: 배포판 거짓 표시 66건 = THIRD_PARTY_NOTICES·번들 저작권 주석). 개인 메일은 볼트 꼴(leak-patterns)이 따로 잡는다.
+SKIP_IN = (("세션 id", lambda rel, code: code), ("작업 세션 이름", lambda rel, code: bool(BUNDLE.search(rel))),
+           ("이메일", lambda rel, code: bool(BUNDLE.search(rel) or PLUGIN_TOP.search(rel) or NOTICE.search(rel))))
+_UESC = re.compile(r"\\u([0-9a-fA-F]{4})")
+
+
+def _unesc(s):
+    # 번들 js 는 한글을 \uXXXX 로 내보낸다 — 풀지 않으면 호칭·실명을 못 본다(2026-10-23 빈틈) · 제어 글자는 안 풀어 줄 번호를 지킨다
+    return _UESC.sub(lambda m: chr(int(m.group(1), 16)) if int(m.group(1), 16) >= 0x20 else m.group(0), s) if "\\u" in s else s
+
+
+def compile_rules(rules):
+    return [(re.compile(rx), label) for rx, label in rules]
+
+
+def scan_text(rel, text, comp, allow=(), with_rx=False):
+    """글 한 벌 → [(줄 번호, 꼴 이름, 줄)] — 파일·git blob 이 같이 쓴다. 꼴마다 글 전체를 한 번 훑어 걸린 꼴만 줄 단위로 다시 본다
+    (줄마다 꼴 백여 개를 대 보면 14MB 번들 하나에 50초 · 11-22 잼)."""
+    code = not PROSE.search(rel)
+    use = [(rx, lb) for rx, lb in comp if not any(lb.startswith(k) and f(rel, code) for k, f in SKIP_IN)]
+    whole = _unesc(text) if code else text
+    cand = [(rx, lb) for rx, lb in use if any(m.group(0).lower() not in allow for m in rx.finditer(whole))]
+    out = []
+    if not cand:
+        return out
+    for i, line in enumerate(text.splitlines(), 1):
+        if code:
+            line = _unesc(line)
+        for rx, lb in cand:
+            if any(m.group(0).lower() not in allow for m in rx.finditer(line)):
+                out.append((i, lb, line.strip()[:90], rx.pattern) if with_rx else (i, lb, line.strip()[:90]))
+                break
+    return out
+
+
+def scan_leaks(files, rules=None, allow=None):
+    # 글 파일이면 다 본다(확장자 무관) — css·js 주석(2026-10-22 styles.css 7곳) · html 주석(11-21 view.html 4곳).
     hits = []
+    comp = compile_rules(list(rules or LEAK))
+    allow = allow or set()
     for rel, full in sorted(files.items()):
-        # 글 파일이면 다 본다(확장자 무관) — css·js 주석(2026-10-22 styles.css 7곳) · html 주석(11-21 view.html 4곳).
-        # 번들·마크업(.js·.css·.html·.ts·.svg …)은 16진 8자가 흔해 세션 id 후보는 산문 꼴(PROSE)에서만 센다.
         enc = text_encoding(full)
         if not enc:
             continue
-        code = not PROSE.search(rel)
         try:
             with open(full, encoding=enc, errors="replace") as f:
-                for i, line in enumerate(f, 1):
-                    # 번들 js 는 한글을 \uXXXX 로 내보낸다 — 풀지 않으면 호칭·실명을 못 본다(2026-10-23 빈틈)
-                    if code:
-                        line = re.sub(r"\\u([0-9a-fA-F]{4})", lambda m: chr(int(m.group(1), 16)), line)
-                    for rx, label in (rules or LEAK):
-                        if code and label.startswith("세션 id"):
-                            continue
-                        if re.search(rx, line):
-                            hits.append((rel, i, label, line.strip()[:90]))
-                            break
+                text = f.read()
         except OSError:
             continue
+        hits += [(rel, i, lb, line) for i, lb, line in scan_text(rel, text, comp, allow)]
     return hits
 
 
@@ -366,19 +487,151 @@ def scan_broken(files):
     return hits
 
 
+def _tab_rules(p, default):
+    out = []
+    if os.path.exists(p):
+        with open(p, encoding="utf-8") as f:
+            for ln in f:
+                ln = ln.rstrip("\n")
+                if ln.strip() and not ln.startswith("#"):
+                    rx, _, label = ln.partition("\t")
+                    out.append((rx, label.strip() or default))
+    return out
+
+
+# 자동 꼴(11-22) — 손으로 걷던 개인 값을 볼트의 개인 층에서 읽어 꼴로 만든다. 값은 이 대본에 없다.
+#   작업 세션 이름(빅보스 roster.json 의 name · run 폴더 이름) · 수집 출처 id(조리법 파일 이름) · 과목 이름(배움 칸 폴더 이름)
+# 흔한 낱말 규칙: 세션 이름은 «-»나 숫자가 든 것만(main·check·publish·widget 같은 낱말 하나는 뺌) ·
+#   볼트가 싣는 이름(모듈·스킬·플러그인 id · 추적 파일 이름)과 같으면 뺌 · 그래도 겹치는 낱말은 leak-allow.txt(개인 층 · 한 줄에 하나)
+LEAK_AUTO = os.path.join("3_시스템", "_index", "dist-sync", "leak-auto.txt")
+LEAK_ALLOW = os.path.join("3_시스템", "_index", "dist-sync", "leak-allow.txt")
+LEAK_EXTRA = ("mobility-leak.txt",)       # 같은 꼴(«정규식<TAB>이름») · 모듈 내보내기가 쓰던 개인 꼴 — 배포판 검사도 같이 탄다
+ANON_PAIRS = "anon-pairs.txt"             # «찾을 글<TAB>바꿀 글» — 찾을 글이 남아 있으면 익명화 안 된 것
+def _edge(lit):
+    """ASCII 낱말 경계 꼴 — 낱말을 먼저 적고 앞 글자는 뒤에서 본다(앞에 둔 lookbehind 는 정규식 엔진의 낱말 빨리 찾기를 꺼 14MB 번들에 꼴 하나 0.6초 · 11-22 잼)."""
+    e = re.escape(lit)       # 뒤에 확장자(.json 등)가 붙으면 파일 이름 — 세션 이름이 상태 파일 이름과 같은 때(phone-app.json · 11-22 mobility 저장소 거짓 표시)
+    return e + "(?<![A-Za-z0-9_-]" + e + r")(?![A-Za-z0-9_-]|\.[A-Za-z])"
+
+
+def _shipped_names(vault):
+    """볼트가 싣는 이름 — 모듈·스킬·플러그인 id 와 추적 파일의 이름(확장자 뺌 · _ 와 - 같게)."""
+    names = set()
+    for base in (os.path.join(vault, ".claude", "skills"), os.path.join(vault, ".obsidian", "plugins")):
+        try:
+            for d in os.listdir(base):
+                names.add(d.lower())
+                sub = os.path.join(base, d, "skills")
+                if os.path.isdir(sub):
+                    names.update(x.lower() for x in os.listdir(sub))
+        except OSError:
+            pass
+    try:
+        out = subprocess.run(["git", "-C", vault, "-c", "core.quotepath=off", "ls-files", "-z"], capture_output=True, timeout=30).stdout
+    except (OSError, subprocess.SubprocessError):
+        out = b""
+    for rel in out.decode("utf-8", "replace").split("\0"):
+        if rel and layer(rel) not in ("개인", "제외"):
+            for seg in rel.split("/"):
+                names.add(os.path.splitext(seg)[0].lower())
+    return {n.replace("_", "-") for n in names}
+
+
+def auto_leaks(vault, write=True):
+    """개인 층에서 만든 꼴 [(정규식, 이름)] — write 면 LEAK_AUTO 에 적는다(바뀐 때만 · 사람이 보고 leak-allow.txt 로 뺄 수 있게)."""
+    allow = load_allow(vault)      # «값  # 까닭» 의 # 뒤를 떼고 읽는다(11-22 · 옛 판은 줄 통째를 견줘 허용 낱말도 꼴로 만들었다)
+    shipped = _shipped_names(vault)
+    rules = {}
+
+    def common(n):
+        k = n.lower().replace("_", "-")
+        return len(k) < 4 or k in allow or k in shipped
+
+    bb = os.path.join(vault, "3_시스템", "_index", "bigboss")
+    sess = set()
+    for run in (os.listdir(bb) if os.path.isdir(bb) else []):
+        rp = os.path.join(bb, run, "roster.json")
+        if not os.path.isfile(rp):
+            continue
+        sess.add(run)
+        try:
+            with open(rp, encoding="utf-8") as f:
+                d = json.load(f)
+        except (OSError, ValueError):
+            continue
+        items = d if isinstance(d, list) else next((v for v in d.values() if isinstance(v, list)), [])
+        sess.update(str(x.get("name") or "") for x in items if isinstance(x, dict))
+    for n in sorted(sess):
+        if n and re.search(r"[-\d]", n) and re.fullmatch(r"[A-Za-z0-9_-]+", n) and not common(n):
+            rules[_edge(n)] = "작업 세션 이름"
+    col = os.path.join(vault, "3_시스템", "collect")
+    ex = os.path.join(vault, "3_시스템", "collect-examples")
+    public = {os.path.splitext(x)[0] for x in os.listdir(ex)} if os.path.isdir(ex) else set()
+    for dp, dns, fns in os.walk(col):
+        dns[:] = [x for x in dns if x != "candidates"]
+        for fn in fns:
+            n = os.path.splitext(fn)[0]
+            if fn.endswith(".json") and n not in public and re.fullmatch(r"[A-Za-z0-9_-]+", n) and not common(n):
+                rules[_edge(n)] = "수집 출처 id"
+    wk = os.path.join(vault, "0_작업")     # 작업 폴더 속 실제 주제 자리(0_작업/<영역>/<주제>) — 시험의 가짜 자리(0_작업/일/x)는 안 걸게 있는 폴더만
+    for a in (os.listdir(wk) if os.path.isdir(wk) else []):
+        for b in (os.listdir(os.path.join(wk, a)) if os.path.isdir(os.path.join(wk, a)) else []):
+            if os.path.isdir(os.path.join(wk, a, b)) and ("%s/%s" % (a, b)).lower() not in allow:
+                rules[re.escape("0_작업/%s/%s" % (a, b)) + r"(?![^\s/\"'`)\]|»])"] = "작업 폴더 속 경로"
+    for k in ("2_지식", "0_작업"):
+        bd = os.path.join(vault, k, "배움")
+        for d0 in (os.listdir(bd) if os.path.isdir(bd) else []):
+            n = re.sub(r"\(.*?\)", "", d0).strip()          # «과목(갈래)» → 과목
+            if os.path.isdir(os.path.join(bd, d0)) and len(n) >= 4 and n.lower() not in allow:
+                rules[re.escape(n)] = "과목·배움 칸 이름"
+    # 숨긴 노트 경로 — 볼트 뿌리의 무시 목록에 «경로 그대로» 적힌 개인 층 파일(민감 노트). 그 목록을 배포판에 통째로 옮기면 노트 이름이 새는데
+    # 위 꼴은 과목 이름이 든 한 줄만 잡았다(2026-11-26 · 10줄 중 1줄). 경로 글자 그대로를 꼴로 삼는다.
+    try:
+        with open(os.path.join(vault, ".gitignore"), encoding="utf-8") as f:   # mf:allow-path
+            for ln in f:
+                ln = ln.strip()
+                if ln.startswith(("2_지식/", "0_작업/", "1_수집/")) and not re.search(r"[*?\[!]", ln) and not ln.endswith("/") and "." in ln.rsplit("/", 1)[-1] and ln.lower() not in allow:   # mf:allow-path
+                    rules[re.escape(ln)] = "숨긴 노트 경로"
+    except OSError:
+        pass
+    out = sorted(rules.items(), key=lambda x: (x[1], x[0]))
+    if write:
+        p = os.path.join(vault, LEAK_AUTO)
+        body = "# dist-diff auto_leaks 가 만든 꼴(개인 층 · 손으로 고치지 않음 — 빼려면 leak-allow.txt 에 낱말)\n" + "".join("%s\t%s\n" % x for x in out)
+        old = open(p, encoding="utf-8").read() if os.path.exists(p) else None
+        if old != body and os.path.isdir(os.path.dirname(p)):
+            with open(p, "w", encoding="utf-8", newline="\n") as f:
+                f.write(body)
+    return out
+
+
+def dist_rules(vault):
+    """배포판 검사의 꼴 한 벌 — 내장(세션 id 후보 빼고) + 볼트 전용 전부. dist-diff publish · dist-check ⑨⑩ 이 같이 쓴다."""
+    seen, out = set(), []
+    for rx, lb in [r for r in LEAK if not r[1].startswith("세션 id")] + (load_local_leaks(vault) or []):
+        if rx not in seen:
+            seen.add(rx)
+            out.append((rx, lb))
+    return out
+
+
 def load_local_leaks(vault):
-    """볼트 전용 패턴(실명·호칭·개인 저장소 이름). 파일이 없으면 None."""
+    """볼트 전용 패턴 — leak-patterns.txt(실명·호칭·개인 저장소 이름) + mobility-leak.txt + 바꿈 짝의 찾을 글 + 자동 꼴.
+    leak-patterns.txt 가 없으면 None(«실명·호칭 검사 안 함» 경고 · 다른 볼트)."""
+    d = os.path.join(vault, os.path.dirname(LEAK_LOCAL))
     p = os.path.join(vault, LEAK_LOCAL)
     if not os.path.exists(p):
         return None
-    out = []
-    with open(p, encoding="utf-8") as f:
-        for ln in f:
-            ln = ln.rstrip("\n")
-            if ln.strip() and not ln.startswith("#"):
-                rx, _, label = ln.partition("\t")
-                out.append((rx, label.strip() or "개인 패턴"))
-    return out
+    out = _tab_rules(p, "개인 패턴")
+    for name in LEAK_EXTRA:
+        out += _tab_rules(os.path.join(d, name), "개인 값")
+    out += [(re.escape(a), "익명화 안 된 글") for a, _ in _tab_rules(os.path.join(d, ANON_PAIRS), "") if a]
+    out += auto_leaks(vault)
+    seen, uniq = set(), []
+    for rx, lb in out:
+        if rx not in seen:
+            seen.add(rx)
+            uniq.append((rx, lb))
+    return uniq
 
 
 def author_hits(B):
@@ -526,9 +779,9 @@ def report(A, B, mode, plan=None, ship_path=None):
 
     if mode == "publish":
         local = load_local_leaks(A)
-        if local:
-            LEAK.extend(local)
-        leaks = scan_leaks({r: fa[r] for r in (added + changed) if r in fa and (layer(r) != "코어" or shipped(ship, r) is not None)})
+        allow = load_allow(A)
+        leaks = scan_leaks({r: fa[r] for r in (added + changed) if r in fa and (layer(r) != "코어" or shipped(ship, r) is not None)},
+                           LEAK + [r for r in (local or []) if r not in LEAK], allow)
         w("## 익명화 후보 — %d건" % len(leaks))
         w("")
         if local is None:
@@ -552,11 +805,22 @@ def report(A, B, mode, plan=None, ship_path=None):
         # 후보 목록은 볼트 쪽을 60건까지만 보여 준다 — 배포판에 실제로 남은 것은 여기서 전수로 잰다(2026-11-03 플러그인 CSS 주석의 호칭을 놓침)
         # walk 는 개인 폴더에 안 들어가 그 안의 씨앗(설계노트·사용자설명서)을 못 본다 — 실리는 것은 추적 파일 전부다(2026-11-03 개인 프로젝트 이름을 놓침)
         tracked = [p.decode("utf-8", "replace") for p in (git_out(B, "ls-files", "-z") or b"").split(b"\0") if p]
-        left = scan_leaks({r: os.path.join(B, r) for r in tracked} if tracked else fb, local) if local else []
+        left = scan_leaks({r: os.path.join(B, r) for r in tracked} if tracked else fb, dist_rules(A), allow)   # 내장 꼴도(세션 id·메일 · 11-22)
         w("## 배포판에 남은 개인 패턴 — %d건" % len(left))
         w("")
         for rel, i, label, txt in left:
             w("- `%s:%d` — %s" % (rel, i, label))
+        w("")
+        sk_missing, sk_stale = skeleton(A, B)
+        w("## 폴더 뼈대 — 배포판에 없는 자리 %d · 남은 옛 자리 %d" % (len(sk_missing), len(sk_stale)))
+        w("")
+        if sk_missing or sk_stale:
+            w("새 설치에 이 폴더가 없으면 그 기능이 첫날부터 막힌다. 맞추기 = `dist-diff.py --a . --b <배포판> --skeleton` 뒤 그 `.gitkeep` 을 커밋에 넣는다(옛 자리는 `git rm`).")
+            w("")
+        for rel in sk_missing:
+            w("- 없음 `%s`" % rel)
+        for rel in sk_stale:
+            w("- 옛 자리 `%s`" % rel)
         w("")
         named = author_hits(B)
         w("## 올라갈 커밋의 작성자 — 익명이 아닌 것 %d건" % len(named))
@@ -704,6 +968,8 @@ def read_bytes(path):
 def body(rel, data):
     """견주는 내용 — 줄바꿈 차이는 빼고, 규약 파일은 §0 도 뺀다(인터뷰가 채워 사람마다 다르다)."""
     data = data.replace(b"\r\n", b"\n")
+    if rel.endswith(".md"):
+        data = RX_SEMLINK.sub(b"", data)   # 찾기 색인이 노트 끝에 쓰는 «관련 노트» 칸 — 받은 사람 색인이 써넣은 것을 «내가 고친 파일»로 세지 않는다
     if rel == L_CLAUDE:
         data = RX_S0.sub(S0_MARK, data.decode("utf-8", "replace"), count=1).encode("utf-8")
     return data
@@ -984,6 +1250,7 @@ def main():
     ap.add_argument("--plan-out", help="(update) 업데이트 계획 JSON 저장 경로 — 실행은 배포판의 fileops.py update 가 한다")
     ap.add_argument("--build-known", metavar="배포판", help="(publish) 배포판 이력에서 판 해시 표를 만든다")
     ap.add_argument("--ship", metavar="파일", help="(publish) 배포 목록 초안으로 미리 잰다(기본 = %s)" % SHIP_REL)
+    ap.add_argument("--skeleton", action="store_true", help="(publish) 배포판 작업 폴더의 폴더 뼈대(.gitkeep)를 ship.json «뼈대»에 맞춘다")
     a = ap.parse_args()
     if a.build_known:
         n_paths, n_vers = build_known(os.path.abspath(a.build_known))
@@ -991,13 +1258,26 @@ def main():
         return 0
     if not (a.a and a.b):
         ap.error("--a 와 --b 가 필요하다")
-    if not (a.mode or a.apply_plugins):
-        ap.error("--mode 또는 --apply-plugins 가 필요하다")
+    if not (a.mode or a.apply_plugins or a.skeleton):
+        ap.error("--mode · --apply-plugins · --skeleton 중 하나가 필요하다")
 
     for p in (a.a, a.b):
         if not os.path.isdir(p):
             print("경로 없음: %s" % p, file=sys.stderr)
             return 2
+
+    if a.skeleton:
+        missing, stale = skeleton(os.path.abspath(a.a), os.path.abspath(a.b), apply=True)
+        for rel in missing:
+            print("만듦 %s" % rel)
+        for rel in stale:
+            print("지움 %s" % rel)
+        print("폴더 뼈대: 만듦 %d · 지움 %d — 커밋에 넣는다(지운 것은 git rm)" % (len(missing), len(stale)))
+        want_now = missing + [r for r in skeleton(os.path.abspath(a.a), os.path.abspath(a.b))[0] if r not in missing]
+        blocked = [r for r in want_now if (git_out(os.path.abspath(a.b), "check-ignore", "-q", r) is not None)]
+        for r in blocked:
+            print("⚠ 무시 목록이 막음: %s — 배포판 무시 목록에 `!<층>/**/.gitkeep` 줄이 있어야 실린다" % r)
+        return 1 if blocked else 0
 
     if a.apply_plugins:
         if obsidian_running():

@@ -25,6 +25,11 @@
   "contributes": {
     "tutorial": ".claude/skills/dist-sync/tutorial",
     "manual": [{"file": ".claude/skills/dist-sync/manual/설명서-dist-sync.md", "name": "업데이트", "gist": "새 판 받기 · 고친 파일 보존 · 되돌리기 · 배포판에 올리기 · 볼트 밖 설정 점검 · 배포판 최신 점검"}],
-    "doctor": ["{py}", ".claude/skills/dist-sync/scripts/doctor.py"]
+    "doctor": ["{py}", ".claude/skills/dist-sync/scripts/doctor.py"],
+    "actions": [
+      {"id": "dist-sync.setup", "name": "기본 세팅 재기", "risk": "read", "data": true, "run": ["{py}", ".claude/skills/dist-sync/scripts/external.py", "view"]},
+      {"id": "dist-sync.setup_did", "name": "기본 세팅 — 사람이 했음", "risk": "write", "run": ["{py}", ".claude/skills/dist-sync/scripts/external.py", "did", "{id}"], "args": [{"name": "id", "label": "항목 id"}]},
+      {"id": "dist-sync.setup_undo", "name": "기본 세팅 — 했음 지움", "risk": "write", "run": ["{py}", ".claude/skills/dist-sync/scripts/external.py", "did", "{id}", "--undo"], "args": [{"name": "id", "label": "항목 id"}]}
+    ]
   }
 }

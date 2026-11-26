@@ -1,16 +1,21 @@
-"""원본 색인 생성기 — 1_수집 원본마다 1_수집/_색인/<원본 상대경로>.색인.md 를 만든다.
+"""원본 색인 생성기 — 원본마다 짝 색인 하나를 1_수집/_색인/ 한 자리에 만든다.
+  1_수집 원본      → 1_수집/_색인/<1_수집 뒤 상대경로>.색인.md(지금까지 그대로)
+  2_지식 원본      → 1_수집/_색인/2_지식/<나머지>.색인.md(층 이름을 남겨 1_수집 짝과 안 겹침 · 11-21 사용자 «필기색인은 다른 종류의
+                     파일들과 동일하게 짝으로» · 보스 D) — 2_지식 은 «문서·필기» 형식만(LAYERS · png·코드·대본·영상은 노트에 딸린 부산물)
+  0_작업·3_시스템 = 훑지 않음(임시·시스템). 해시 다시 잇기·고아 알림은 두 층을 함께 본다.
 
 색인 = 정리본이 아니라 «찾고 원본의 그 자리로 가기 위한» 검색 표면. 옵시디언 검색과 search.py 가 같은 파일을 읽는다.
 규칙 = 3_시스템/conventions.md §원본·색인 · 설계 = [[외부뇌-원본형식-수용]] · 결정 = ADR-013.
 
 사용:
-  py -3 3_시스템/ingest.py                 1_수집 전체 — 바뀐 것만 다시 만든다
+  py -3 3_시스템/ingest.py                 1_수집·2_지식 전체 — 바뀐 것만 다시 만든다
   py -3 3_시스템/ingest.py <파일|폴더>...   지정분만(같은 해시 묶음은 전체를 보고 정한다)
   --force   해시·판이 같아도 다시 만든다
   --dry     쓰지 않고 할 일만 보고
   --prune   원본이 없어진 색인(고아)을 지운다(기본은 보고만)
   --vision  그림을 Claude(claude -p · sonnet 5.5)로 읽어 «무엇을 그렸나(명사구) + 손글씨(있으면)» 를 색인에 덧붙인다. 대상 = 그림 쪽(글자 층 20자 미만)·
-            그림 든 쪽(10-26)·그림 파일·docx·pptx·html 안 그림(10-26). 한 번에 --vision-max 장(기본 60)까지.
+            그림 든 쪽(10-26)·그림 파일·docx·pptx·html 안 그림(10-26)·필기(.note·.sdocx) 쪽 조각(11-21 · inkrender).
+            한 번에 --vision-max 장(기본 60)까지.
             사용량이 들어서 이 플래그를 줄 때만 부른다. 결과 캐시 = 3_시스템/_index/ingest-vision/ · 글씨체 사전 = 3_시스템/handwriting/
 
 원칙:
@@ -43,6 +48,10 @@ HWP = {".hwp", ".hwpx"}
 TEXT = {".txt", ".v", ".sv", ".vhd", ".py", ".c", ".h", ".cpp", ".js", ".ts", ".json", ".tsv",
         ".log", ".m", ".tex", ".typ", ".ps1", ".sh", ".xml", ".yaml", ".yml", ".ini", ".cfg"}
 IMAGE = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".avif", ".svg"}
+INK = {".note", ".sdocx"}        # 필기 — 쪽 조각 그림(inkrender · 오프라인) + 손글씨 전사는 --vision 일 때만(조각 해시 캐시)
+DOCS = PDF | {".docx", ".pptx", ".xlsx", ".xls"} | HWP | INK
+# 훑는 원본 층 → 형식 거름(None = 모두). 2_지식 은 문서·필기만(11-21 보스 B) — 넓히려면 여기 한 줄.
+LAYERS = {"1_수집": None, "2_지식": DOCS}
 MEDIA = {".mp4", ".mkv", ".mov", ".webm", ".avi", ".m4v", ".wmv", ".ogv",
          ".mp3", ".m4a", ".wav", ".flac", ".ogg", ".3gp"}
 
@@ -66,9 +75,10 @@ def sha256(path):
 
 
 def index_path(origin):
-    """'<원본 층>/<상대 경로>/x.pdf' → <vault>/<원본 층>/_색인/<상대 경로>/x.pdf.색인.md"""
-    sub = origin.split("/", 1)[1]
-    return os.path.join(OUT, *sub.split("/")) + SUFFIX
+    """'1_수집/<상대 경로>/x.pdf' → 1_수집/_색인/<상대 경로>/x.pdf.색인.md · '2_지식/a/x.note' → 1_수집/_색인/2_지식/a/x.note.색인.md
+    (색인 자리는 하나 · 1_수집 밖은 층 이름을 남겨 겹치지 않게 · 11-21 보스 D)"""
+    layer, sub = origin.split("/", 1)
+    return os.path.join(OUT, *([] if layer == "1_수집" else [layer]), *sub.split("/")) + SUFFIX
 
 
 # ───────── 프론트매터 (값은 JSON 표기 = 유효한 YAML 이중따옴표) ─────────
@@ -976,6 +986,24 @@ def ex_hwp(path, origin, ext):
     return t, {"extractor": f"{VERSION} · {ex}"}, ("ok" if t else "글자 없음")
 
 
+def ex_ink(path):
+    """필기(.note·.sdocx) — 타자 글(sdocx 본문·글상자)은 바로 · 손글씨는 쪽 조각마다 전사 캐시(inkrender · --vision 이 채움)에서만 읽는다.
+    여기서는 Claude 를 부르지 않는다(사용량 = 누를 때만). 조각 열쇠 = 그림 판 + 조각 획 내용 → 필기를 덧붙이면 바뀐 조각만 «대기»."""
+    import inkrender as K
+    pages, typed = K.load(path)
+    ts = K.tiles(pages)
+    got = [(t, K.cached(t)) for t in ts]
+    done = [(t, x) for t, x in got if x is not None]
+    body = K.as_markdown(done, typed)
+    meta = {"extractor": VERSION, "pages": len(pages)}
+    if not ts and not typed:
+        return "", meta, "빈 필기"
+    if len(done) == len(ts):
+        return body, meta, "ok" + (f" · 손글씨 {len(ts)}조각 전사(Claude)" if ts else "")
+    wait = f"손글씨 {len(ts) - len(done)}/{len(ts)}조각 그림 읽기 대기(--vision)"
+    return body, meta, (f"ok · {wait}" if body else wait)
+
+
 def extract(path, origin, sha):
     ext = os.path.splitext(path)[1].lower()
     if ext in PDF:
@@ -988,6 +1016,8 @@ def extract(path, origin, sha):
         return ext[1:], ex_text(path, origin, ext)
     if ext in IMAGE and ext != ".svg":
         return ext[1:], ex_image(path, origin, sha)
+    if ext in INK:
+        return ext[1:], ex_ink(path)
     if ext in MEDIA:                                    # 영상·소리 전사는 아직 없다
         return ext[1:], ("", {"extractor": VERSION}, "전사 대기")
     return (ext[1:] or "?"), ("", {"extractor": VERSION}, "형식 미지원")
@@ -995,12 +1025,15 @@ def extract(path, origin, sha):
 
 # ───────── 스캔·묶음 ─────────
 def candidates():
-    for dp, dns, fns in os.walk(SRC):
-        dns[:] = sorted(d for d in dns if not d.startswith(".") and os.path.join(dp, d) != OUT)
-        for fn in sorted(fns):
-            if fn.startswith((".", "~$")) or fn.lower().endswith(".md"):
-                continue
-            yield os.path.join(dp, fn)
+    for layer, kinds in LAYERS.items():
+        for dp, dns, fns in os.walk(os.path.join(VAULT, layer)):
+            dns[:] = sorted(d for d in dns if not d.startswith(".") and os.path.join(dp, d) != OUT)
+            for fn in sorted(fns):
+                if fn.startswith((".", "~$")) or fn.lower().endswith(".md"):
+                    continue
+                if kinds is not None and os.path.splitext(fn)[1].lower() not in kinds:
+                    continue
+                yield os.path.join(dp, fn)
 
 
 def existing_indexes():
@@ -1163,6 +1196,7 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
         return V.png(fit(im), V.SIDE)
 
     jobs, later, copied, left = [], [], 0, 0                    # job = (sha, 쪽|0|img:…, origin, 작은 png, 큰 그림 출처)
+    ink = []                                                    # 필기 = (sha, origin, 아직 안 읽은 쪽 조각들) — inkrender 캐시(조각 해시)로 읽는다
     locs = []                                                   # 번호 그림으로 읽을 쪽 = (sha, 쪽, origin, PDF 경로, 잘라 그리기, 새 결과 | None = 저장된 결과)
     for sha, origins in sorted(groups.items(), key=lambda kv: min(kv[1], key=canonical_key)):
         origins = sorted(origins, key=canonical_key)
@@ -1172,7 +1206,7 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
         path = os.path.join(VAULT, *origin.split("/"))
         ext = os.path.splitext(path)[1].lower()
         pages = V.load(sha)["pages"]
-        room = lambda: limit - len(jobs) - len(locs)
+        room = lambda: limit - len(jobs) - len(locs) - sum(len(x[2]) for x in ink)
         try:
             if ext in PDF:
                 empty = pdf_empty_pages(path)
@@ -1195,6 +1229,13 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
                             jobs.append((sha, k, origin, V.png(render_page(pdf, k, V.SIDE, crop), V.SIDE), (path, k, crop)))
                     finally:
                         pdf.close()
+            elif ext in INK:
+                import inkrender as K
+                ts = [t for t in K.tiles(K.load(path)[0]) if K.cached(t) is None]
+                n = max(0, min(len(ts), room()))
+                left += len(ts) - n
+                if n:
+                    ink.append((sha, origin, ts[:n]))
             elif ext in IMAGE and ext != ".svg" and V.stale(pages.get("0"), prof[2]):
                 if room() <= 0:
                     left += 1
@@ -1220,7 +1261,7 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
             print(f"그림 읽기 준비 실패: {origin} — {type(e).__name__}: {e}")
     if copied:
         print(f"그림 읽기: 다른 원본에서 읽은 같은 그림 {copied}장 옮겨 씀")
-    if not jobs and not locs:
+    if not jobs and not locs and not ink:
         print("그림 읽기: 새로 읽을 것 없음")
         for sha in list(caches):
             rebuild_index(sha, groups, sizes, mtimes, "그림 읽기")
@@ -1236,6 +1277,7 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
         return
     batches = [jobs[i:i + V.BATCH] for i in range(0, len(jobs), V.BATCH)]
     print(f"그림 읽기 {len(jobs)}장({len(batches)}번 묻기) · {V.MODEL} · 동시 {workers}" + (f" · 판서 다시 {len(locs)}쪽" if locs else "")
+          + (f" · 필기 조각 {sum(len(x[2]) for x in ink)}" if ink else "")
           + (f" · 남은 {left}장은 다음 실행에" if left else ""))
     halt = []                                                   # V.Stop(구독 아님·사용량 한도) — 하나라도 나면 남은 그림은 묻지 않는다
 
@@ -1365,6 +1407,17 @@ def vision_pass(groups, only, sizes, mtimes, workers, limit):
                     tot["ok"] += 1
                     tot["hw"] += 1
                 print(f"  {origin} p.{k} — 판서 덩이 {len(boxes)} · 글 {sum(1 for t in texts if t)} · 낱말 {len(items)} · 손글씨 {len(whole)}자")
+    if ink and not halt:                                        # 필기 쪽 조각 — 조각마다 전사해 inkrender 캐시에 둔다(다음 색인이 읽음)
+        import inkrender as K
+        for sha, origin, ts in ink:
+            got, s = K.read(ts, transcribe=lambda img: guard(V.transcribe, V.png(img, V.HW_SIDE), prof) or ("", {}, "멈춤"))
+            tot["in"] += s["in"]
+            tot["out"] += s["out"]
+            tot["ok"] += s["calls"]
+            tot["hw"] += s["calls"]
+            tot["fail"] += s["fail"]
+            caches.setdefault(sha, V.load(sha))                 # 이 원본 색인을 다시 만들게
+            print(f"  {origin} — 필기 조각 {s['calls']}/{len(ts)} 전사" + (f" · 실패 {s['fail']}" if s["fail"] else ""))
     for sha, k in later:                                        # 같은 그림을 기다리던 원본에 옮겨 쓴다
         got = next((c["pages"][k] for c in caches.values() if k in c["pages"]), None)
         if got:
@@ -1417,8 +1470,8 @@ def main():
         only = set()
         for p in a.paths:
             ap_ = os.path.abspath(p)
-            if not ap_.startswith(SRC + os.sep):
-                sys.exit(f"1_수집 밖은 색인하지 않는다: {p}")
+            if not any(ap_.startswith(os.path.join(VAULT, l) + os.sep) for l in LAYERS):
+                sys.exit(f"원본 층({'·'.join(LAYERS)}) 밖은 색인하지 않는다: {p}")
             only.add(rel(ap_))
 
     by_sha, by_origin = existing_indexes()
@@ -1450,7 +1503,8 @@ def main():
         olds = by_sha.get(sha, [])
         old_p, old_fm = olds[0] if olds else (None, None)
         same = (old_fm is not None and old_p == target and old_fm.get("extractor", "").startswith(VERSION)
-                and old_fm.get("origin") == origins[0] and (old_fm.get("also") or []) == origins[1:])
+                and old_fm.get("origin") == origins[0] and (old_fm.get("also") or []) == origins[1:]
+                and not (old_fm.get("quality") == "형식 미지원" and os.path.splitext(origins[0])[1].lower() in INK))  # 새로 읽게 된 형식(11-21)
         if same and not a.force:
             stats["같음"] += 1
             if not str(old_fm.get("quality")).startswith("ok"):   # «ok · OCR …» 는 경고 아님

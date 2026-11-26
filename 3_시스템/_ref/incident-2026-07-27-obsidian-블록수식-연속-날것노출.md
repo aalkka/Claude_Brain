@@ -54,6 +54,3 @@ $$\mathbf A = A_x\hat{\mathbf x} \tag{1.3}$$   ← 앞 줄과 붙어 있으면 �
 ## 관련
 - [[incident-2026-07-26-obsidian-svg-style-stripping]] — 같은 계열(Obsidian 렌더 제약을 몰라서 생긴 결함). 그때는 `<style>` 스트리핑으로 전 도형 검정.
 - 진단 프로토콜 = 메모리 `feedback-troubleshooting-diagnose-protocol`(⑦대조군 확보·⑧체감≠실측 항목을 이 건에서 보강).
-
-> [!info]- 관련 노트 %%sl%%
-> [[incident-2026-07-26-obsidian-svg-style-stripping]]

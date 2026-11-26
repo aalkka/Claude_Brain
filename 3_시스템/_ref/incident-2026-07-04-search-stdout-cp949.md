@@ -29,6 +29,3 @@ for _s in (sys.stdout, sys.stderr):
 - 인코딩 검증은 **실제 런타임 경로**(콘솔 stdout)로. `2>/dev/null`·`| Out-Null`이 크래시 숨김 → eval만 돌리면 못 잡음. 스킬이 실제 소비하는 stdout 직접 확인.
 - 3층 정리: ①.ps1 스크립트=UTF-8 BOM(#6) ②PS Get-Content 데이터read=`-Encoding UTF8`(#9) ③**파이썬 stdout=`reconfigure utf-8`(본건).** 전부 Windows 기본 인코딩(cp949/ANSI) 회피.
 [[incident-2026-07-03-스펙-실측-괴리]]
-
-> [!info]- 관련 노트 %%sl%%
-> [[incident-2026-07-04-writer-crlf-eol-churn]] · [[incident-2026-07-03-스펙-실측-괴리]]

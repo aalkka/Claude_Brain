@@ -135,6 +135,14 @@ check("T23b 설정 파일 값", (c1["test_avds"], c1["locks"][-1]), ({"x1"}, "a/
 own.CFG = dict(c0)
 check("T24 기본 = 에뮬레이터 안 셈", own.kind_of(P(1, "emulator.exe", NOW, "emulator.exe -avd test-avd-a")), "")
 
+# T25 주인 없는 시험 프로세스 = 행에 «끄지 않은 까닭»
+own.CFG = cfg()
+own.machine = lambda: {"ram": 14.0, "avail": 6.0, "commit": 12.0}
+own.ledger = lambda: {}
+own.heavy_locked = lambda: False
+_k, _rows, _i = own.judge({7: P(1, "qemu-system-x86_64.exe", NOW - 600, "emulator -avd x")}, {}, {}, NOW)
+check("T25 까닭 칸", [(r["pid"], bool(r["keep"])) for r in _rows if r["kind"]] in ([(7, True)], []), True)
+
 # T16 doctor 줄: 상태 파일 없으면 △
 own.CFG = cfg()
 own.STATE = os.path.join(tempfile.mkdtemp(), "tick.json")

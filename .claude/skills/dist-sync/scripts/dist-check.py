@@ -28,6 +28,10 @@
   ⑦ 만드는 길 없는 개인 파일(배포 목록 «개인» 칸)
   ⑧ 모듈 계약 — 이 볼트 모듈(꺼진 것·배포판에 안 싣는 것까지)이 쓰는 코어 이름(module.json uses_core)이 배포판에 없음 —
      그 모듈을 배포판 꼴 볼트에 붙이면 깨진다(contracts.py names --core <배포판> · 11-17 mobility 범용화)
+  ⑨ 지금 배포판 트리(HEAD + 커밋 안 한 고침)에 남은 개인 값 — 꼴 = dd.dist_rules(내장 + 볼트 전용 + 자동 꼴 · 11-22) ·
+     그림은 OCR 글자로 · 개인 꼴 파일(leak-*·mobility-leak·anon-pairs·not-shipped)이 배포판에 실렸으면 센다
+  ⑩ 이력 — push 될 커밋의 blob·커밋 글·작성자(셈에 듦) · 원격의 지난 이력 전체(이미 공개 · 목록만 · 고치려면 강제 push = 사람 몫).
+     blob 단위 · 본 blob 은 꼴 판마다 담아 둔다(history-scan.json · 처음 한 번 ~30초 · 그 뒤 ~1.5초)
 배포판 worktree = 볼트 저장소의 worktree 가운데 `dist-sync` 가지 · 없으면(제작자 볼트가 아니면) 잴 것이 없다.
 """
 import argparse
@@ -268,16 +272,14 @@ def needed_by(rel, texts):
 def annotate(A, B, rows, texts, gaps, ack):
     """① 항목마다 가를 까닭(기계) — 필요(배포판 코어가 부름) · 익명화할 곳 · 안내 없는 바깥 설정.
     안 싣기로 적었는데 배포판 코어가 부르는 것(배포판에 없는 것만)도 ① 에 다시 올린다."""
-    rules = [r for r in dd.LEAK if not r[1].startswith("세션 id")] + (dd.load_local_leaks(A) or [])
+    rules, allow = dd.dist_rules(A), dd.load_allow(A)
     # 익명화할 곳은 통째로 실릴 층만 — 씨앗(항목)·옵시디언 설정은 늘 개인 값이 들어 있어 셀 뜻이 없다.
     # 동봉 플러그인 번들은 센다 — 소스의 CSS 주석이 번들 문자열에 \uXXXX 로 남는다(11-21 brain-source 0.36.30 main.js 호칭 2곳을 못 셈)
     files = {x["path"]: os.path.join(A, *x["path"].split("/")) for x in rows
              if dd.layer(x["path"]) in ("코어", dd.L_CLAUDE, "미분류")
              and (not x["path"].startswith(OBS + "/") or any(x["path"].startswith(d) for d in dd.DIST_PLUGINS))}
-    plug = {k for k in files if k.startswith(OBS + "/")}      # 번들은 볼트 전용 패턴만 — 내장 이메일 꼴은 남의 라이선스 고지에 수백 개
-    leaks = collections.Counter(h[0] for h in dd.scan_leaks({k: v for k, v in files.items() if os.path.isfile(v) and k not in plug}, rules))
-    if plug and dd.load_local_leaks(A):
-        leaks.update(h[0] for h in dd.scan_leaks({k: files[k] for k in plug if os.path.isfile(files[k])}, dd.load_local_leaks(A)))
+    # 번들의 내장 메일 꼴(남의 라이선스 고지)·세션 이름(기능 이름)은 scan_text 가 뺀다(dd.SKIP_IN · 11-22)
+    leaks = collections.Counter(h[0] for h in dd.scan_leaks({k: v for k, v in files.items() if os.path.isfile(v)}, rules, allow))
     outside = collections.Counter(rel for rel, _, _ in gaps)
 
     def first(need):
@@ -452,6 +454,296 @@ def merge_marks(A, B, ship, ack):
     return out
 
 
+# ── ⑨⑩ 개인 값(11-22) ──────────────────────────────────────────
+# ⑨ 지금 배포판 트리(HEAD + 커밋 안 한 고침)에 남은 개인 값 · 개인 꼴 파일이 배포판에 실렸나
+# ⑩ 이력 — push 될 커밋(올리기 전 고침 · 셈에 듦)과 원격의 지난 이력 전체(이미 공개 · 목록만 · 고치려면 이력을 다시 써 강제 push = 사람 몫)
+#    blob 단위로 보고 본 blob 은 꼴 판(해시)마다 담아 둔다 — 같은 꼴이면 다시 안 읽는다. 커밋 글·작성자도 본다.
+NOWIN = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+SCAN_CACHE = os.path.join("3_시스템", "_index", "dist-sync", "history-scan.json")  # mf:allow-path  (본 blob 담아 둠 · 개인 층)
+PRIVATE_RULE_FILES = [dd.LEAK_LOCAL, dd.LEAK_AUTO, dd.LEAK_ALLOW] + [os.path.join(os.path.dirname(dd.LEAK_LOCAL), n) for n in dd.LEAK_EXTRA + (dd.ANON_PAIRS, "not-shipped.txt")]
+
+
+def _rules_key(rules, allow):
+    return hashlib.sha256(json.dumps([rules, sorted(allow)], ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
+
+
+def _blob_text(b):
+    """blob 바이트 → 글(못 읽는 바이너리면 None) — dd.text_encoding 과 같은 가름."""
+    if b[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return b.decode("utf-16", "replace")
+    head = b[:65536]
+    if b"\0" in head:
+        return None
+    try:
+        return b.decode("utf-8-sig")
+    except UnicodeDecodeError as e:
+        if e.start < len(head) - 3 or len(b) < 65536:
+            return None
+        return b.decode("utf-8", "replace")
+
+
+def _cat_blobs(B, shas):
+    """sha 목록 → {sha: 바이트} — cat-file --batch 한 번."""
+    if not shas:
+        return {}
+    p = subprocess.run(["git", "-C", B, "cat-file", "--batch"], input=("\n".join(shas) + "\n").encode(), capture_output=True, timeout=300, creationflags=NOWIN)
+    out, i, data = {}, 0, p.stdout
+    for s in shas:
+        j = data.index(b"\n", i)
+        head = data[i:j].split()
+        if len(head) < 3 or head[1] == b"missing":
+            i = j + 1
+            continue
+        n = int(head[2])
+        out[s] = data[j + 1:j + 1 + n]
+        i = j + 1 + n + 1
+    return out
+
+
+def _blobs(B, *rev_args):
+    """rev-list --objects → {blob sha: 처음 본 경로} (나무·커밋은 뺌)."""
+    code, out, _ = git(B, "-c", "core.quotepath=off", "rev-list", "--objects", *rev_args, timeout=120)
+    if code:
+        return {}
+    pairs = [ln.split(" ", 1) for ln in out.splitlines() if " " in ln]
+    if not pairs:
+        return {}
+    p = subprocess.run(["git", "-C", B, "cat-file", "--batch-check=%(objectname) %(objecttype)"],
+                       input=("\n".join(s for s, _ in pairs) + "\n").encode(), capture_output=True, timeout=120, creationflags=NOWIN)
+    kinds = dict(ln.split(" ", 1) for ln in p.stdout.decode().splitlines() if " " in ln)
+    return {s: path for s, path in pairs if kinds.get(s) == "blob"}
+
+
+IMAGE = re.compile(r"\.(png|jpe?g|gif|bmp|webp)$", re.I)       # 그림 안 글자 = OCR(svg 는 글이라 그대로 읽힌다)
+OCR_CACHE = os.path.join("3_시스템", "_index", "dist-sync", "image-ocr.json")  # mf:allow-path  (blob → OCR 줄 · 꼴과 상관없이 담아 둠)
+
+
+def on_battery():
+    """배터리면 OCR 을 새로 띄우지 않는다(밖에서 쓰는 중) — 윈도가 아니거나 못 재면 False."""
+    try:
+        import ctypes
+
+        class S(ctypes.Structure):
+            _fields_ = [("ac", ctypes.c_byte), ("flag", ctypes.c_byte), ("pct", ctypes.c_byte), ("saver", ctypes.c_byte),
+                        ("life", ctypes.c_ulong), ("full", ctypes.c_ulong)]
+        s = S()
+        return bool(ctypes.windll.kernel32.GetSystemPowerStatus(ctypes.byref(s))) and s.ac == 0
+    except (AttributeError, OSError, ImportError):
+        return False
+
+
+def ocr_blobs(A, B, blobs):
+    """{sha: 경로} 가운데 그림 → {sha: 글 | None(못 읽음·안 잼)} — 3_시스템/ingest.py 의 ocr_images(윈도 내장 OCR)를 부른다.
+    읽은 것은 blob 마다 담아 두고 다시 안 읽는다 · 배포판에 ingest.py 가 없거나 배터리면 None(안 잼 · 셈에 안 듦)."""
+    imgs = {s: p for s, p in blobs.items() if IMAGE.search(p)}
+    if not imgs:
+        return {}
+    cp = os.path.join(A, OCR_CACHE)
+    try:
+        with open(cp, encoding="utf-8") as f:
+            cache = json.load(f)
+    except (OSError, ValueError):
+        cache = {}
+    new = [s for s in imgs if s not in cache]
+    if new and not on_battery():
+        ingest = None
+        for v in dict.fromkeys([A, VAULT]):      # 잴 볼트 → 없으면 이 대본이 든 볼트(시험의 임시 볼트엔 ingest 가 없다)
+            p = os.path.join(v, "3_시스템", "ingest.py")
+            if not os.path.isfile(p):
+                continue
+            try:                               # 깨졌으면 안 잰다(셈에 안 듦)
+                sys.path.insert(0, os.path.dirname(p))
+                s = importlib.util.spec_from_file_location("dist_ingest", p)
+                ingest = importlib.util.module_from_spec(s)
+                s.loader.exec_module(ingest)
+                break
+            except Exception:
+                ingest = None
+        if ingest is not None:
+            import tempfile
+            with tempfile.TemporaryDirectory(prefix="dist-ocr-") as td:
+                paths = []
+                for s, b in _cat_blobs(B, new).items():
+                    p = os.path.join(td, s + os.path.splitext(imgs[s])[1].lower())
+                    with open(p, "wb") as f:
+                        f.write(b)
+                    paths.append((s, p))
+                res, why = ingest.ocr_images([p for _, p in paths]), None
+                if isinstance(res, tuple):
+                    res, why = res
+                for (s, _), lines in zip(paths, res or []):
+                    if lines is not None:
+                        cache[s] = lines
+            os.makedirs(os.path.dirname(cp), exist_ok=True)
+            with open(cp, "w", encoding="utf-8", newline="\n") as f:
+                json.dump(cache, f, ensure_ascii=False)
+    return {s: ("\n".join(cache[s]) if s in cache else None) for s in imgs}
+
+
+def scan_blobs(A, B, blobs, rules=None, allow=None, stats=None):
+    """{sha: 경로} → {sha: [(줄, 꼴, 글)]} 걸린 것만 · 꼴 판이 같으면 본 blob 은 담아 둔 결과를 쓴다."""
+    rules = dd.dist_rules(A) if rules is None else rules
+    allow = dd.load_allow(A) if allow is None else allow
+    # 담아 두기는 꼴마다 — blob 마다 «어느 꼴 묶음으로 봤나»(sets 의 번호)를 적어, 꼴이 늘면 새 꼴만 대 보고 줄면 그 꼴 걸림만 다시 본다.
+    # (세션 이름 꼴은 새 하위 세션마다 늘어 통째 다시 읽으면 건강 줄이 그때마다 30초 · 11-22) · 허용 값이 바뀌면 처음부터.
+    cur = [rx for rx, _ in rules]
+    cp = os.path.join(A, SCAN_CACHE)
+    try:
+        with open(cp, encoding="utf-8") as f:
+            cache = json.load(f)
+    except (OSError, ValueError):
+        cache = {}
+    akey = _rules_key([], allow)
+    if cache.get("allow") != akey or cache.get("v") != 2:
+        cache = {"v": 2, "allow": akey, "sets": {}, "seen": {}}
+    sets, seen = cache["sets"], cache["seen"]
+    sid = _rules_key(cur, set())
+    sets[sid] = cur
+    curset = set(cur)
+    todo = {}                           # blob → 대 볼 꼴(None = 전부)
+    for s in blobs:
+        e = seen.get(s)
+        if not e:
+            todo[s] = None
+            continue
+        have = set(sets.get(e["k"], []))
+        gone = have - curset
+        if gone and any(h[3] in gone for h in e["h"]):
+            todo[s] = None              # 없어진 꼴에 걸렸던 줄은 다른 꼴에도 걸릴 수 있다 — 통째로 다시
+        elif curset - have:
+            todo[s] = curset - have
+        elif e["k"] != sid:
+            e["k"] = sid
+    changed = bool(todo)
+    full = [s for s, r in todo.items() if r is None]
+    comp_all = dd.compile_rules(rules)
+    ocr = ocr_blobs(A, B, {s: blobs[s] for s in todo})
+    for s, b in _cat_blobs(B, [s for s in todo if s not in ocr]).items():
+        t = _blob_text(b)
+        if t is None:
+            seen[s] = {"k": sid, "h": []}
+            continue
+        comp = comp_all if todo[s] is None else [(rx, lb) for rx, lb in comp_all if rx.pattern in todo[s]]
+        got = [list(h) for h in dd.scan_text(blobs[s], t, comp, allow, with_rx=True)]
+        if todo[s] is not None:         # 새 꼴만 댐 — 옛 걸림과 합침(줄마다 하나)
+            lines = {h[0] for h in seen[s]["h"]}
+            got = [h for h in seen[s]["h"] if h[3] in curset] + [h for h in got if h[0] not in lines]
+        seen[s] = {"k": sid, "h": sorted(got)}
+    for s, t in ocr.items():            # 그림 — 못 읽었으면(None) 담지 않아 다음에 다시 잰다
+        if t is not None:
+            seen[s] = {"k": sid, "h": [[h[0], h[1] + " (그림 글자)", h[2], h[3]] for h in dd.scan_text(blobs[s] + ".ocr.txt", t, comp_all, allow, with_rx=True)]}
+        elif stats is not None:
+            stats["ocr_skip"] = stats.get("ocr_skip", 0) + 1
+    if changed:
+        used = {e["k"] for e in seen.values()}
+        for k in [k for k in sets if k not in used]:
+            del sets[k]
+        os.makedirs(os.path.dirname(cp), exist_ok=True)
+        with open(cp, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(cache, f, ensure_ascii=False)
+    if stats is not None:
+        stats.update(blobs=stats.get("blobs", 0) + len(blobs), new=stats.get("new", 0) + len(full),
+                     partial=stats.get("partial", 0) + len(todo) - len(full))
+    return {s: [h[:3] for h in seen[s]["h"]] for s in blobs if s in seen and seen[s]["h"]}
+
+
+def tree_leaks(A, B, rules=None, allow=None):
+    """⑨ — [{path, line, label, text}] · HEAD 트리 blob(담아 둔 것) + 커밋 안 한 고침(파일로 직접) + 개인 꼴 파일이 실렸나."""
+    rules = dd.dist_rules(A) if rules is None else rules
+    allow = dd.load_allow(A) if allow is None else allow
+    code, out, _ = git(B, "-c", "core.quotepath=off", "ls-tree", "-r", "HEAD")
+    head = {}
+    for ln in out.splitlines() if code == 0 else []:
+        meta, _, path = ln.partition("\t")
+        m = meta.split()
+        if len(m) == 3 and m[1] == "blob":
+            head.setdefault(m[2], []).append(path)
+    hit = scan_blobs(A, B, {s: p[0] for s, p in head.items()}, rules, allow)
+    code, st, _ = git(B, "-c", "core.quotepath=off", "status", "--porcelain", "-z")
+    dirty = [e[3:] for e in (st.split("\0") if code == 0 else []) if len(e) > 3 and (e[0] in "MA?" or e[1] in "MA?")]
+    dirty = [p for p in dirty if os.path.isfile(os.path.join(B, *p.split("/")))]
+    rows = []
+    for s, hs in hit.items():
+        for path in head[s]:
+            if path in dirty:
+                continue
+            rows += [{"path": path, "line": h[0], "label": h[1], "text": h[2]} for h in hs]
+    for path, i, lb, txt in dd.scan_leaks({p: os.path.join(B, *p.split("/")) for p in dirty}, rules, allow):
+        rows.append({"path": path, "line": i, "label": lb, "text": txt, "dirty": True})
+    files = set(tracked(B)) | set(dirty)
+    for rel in PRIVATE_RULE_FILES:
+        r = rel.replace(os.sep, "/")
+        if r in files or dd.layer(r) not in ("개인", "제외"):
+            rows.append({"path": r, "line": 0, "label": "개인 꼴 파일이 배포판에 실림" if r in files else "개인 꼴 파일 자리가 개인 층이 아님", "text": ""})
+    return sorted(rows, key=lambda x: (x["path"], x["line"]))
+
+
+def _commit_rows(B, rng, rules, allow):
+    """커밋 글·작성자 → [{commit, label, text}] — 작성자·커미터는 익명(dd.ANON_AUTHOR)이어야 · 글·메일은 꼴로."""
+    code, out, _ = git(B, "log", "--format=%h%x00%an%x00%ae%x00%cn%x00%ce%x00%B%x01", *rng, timeout=120)
+    comp = dd.compile_rules(rules)
+    rows = []
+    for rec in out.split("\x01") if code == 0 else []:
+        f = rec.strip("\n").split("\0")
+        if len(f) < 6:
+            continue
+        h, an, ae, cn, ce, body = f[:6]
+        if an != dd.ANON_AUTHOR or cn != dd.ANON_AUTHOR:
+            rows.append({"commit": h, "label": "작성자가 익명 아님", "text": "%s / %s" % (an, cn)})
+        for i, lb, txt in dd.scan_text("COMMIT_MSG.md", "\n".join([ae, ce, body]), comp, allow):
+            rows.append({"commit": h, "label": lb, "text": txt})
+    return rows
+
+
+def history_leaks(A, B, upstream):
+    """⑩ — {"pending": [...], "published": [...], "commits_pending": [...], "commits_published": [...], "blobs", "new", "secs"}."""
+    t0 = datetime.datetime.now().timestamp()
+    rules, allow = dd.dist_rules(A), dd.load_allow(A)
+    stats = {}
+    pub = _blobs(B, upstream) if upstream else {}
+    pend = _blobs(B, "HEAD", "--not", upstream) if upstream else _blobs(B, "HEAD")
+    hp = scan_blobs(A, B, pend, rules, allow, stats)
+    hb = scan_blobs(A, B, pub, rules, allow, stats)
+    code, out, _ = git(B, "-c", "core.quotepath=off", "ls-tree", "-r", "--object-only", "HEAD")
+    now = set(out.split()) if code == 0 else set()
+
+    first = {}          # blob 이 처음 들어간 커밋 — 이력 한 번 훑어(--raw · 오래된 것부터) 맞춤
+    if upstream and hb:
+        code, o, _ = git(B, "log", "--raw", "--no-abbrev", "--reverse", "--format=@%H", upstream, timeout=120)
+        cur = None
+        for ln in o.splitlines() if code == 0 else []:
+            if ln.startswith("@"):
+                cur = ln[1:]
+            elif ln.startswith(":"):
+                f = ln.split()
+                if len(f) > 3 and f[3] in hb and f[3] not in first:
+                    first[f[3]] = cur
+
+    def rows(hit, paths):
+        """같은 줄이 판마다 되풀이되면 하나로 — 판 수·처음 커밋·지금 트리에 남았나."""
+        g = {}
+        for s, hs in hit.items():
+            for h in hs:
+                k = (paths[s], h[1], h[2])
+                x = g.setdefault(k, {"blob": s[:10], "path": paths[s], "line": h[0], "label": h[1], "text": h[2], "now": False, "versions": 0, "commit": None})
+                x["versions"] += 1
+                x["now"] = x["now"] or s in now
+                c = first.get(s)
+                if c and (x["commit"] is None or order.get(c, 0) < order.get(x["commit"], 0)):
+                    x["commit"] = c
+        for x in g.values():
+            x["commit"] = (x["commit"] or "")[:8] or None
+        return sorted(g.values(), key=lambda x: (x["path"], x["line"]))
+    code, o, _ = git(B, "log", "--reverse", "--format=%H", upstream) if upstream else (1, "", "")
+    order = {h: i for i, h in enumerate(o.split())} if code == 0 else {}
+    res = {"pending": rows(hp, pend), "published": rows(hb, pub),
+           "commits_pending": _commit_rows(B, ["HEAD", "--not", upstream] if upstream else ["HEAD"], rules, allow),
+           "commits_published": _commit_rows(B, [upstream], rules, allow) if upstream else [],
+           "blobs": stats.get("blobs", 0), "new": stats.get("new", 0), "partial": stats.get("partial", 0)}
+    res["secs"] = round(datetime.datetime.now().timestamp() - t0, 1)
+    return res
+
+
 def commits(B, rng):
     code, out, _ = git(B, "log", "--format=%h %s", rng)
     return [ln for ln in out.splitlines() if ln.strip()] if code == 0 else None
@@ -522,6 +814,8 @@ def check(A=VAULT, B=None, do_fetch=False, ship_path=None):
     gaps, res["external"] = external_gaps(A, B, ack)
     annotate(A, B, res["unsynced"], dist_texts(B), gaps, ack)
     res["contracts"] = contract_gaps(A, B)
+    res["leaks"] = tree_leaks(A, B)
+    res["history"] = history_leaks(A, B, res["upstream"])
     return res
 
 
@@ -602,8 +896,15 @@ def scope(r):
     return len(r.get("undecided", [])) + len(r.get("drops", [])) + len(r.get("pointers", [])) + len((r.get("ship") or {}).get("잘못", [])) + len(r.get("make") or [])
 
 
+def pending_leaks(r):
+    """⑩ 가운데 셈에 드는 것 — push 될 커밋의 blob·글·작성자(이미 공개된 것은 목록만)."""
+    h = r.get("history") or {}
+    return len(h.get("pending", [])) + len(h.get("commits_pending", []))
+
+
 def total(r):
-    return len(r["unsynced"]) + len(r["unpushed"]) + len(r["uncommitted"]) + len(r["remote_only"]) + len(r.get("external", [])) + len(r.get("contracts", [])) + scope(r)
+    return (len(r["unsynced"]) + len(r["unpushed"]) + len(r["uncommitted"]) + len(r["remote_only"]) + len(r.get("external", []))
+            + len(r.get("contracts", [])) + scope(r) + len(r.get("leaks", [])) + pending_leaks(r))
 
 
 def todo(r):
@@ -622,6 +923,10 @@ def todo(r):
         t.append("바깥 설정 안내 채우기")
     if r.get("contracts"):
         t.append("모듈 계약 맞추기(코어 이름을 싣거나 모듈을 고침)")
+    if r.get("leaks"):
+        t.append("배포판에 남은 개인 값 고치기(다음 배포판 적용)")
+    if pending_leaks(r):
+        t.append("push 전에 개인 값 고치기(커밋 글·작성자 포함)")
     return " · ".join(t)
 
 
@@ -638,7 +943,12 @@ def summary(r):
              ("만드는 길 없는 개인 파일", len(r.get("make") or [])),
              ("안 올린 고침", len(r["unsynced"])), ("커밋 안 함", len(r["uncommitted"])),
              ("push 안 함", len(r["unpushed"])), ("받을 것", len(r["remote_only"])),
-             ("안내 없는 바깥 설정", len(r.get("external", []))), ("모듈 계약 어긋남", len(r.get("contracts", [])))]
+             ("안내 없는 바깥 설정", len(r.get("external", []))), ("모듈 계약 어긋남", len(r.get("contracts", []))),
+             ("배포판에 남은 개인 값", len(r.get("leaks", []))), ("올릴 커밋의 개인 값", pending_leaks(r))]
+    pub = (r.get("history") or {})
+    pub_n = len(pub.get("published", [])) + len(pub.get("commits_published", []))
+    if pub_n:
+        note += " · 이미 공개된 이력에 개인 값 %d(목록만 · 고치려면 강제 push)" % pub_n
     if r.get("ship", 0) is None:
         note += " · 배포 목록 없음(옛 동작 — 코어 자리의 새 파일이 기본으로 실린다)"
     return "배포판 어긋남 %d — %s · 할 일 %s%s" % (n, " · ".join("%s %d" % p for p in parts if p[1]), todo(r), note)
@@ -675,6 +985,20 @@ def report(r):
         L += ["   - %s — %s" % (x["path"], x["why"]) for x in mk or []]
     L.append("⑧ 모듈이 쓰는 코어 이름이 배포판에 없음 %d" % len(r.get("contracts", [])))
     L += ["   - " + c for c in r.get("contracts", [])]
+    lk = r.get("leaks", [])
+    L.append("⑨ 지금 배포판 트리에 남은 개인 값 %d" % len(lk))
+    L += ["   - %s:%d — %s%s · %s" % (x["path"], x["line"], x["label"], " (커밋 안 함)" if x.get("dirty") else "", x["text"][:70]) for x in lk]
+    h = r.get("history") or {}
+    L.append("⑩ 이력 검사 — blob %d(새로 읽음 %d · 새 꼴만 댐 %d) · %s초 · 꼴 %d개" % (h.get("blobs", 0), h.get("new", 0), h.get("partial", 0),
+                                                                     h.get("secs", "?"), len(dd.dist_rules(VAULT))))
+    L.append("   올릴 커밋: 파일 %d · 커밋 글·작성자 %d" % (len(h.get("pending", [])), len(h.get("commits_pending", []))))
+    L += ["   - %s:%d — %s · %s" % (x["path"], x["line"], x["label"], x["text"][:70]) for x in h.get("pending", [])]
+    L += ["   - 커밋 %s — %s · %s" % (x["commit"], x["label"], x["text"][:70]) for x in h.get("commits_pending", [])]
+    pubs = h.get("published", []) + h.get("commits_published", [])
+    L.append("   이미 공개된 이력: %d — 고치지 않음(이력을 다시 써 강제 push 해야 지워짐 · 사람 몫)" % len(pubs))
+    L += ["   - %s:%d (blob %s · 처음 커밋 %s · 판 %d%s) — %s · %s" % (x["path"], x["line"], x["blob"], x.get("commit") or "?", x.get("versions", 1), " · 지금 트리에도" if x.get("now") else " · 지난 이력만",
+                                                      x["label"], x["text"][:60]) for x in h.get("published", [])]
+    L += ["   - 커밋 %s — %s · %s" % (x["commit"], x["label"], x["text"][:60]) for x in h.get("commits_published", [])]
     L.append(summary(r))
     return "\n".join(L)
 

@@ -31,6 +31,3 @@ tags: [incident, 훅, 커밋, git, 셧다운]
 - 원칙: **latency-bound 훅(타임아웃 有)에 무거운 ML 넣지 말 것**(설계노트 §7 "훅=결정론적 추출·저장·커밋·검증만" 위반이 뿌리였음).
 - 무성 실패 가시화: session-end.ps1은 pre-commit 차단 시 hooks.log 기록(기존). Stop 커밋은 diff 가드로 안전.
 - 향후 종료방식 바뀌면(예: /quit 습관화) 재평가. reindex의 SessionStart 무변경분 모델로드 낭비(16s)는 별건 최적화 여지(잔여).
-
-> [!info]- 관련 노트 %%sl%%
-> [[incident-2026-08-02-git-index-lock-62시간-자동커밋사망]]

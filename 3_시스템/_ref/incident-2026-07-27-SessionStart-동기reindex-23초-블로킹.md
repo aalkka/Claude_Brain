@@ -53,6 +53,3 @@ Start-Process -FilePath 'py' -ArgumentList '-3', $searchPy, '--reindex' -WindowS
 - 07-19 원칙(**latency-bound 훅에 무거운 ML 금지**, 설계노트 §7 "훅=결정론적 추출·저장·커밋·검증만")이 SessionEnd에만 적용되고 **SessionStart에는 적용이 누락**돼 있었다. 훅 3종 전체에 적용 완료.
 - 동시 실행 race(SessionStart 디태치 ↔ SessionEnd 디태치)는 **무해**: `save_index`가 tmp→`os.replace` 원자교체(`search.py:209`)라 손상 불가, 유실분은 다음 reindex가 hash 불일치로 자기치유. 이 race는 이번 변경 이전에도 존재했다.
 - 잔여: HF Hub 확인 5.1s는 백그라운드로 밀렸을 뿐 사라지지 않았다. 배포판 신규설치 호환을 지키며 없애려면 "모델 캐시 존재 시에만 오프라인" 조건부가 필요 — 실수요 생기면 착수.
-
-> [!info]- 관련 노트 %%sl%%
-> [[incident-2026-07-19-SessionEnd-커밋정지]]

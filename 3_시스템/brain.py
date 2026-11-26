@@ -160,7 +160,10 @@ def cmd_run(a):
     else:
         log({"ts": ts, "action": x["id"], "owner": owner, "by": by, "args": kv or None, "rest": rest or None, "code": code, "seconds": secs})
     if a.json:
-        print(json.dumps({"ok": code == 0, "action": x["id"], "code": code, "seconds": secs, "by": by, "out": out[-4000:], "err": err[-2000:]}, ensure_ascii=False))
+        # 출력은 끝 4000자만 넘긴다(사람이 볼 꼬리). 행위가 `"data": true` 를 선언하면 통째로 — 화면이 읽는 JSON 한 벌이 잘리면 못 읽는다
+        # (2026-11-26: 기본 세팅 화면이 읽는 dist-sync.setup 이 3만 자를 넘어 꼬리만 가서 화면에 날 JSON 이 찍혔다)
+        keep = out if x.get("data") else out[-4000:]
+        print(json.dumps({"ok": code == 0, "action": x["id"], "code": code, "seconds": secs, "by": by, "out": keep, "err": err[-2000:]}, ensure_ascii=False))
     elif x.get("builtin"):
         print(out)
     return code

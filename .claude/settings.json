@@ -20,6 +20,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/.claude/skills/dist-sync/scripts/privguard.py\"; if [ -f \"$f\" ]; then py -3 \"$f\" --hook; fi",
+            "timeout": 15
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write|Bash|PowerShell",
         "hooks": [
           {

@@ -69,14 +69,16 @@ def main():
     if not shutil.which("git"):
         print("git 없음 — update·publish 를 못 돎")
         return 1
-    code, url = git("remote", "get-url", "dist")
-    if code:
-        print("원격 dist 없음 — update 스킬이 처음에 더한다")
-        return 1
     try:
         ext, en = external_line()
     except Exception as e:  # 확인이 깨져도 건강 줄의 원래 칸은 나온다
         ext, en = "볼트 밖 설정 확인 못 돎(%s)" % type(e).__name__, 1
+    code, url = git("remote", "get-url", "dist")
+    if code:
+        # 새로 받은 볼트는 dist 원격이 없다(받은 곳이 origin) — 고장이 아니라 처음 업데이트 때 더하는 것이라 경고로 세지 않는다.
+        # 그래도 볼트 밖 설정 줄은 낸다(2026-11-26: 여기서 먼저 끝나 새 설치의 «볼트 밖 설정 안 됨»이 건강 줄에 한 번도 안 떴다)
+        print((ext + " · " if ext else "") + "원격 dist 없음(처음 업데이트 때 더한다)")
+        return 1 if (ext and en) else 0
     try:
         line, n = dist_line()
     except Exception as e:

@@ -1,0 +1,21 @@
+{
+ "판": "door-app-1",
+ "주소": "https://github.com/aalkka/Claude_Brain/releases/download/door-app-1/",
+ "파일": [
+  {
+   "이름": "brain-key.exe",
+   "크기": 169472,
+   "sha256": "0d0bfd13fd07391083e5d9ae241436c86d8f2ed60fadccde6c1de169bf7120ad"
+  },
+  {
+   "이름": "brain-inbox-menu.dll",
+   "크기": 174592,
+   "sha256": "f8fa4edcb549d810239f4a778aee3b26bf481a7f183b75c5b6ce78645059b24e"
+  },
+  {
+   "이름": "brain-inbox-menu.msix",
+   "크기": 21245,
+   "sha256": "16e1427bbaed59ca75a1017c5162e552381ce8acd2cfc3dedbbdf1121c749eaa"
+  }
+ ]
+}

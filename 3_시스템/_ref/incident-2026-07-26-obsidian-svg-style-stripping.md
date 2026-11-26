@@ -26,6 +26,3 @@ study-helper `illustrate`가 만든 인라인 `<svg>`(class + `<style>` 블록 �
 - Mermaid는 이 문제 없음(Obsidian 네이티브 처리) — 단순 도해는 Mermaid, 정밀·흐름 도해는 인라인-속성 SVG.
 
 관련: study-helper 모듈의 illustrate 스킬 · 해당 도해가 실린 학습 노트(배포판 미포함).
-
-> [!info]- 관련 노트 %%sl%%
-> [[incident-2026-07-27-obsidian-블록수식-연속-날것노출]]

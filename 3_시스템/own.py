@@ -340,7 +340,9 @@ def judge(procs=None, sess=None, prev=None, now=None):
         if o or k or e:
             rows.append({"pid": pid, "name": r["name"], "kind": k or (e or {}).get("kind", ""), "owner": (s or {}).get("name", "")[:24],
                          "owner_short": (s or {}).get("short", ""), "idle_h": idle_h, "core": core, "priv_mb": r["priv"] >> 20,
-                         "age_h": (now - r["start"]) / 3600, "rule": why[0] if why else "", "why": why[1] if why else ""})
+                         "age_h": (now - r["start"]) / 3600, "rule": why[0] if why else "", "why": why[1] if why else "",
+                         "keep": "" if why else ("시험 잠금 중" if locked else ("띄운 지 %.1f시간 < 문턱 %.1f시간" % ((now - r["start"]) / 3600, t_idle) if (k and s is None and (now - r["start"]) / 3600 <= t_idle)
+                                 else ("주인 %.1f시간 쉼 < 문턱 %.1fh" % (idle_h, t_idle) if (k and s is not None) else "해당 규칙 없음"))) + ("" if press else " · 압박 아님")})
         if why:
             kill.append((pid, why[0], why[1], r))
     for pid, s in sess.items():
@@ -410,6 +412,10 @@ def tick(dry=False):
                       "killed_mb": sum(d["priv_mb"] for d in done if d["ok"]), "owned": len(rows), "dry": dry,
                       "orphans": sum(1 for r in rows if r["kind"] and not r["owner"]),   # 주인 없는 시험 프로세스(하루 실측 «주인 없는 것 0»)
                       "on": info.get("on"), "held": len(held)}}
+    held_pids = {h[0] for h in held}
+    orph = [{"name": os.path.basename(r["name"]), "pid": r["pid"], "age_min": int(r["age_h"] * 60), "mb": r["priv_mb"],
+             "why_kept": ("규칙 꺼 둠(%s)" % r["rule"]) if r["pid"] in held_pids else (("끔 " + r["rule"]) if r["rule"] else r["keep"])}
+            for r in rows if r["kind"] and not r["owner"]][:5]
     tmp = sf + ".tmp"
     with open(tmp, "w", encoding="utf-8") as h:
         json.dump(st, h)
@@ -417,7 +423,7 @@ def tick(dry=False):
     if True:                                    # tick 마다 한 줄(하루 실측 = 남은 램·주인 붙은 수·끈 것 · 미리 보기는 dry.jsonl)
         with open(os.path.join(DIR, "dry.jsonl" if dry else "ticks.jsonl"), "a", encoding="utf-8") as h:
             h.write(json.dumps({**st["summary"], "would": [{k: d[k] for k in ("pid", "name", "rule", "why", "priv_mb", "ok")} for d in done],
-                                "commit_gb": round(info.get("commit", 0), 1)}, ensure_ascii=False) + "\n")
+                                "commit_gb": round(info.get("commit", 0), 1), "orphan_list": orph}, ensure_ascii=False) + "\n")
     return done, rows, info, st["summary"]
 
 

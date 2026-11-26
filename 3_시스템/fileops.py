@@ -1380,7 +1380,7 @@ def op_plan(ctx, path, apply):
     plan = load_json(path)
     ops = plan.get("ops", [])
     print("계획 %s · %d건%s" % (plan.get("title", os.path.basename(path)), len(ops), "" if apply else " (미리 보기 — 실행 = --apply)"))
-    ctx.dry = not apply
+    ctx.dry = ctx.dry or not apply      # 전역 --dry 가 --apply 보다 우선(11-23 --dry plan --apply 가 진짜로 돎)
     run_ops(ctx, ops, lenient=False)
 
 
@@ -1635,9 +1635,9 @@ def main(argv=None):
         elif c == "plan":
             op_plan(ctx, a.file, a.apply)
         elif c == "migrate":
-            op_migrate(ctx, a.apply, a.undo, a.from_dir)
+            op_migrate(ctx, a.apply and not a.dry, a.undo, a.from_dir)
         elif c == "update":
-            op_update(ctx, a.file, a.apply)
+            op_update(ctx, a.file, a.apply and not a.dry)
         elif c == "record":
             op_record(ctx, a.op, a.src, a.dst, a.trash, a.why)
         elif c == "log":

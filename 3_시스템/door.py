@@ -4,7 +4,9 @@
 왜: 받은함에 넣으려면 옵시디언을 켜고 끌어 넣어야 했고, 복사라 원래 파일을 또 지워야 했다 — 폴더에 직접 넣는 것과 다를 게 없었다.
 문 셋(우클릭 메뉴 · 단축키 · 탐색기 왼쪽 즐겨찾기)이 이 엔진 하나로 들어온다. 정리(inbox.py · 확신 높음만 제자리로)는 볼트가 켜져 있을 때만 한다
 (11-03 «볼트를 켜면 그때 · 예약 필요 없음») — 켜져 있으면 넣자마자 · 꺼져 있으면 받은함에서 기다렸다 brain-base 가 켤 때 sweep 을 부른다.
-우클릭·단축키·즐겨찾기 등록에 쓰는 작은 실행 파일(구동부)의 자리는 `3_시스템/door-app/`(바꾸려면 `DOOR_APP`)이다. 볼트 밖 빌더에서 만들고 서명 없는 실행 파일이라 배포판에는 없다. 없어도 put·list·recent·sweep·undo 는 돈다.
+우클릭·단축키의 작은 실행 파일(구동부 셋)은 `3_시스템/door-app/` 에 놓인다 — 서명 없는 실행 파일이라 저장소에는 싣지 않고 릴리스 첨부로 낸다(사용자 2026-11-26).
+없으면 `install`·`menu` 가 `door-app/release.json`(주소·크기·sha256 · 저장소에 실림)대로 받아, 적어 둔 값과 같을 때만 놓는다. 못 받으면 즐겨찾기만 넣고 끌어 넣기를 안내한다(실패 아님).
+`door.cfg`·`install-menu.log` 는 설치할 때 이 PC 값으로 쓰는 파일이라 git 밖이다.
 
   py -3 3_시스템/door.py put <경로...>      옮김(볼트가 켜져 있으면 바로 정리)
   py -3 3_시스템/door.py list <목록 파일>    우클릭·단축키가 부른다(줄마다 경로 · 읽고 지움)
@@ -12,10 +14,15 @@
   py -3 3_시스템/door.py sweep              받은함에 새로 든 것 정리 + 끝난 작업 비우기(brain-base 가 켤 때 · 켜진 동안 받은함에 새로 들 때)
   py -3 3_시스템/door.py undo <토큰>         알림의 되돌리기(원래 자리로)
   py -3 3_시스템/door.py install | remove | status   즐겨찾기·단축키·보내기·알림·Shift+우클릭 등록·해제·확인(지속 설정 — 사람이 승인)
+  py -3 3_시스템/door.py installed          이 볼트의 것이 등록됐나(종료 0 됨 · 1 안 됨 · 읽기만)
+  py -3 3_시스템/door.py menu [--remove]    탐색기 첫 우클릭 메뉴에도 넣기·빼기(윈도 관리자 확인 1번 — 사람이 «예»)
+  py -3 3_시스템/door.py state [--no-probe] 구동부 상태 한 줄: 깔림 / 받을 수 있음 / 못 받음(읽기만)
+  py -3 3_시스템/door.py relhash <폴더> <판 꼬리표> <주소> | relcheck   출시 쪽: release.json 다시 쓰기 · 올린 첨부가 표와 맞는지
 
 장부에는 «내려받기/이름»만 적는다(outside.py 와 같음). 원래 자리 절대 경로는 되돌리기 칸(`_index/door/undo` · git 밖 · 하루)에만 둔다.
 """
 import base64
+import hashlib
 import json
 import os
 import re
@@ -45,6 +52,8 @@ LOCK = os.path.join(OUT, "lock")
 LOG = os.path.join(OUT, "door.log")
 UNDO = os.path.join(OUT, "undo")
 APP = os.environ.get("DOOR_APP") or os.path.join(HERE, "door-app")
+REL = os.path.join(HERE, "door-app", "release.json")  # 릴리스 첨부 표(주소·크기·sha256) — 구동부가 없을 때 install 이 여기서 받는다
+DRIVERS = ("brain-key.exe", "brain-inbox-menu.dll", "brain-inbox-menu.msix")  # 앞 둘 = 단축키·Shift+우클릭 · 셋째 = 첫 우클릭 메뉴(menu)
 HOTKEY = "Ctrl+Alt+B"
 AUMID = "Claude_Brain.Door"
 CLSID = "{6F1D2C84-3B7A-4E95-A1C6-7D2E9B40F513}"
@@ -571,11 +580,135 @@ def pin_path():
     return os.path.normpath(roles.abs("inbox"))
 
 
+def release():
+    """릴리스 첨부 표(door-app/release.json · 저장소에 실림) — {"판", "주소", "파일": [{"이름", "크기", "sha256"}]} · 없으면 None."""
+    d = load(REL, None)
+    return d if isinstance(d, dict) and isinstance(d.get("파일"), list) else None
+
+
+def file_sha(p):
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for b in iter(lambda: f.read(1 << 16), b""):
+            h.update(b)
+    return h.hexdigest()
+
+
+def fetch(names, into=None, force=False):
+    """없는 구동부를 릴리스 첨부에서 받는다 → (상태, 글).
+    ok = 다 있다(이미 있던 것은 다시 받지 않고 건드리지 않는다) · none = 받을 표가 없다 · offline = 못 받았다(네트워크) · bad = 받았는데 적어 둔 값과 다르다(지웠다).
+    받은 파일은 크기와 sha256 이 표와 같을 때만 제자리에 놓는다 — 서명 없는 실행 파일이라 저장소가 적어 둔 값이 유일한 확인이다."""
+    import urllib.error
+    import urllib.request
+    into = into or APP
+    need = [n for n in names if force or not os.path.exists(os.path.join(into, n))]
+    if not need:
+        return "ok", ""
+    rel = release()
+    table = {f.get("이름"): f for f in (rel or {}).get("파일", [])}
+    if not rel or any(n not in table for n in need):
+        return "none", "구동부 없음(%s) — 받을 곳을 적은 표(door-app/release.json)에도 없다" % ", ".join(need)
+    base = (os.environ.get("DOOR_RELEASE") or rel.get("주소") or "").rstrip("/") + "/"
+    os.makedirs(into, exist_ok=True)
+    for n in need:
+        tmp = os.path.join(into, n + ".part")
+        try:
+            with urllib.request.urlopen(base + n, timeout=30) as r, open(tmp, "wb") as f:
+                shutil.copyfileobj(r, f)
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            return "offline", "구동부를 못 받음(%s: %s)" % (n, reason_net(e))
+        size, sha = os.path.getsize(tmp), file_sha(tmp)
+        want = table[n]
+        if size != want.get("크기") or sha != want.get("sha256"):
+            os.remove(tmp)
+            return "bad", "받은 %s 이 적어 둔 값과 다르다(크기 %s ↔ %s · sha256 %s… ↔ %s…) — 지웠고 깔지 않는다" % (
+                n, size, want.get("크기"), sha[:12], str(want.get("sha256"))[:12])
+        os.replace(tmp, os.path.join(into, n))
+        log("받음 %s %s %s" % (n, rel.get("판"), sha[:12]))
+    return "ok", "받음: %s(%s · sha256 확인)" % (", ".join(need), rel.get("판"))
+
+
+def reason_net(e):
+    return str(getattr(e, "reason", e))[:120]
+
+
+LATER = "우클릭·단축키는 나중에(네트워크가 될 때 `py -3 3_시스템/door.py install` 다시) — 지금은 탐색기 왼쪽 «받은함» 즐겨찾기나 받은함 폴더로 끌어 넣으면 같다"
+
+
+def pin_only():
+    """구동부 없이도 되는 것 — 탐색기 왼쪽 즐겨찾기(받은함 진짜 자리)."""
+    if os.environ.get("DOOR_NO_PIN"):  # 시험: 진짜 탐색기를 안 건드린다
+        return None
+    return powershell("""
+$sh=New-Object -ComObject Shell.Application
+$pin=%(pin)s
+$qa=$sh.Namespace('shell:::{679f85cb-0220-4080-b29b-5540cc05aab6}')
+if(-not ($qa.Items() | Where-Object { $_.Path -eq $pin })){ $sh.Namespace($pin).Self.InvokeVerb('pintohome') }
+""" % {"pin": lit(pin_path())})
+
+
+def state(probe=True):
+    """받는 문의 세 상태 한 줄(바깥 설정 점검·안내가 읽는다 · 읽기만): 깔림 / 받을 수 있음 / 못 받음."""
+    have = all(os.path.exists(os.path.join(APP, n)) for n in DRIVERS[:2])
+    if have:
+        print("구동부 있음 — " + ("깔림" if installed(quiet=True) == 0 else "아직 등록 전(py -3 3_시스템/door.py install)"))
+        return 0
+    rel = release()
+    if not rel:
+        print("못 받음 — 구동부도, 받을 곳을 적은 표도 없다 · 받은함 폴더로 끌어 넣기는 된다")
+        return 1
+    if probe:
+        import urllib.error
+        import urllib.request
+        base = (os.environ.get("DOOR_RELEASE") or rel.get("주소") or "").rstrip("/") + "/"
+        try:
+            urllib.request.urlopen(urllib.request.Request(base + DRIVERS[0], method="HEAD"), timeout=8).close()
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            print("못 받음(%s) — %s" % (reason_net(e), LATER))
+            return 1
+    print("받을 수 있음 — `py -3 3_시스템/door.py install` 이 릴리스 첨부(%s)에서 받아 sha256 을 확인하고 깐다" % rel.get("판"))
+    return 0
+
+
+def relhash(folder, tag, url):
+    """출시 쪽: 그 폴더의 구동부 셋으로 release.json 을 다시 쓴다(판 꼬리표·주소·크기·sha256)."""
+    files = []
+    for n in DRIVERS:
+        p = os.path.join(folder, n)
+        files.append({"이름": n, "크기": os.path.getsize(p), "sha256": file_sha(p)})
+    with open(REL, "w", encoding="utf-8", newline="\n") as f:
+        json.dump({"판": tag, "주소": url.rstrip("/") + "/", "파일": files}, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    for x in files:
+        print("%s %d %s" % (x["이름"], x["크기"], x["sha256"]))
+    return 0
+
+
+def relcheck():
+    """출시 쪽: release.json 이 가리키는 첨부를 실제로 받아 크기·sha256 이 맞는지(임시 폴더 · 볼트 것은 안 건드림) — 종료 0 = 맞음."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        st, msg = fetch(DRIVERS, into=td, force=True)
+    rel = release() or {}
+    print("%s — %s %s" % ("맞음" if st == "ok" else "안 맞음(%s)" % st, rel.get("판"), msg))
+    return 0 if st == "ok" else 1
+
+
 def install():
     exe = os.path.join(APP, "brain-key.exe")
-    if not os.path.exists(exe):
-        print("없음: %s — 이 판에는 실행 파일이 없다. 받은함 폴더에 직접 넣어도 같다" % exe)
+    st, msg = fetch(DRIVERS[:2])
+    if msg:
+        print(msg)
+    if st == "bad":
         return 1
+    if st != "ok":
+        # 구동부를 못 받았다 — 실패로 끝내지 않는다: 구동부 없이 되는 즐겨찾기만 넣고 바르게 안내한다
+        pin_only()
+        mark_seen(names_in_inbox())
+        print(LATER)
+        return 0
     write_cfg()
     set_keys(True)
     ps = """
@@ -632,6 +765,49 @@ $l=Join-Path ([Environment]::GetFolderPath('Programs')) '외부뇌 받은함.lnk
     return 0
 
 
+def installed(quiet=False):
+    """이 볼트의 받는 문이 등록됐나(바깥 설정 점검이 부름 · 읽기만) — 종료 0 = 됨 · 1 = 안 됨.
+    됨 = 구동부 파일이 있고, 이 사용자 레지스트리의 우클릭 처리기가 «이 볼트»의 구동부를 가리킨다(다른 볼트가 등록한 것은 안 됨으로 센다)."""
+    import winreg as w
+    say = (lambda s: None) if quiet else print
+    dll = os.path.join(APP, "brain-inbox-menu.dll")
+    if not (os.path.exists(os.path.join(APP, "brain-key.exe")) and os.path.exists(dll)):
+        say("안 됨 — 구동부 없음(door.py install 이 릴리스 첨부에서 받는다 · 받을 수 있나 = door.py state) " + APP)
+        return 1
+    try:
+        with w.OpenKey(w.HKEY_CURRENT_USER, "Software\\Classes\\CLSID\\" + CLSID + "\\InprocServer32") as k:
+            reg = w.QueryValueEx(k, "")[0]
+    except OSError:
+        say("안 됨 — 등록 없음(door.py install)")
+        return 1
+    if os.path.normcase(os.path.normpath(reg)) != os.path.normcase(os.path.normpath(dll)):
+        say("안 됨 — 다른 볼트가 등록함 " + reg)
+        return 1
+    say("됨")
+    return 0
+
+
+def menu(drop=False):
+    """탐색기 첫 우클릭 메뉴(Shift 없이 «외부뇌 받은함으로») — 윈도가 관리자 확인을 한 번 묻는다(사람이 «예»). 결과 = door-app/install-menu.log."""
+    ps1 = os.path.join(APP, "install-menu.ps1")
+    if not os.path.exists(ps1):
+        print("없음: %s" % ps1)
+        return 1
+    if not drop:
+        st, msg = fetch(DRIVERS)
+        if msg:
+            print(msg)
+        if st == "bad":
+            return 1
+        if st != "ok":
+            print(LATER)
+            return 0
+    r = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps1] + (["-Remove"] if drop else []),
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    print((r.stdout or r.stderr).strip()[-600:])
+    return status()
+
+
 def main(argv=None):
     a = list(sys.argv[1:] if argv is None else argv)
     cmd = a.pop(0) if a else ""
@@ -666,6 +842,16 @@ def main(argv=None):
             return remove()
         if cmd == "status":
             return status()
+        if cmd == "installed":
+            return installed()
+        if cmd == "state":
+            return state("--no-probe" not in a)
+        if cmd == "relhash":
+            return relhash(a[0], a[1], a[2])
+        if cmd == "relcheck":
+            return relcheck()
+        if cmd == "menu":
+            return menu("--remove" in a)
     except Busy:
         toast("잠시 뒤 다시", "다른 정리가 도는 중")
         return 1

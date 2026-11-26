@@ -60,6 +60,3 @@ $s = Get-Content "$env:USERPROFILE\.claude\settings.json" -Raw -Encoding UTF8 | 
 | 대응 | 태스크 스코프 승인 사전 등록 | 사용자 직접 수행 |
 
 **"권한이 없다"를 한 덩어리로 다루면 대응을 틀린다.**
-
-> [!info]- 관련 노트 %%sl%%
-> [[incident-2026-07-30-조건부-instruction-로딩-미작동]]

@@ -1,6 +1,8 @@
 """볼트 밖 설정 — 이 볼트가 PC 에 기대는 설정(작업 스케줄러·레지스트리·브라우저·앱 설정·설치 프로그램)을 재고 안내한다(LLM 0).
 
   py -3 .claude/skills/dist-sync/scripts/external.py check [--json] [--all]   # 이 PC 에서 됐나 · 안 된 것의 할 일(Claude 명령 또는 사람 단계)
+  py -3 .claude/skills/dist-sync/scripts/external.py view                    # 기본 세팅 화면(brain-base)이 읽는 한 벌 — 줄 + 사람 확인 + 새 줄 + 승인 · 늘 종료 0
+  py -3 .claude/skills/dist-sync/scripts/external.py did <id> [--undo]       # 화면 «했어요» — 못 재는 줄을 사람이 했다고 적음(잰 «됨»과 갈라 둠)
   py -3 .claude/skills/dist-sync/scripts/external.py scan [--root 경로]…      # 추적: 코어가 볼트 밖을 건드리는데 목록에 없는 곳
   py -3 .claude/skills/dist-sync/scripts/external.py scan --module <id>       # 추적: 그 모듈 대본이 볼트 밖을 건드리는데 모듈 목록에 없는 곳
 
@@ -151,7 +153,32 @@ def row(it, ok):
         eye = eye or "기기 보고가 없음 — 먼저 그 기기를 짝짓고 앱을 한 번 연다"
     return {"id": it["id"], "이름": it["이름"], "필수": it.get("필수", False), "됨": ok,
             "누가": "Claude" if it.get("하기") else "사람", "하기": it.get("하기"), "안내": it.get("안내", []),
-            "까닭": it.get("까닭", ""), "화면 확인": eye, "기기": it.get("기기", "pc"), "묶음": it.get("묶음"), "모듈": it.get("모듈")}
+            "까닭": it.get("까닭", ""), "화면 확인": eye, "기기": it.get("기기", "pc"), "묶음": it.get("묶음"), "모듈": it.get("모듈"),
+            "누름": it.get("누름", [])}
+
+
+def click_text(c):
+    """누름 칸 하나 → «앱 › 화면 › «누를 글»» · 못 잰 것은 «확인 필요: …»(지어내지 않음)."""
+    path = " › ".join([c.get("앱", "")] + list(c.get("길") or []))
+    if c.get("누름") is None or c.get("확인 필요"):
+        return "%s%s  [확인 필요: %s]" % (path, " › «%s»" % c["누름"] if c.get("누름") else "", c.get("확인 필요") or "글 안 잼")
+    return "%s › «%s»" % (path, c["누름"])
+
+
+def click_bad(it):
+    """사람 단계가 있는 줄의 누름 칸 꼴 — 칸마다 앱·근거 · 못 잰 것은 «확인 필요» (잰 근거를 남기기 · 11-21 사용자 «실제로 눌러야 하는 것과 안내가 달라서»)."""
+    out = []
+    if it.get("하기") or it.get("할 일 없음") or len(it.get("안내", [])) < 2:
+        return out
+    cs = it.get("누름")
+    if not cs:
+        return ["사람 단계가 있는데 누름 칸(앱 › 화면 › 누를 글 · 근거)이 없음"]
+    for i, c in enumerate(cs, 1):
+        if not c.get("앱") or not c.get("근거"):
+            out.append("누름 %d: 앱·근거 없음" % i)
+        if c.get("누름") is None and not c.get("확인 필요"):
+            out.append("누름 %d: 누를 글이 없는데 «확인 필요» 까닭도 없음" % i)
+    return out
 
 
 def check(root=VAULT, everything=False):
@@ -205,6 +232,8 @@ def check_text(rows):
             L.append("   Claude 가 할 수 있음(사람 승인 뒤): " + r["하기"])
         for i, s in enumerate(r["안내"], 1):
             L.append("   %d. %s" % (i, s))
+        for c in r.get("누름") or []:
+            L.append("   누름: " + click_text(c))
     if todo or eye:
         L.append("안내 방법: 한 번에 한 단계만 말하고, 사람이 «했어요» 하면 확인 명령으로 재고 다음 단계로. 선택 항목은 먼저 쓸지 묻는다.")
     return "\n".join(L)
@@ -251,6 +280,7 @@ def scan(roots, items=None, layer=None):
             bad.append((it["id"], "확인 명령도 화면 확인 말도 없음"))
         if not it.get("하기") and len(it.get("안내", [])) < 2 and not it.get("할 일 없음"):
             bad.append((it["id"], "Claude 명령도 사람 단계(2단계 이상)도 없음"))
+        bad += [(it["id"], w) for w in click_bad(it)]
     return gaps, bad
 
 
@@ -308,6 +338,7 @@ def scan_module(mid, root=VAULT):
             bad.append((it["id"], "재기가 %s 중 하나가 아님" % "·".join(MEASURES)))
         if not it.get("하기") and len(it.get("안내", [])) < 2 and not it.get("할 일 없음"):
             bad.append((it["id"], "Claude 명령도 사람 단계(2단계 이상)도 없음"))
+        bad += [(it["id"], w) for w in click_bad(it)]
     return gaps, bad
 
 
@@ -347,6 +378,63 @@ def health():
     return "볼트 밖 설정 안 됨 %d(%s) — Claude 에게 «바깥 설정 점검»" % (len(miss), miss[0] + (" 외" if len(miss) > 1 else "")), len(miss)
 
 
+HUMAN = os.path.join(VAULT, "3_시스템", "_index", "dist-sync", "setup-human.json")  # mf:allow-path  («했어요» 기록 · 개인 층)
+SEEN = os.path.join(VAULT, "3_시스템", "_index", "dist-sync", "setup-seen.json")    # mf:allow-path  (줄을 처음 본 때 · 업데이트로 생긴 줄 = 7일 «새»)
+NEW_DAYS = 7
+ASK = re.compile(r"승인|winget|pip install|npm |install|Register-|schtasks|--install")
+
+
+def _read(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return {}
+
+
+def _write(path, d):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+        json.dump(d, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def view(root=VAULT, now=None, human_path=None, seen_path=None):
+    """기본 세팅 화면 한 벌. 줄마다 check 의 칸 + «했어요»(사람 확인 때 · 잰 «됨»은 바꾸지 않음) + «새»(업데이트로 생김 · 7일)
+    + «승인»(Claude 가 하되 내려받기·예약이라 사람 승인 = 폰 승인 길). 처음 연 볼트는 모두 바탕으로 적고 «새»를 안 붙인다."""
+    import time
+    now = now or time.time()
+    human_path, seen_path = human_path or HUMAN, seen_path or SEEN
+    rows = check(root)
+    human = _read(human_path)
+    first = not os.path.exists(seen_path)
+    seen = _read(seen_path)
+    grew = False
+    for r in rows:
+        if r["id"] not in seen:
+            seen[r["id"]] = 0 if first else now
+            grew = True
+        r["새"] = bool(seen[r["id"]]) and now - seen[r["id"]] < NEW_DAYS * 86400
+        r["했어요"] = human.get(r["id"]) if r["됨"] is not True else None
+        r["승인"] = bool(r["하기"] and ASK.search(r["하기"]))
+    if grew:
+        _write(seen_path, seen)
+    return {"at": now, "rows": rows}
+
+
+def did(rid, undo=False, human_path=None):
+    import time
+    human_path = human_path or HUMAN
+    d = _read(human_path)
+    if undo:
+        d.pop(rid, None)
+    else:
+        d[rid] = time.strftime("%Y-%m-%d %H:%M")
+    _write(human_path, d)
+    return d.get(rid)
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -357,6 +445,10 @@ def main():
     c.add_argument("--all", action="store_true", help="이 볼트에 없는 기능의 항목도")
     c.add_argument("--vault", default=VAULT, help="잴 볼트(기본 = 이 대본이 든 볼트)")
     c.add_argument("--save", help="결과를 이 JSON 에 담는다(건강 줄이 하루 한 번 따로 부른다)")
+    sp.add_parser("view")
+    d = sp.add_parser("did")
+    d.add_argument("id")
+    d.add_argument("--undo", action="store_true")
     s = sp.add_parser("scan")
     s.add_argument("--root", action="append", help="잴 저장소(여럿 가능 · 기본 = 이 볼트)")
     s.add_argument("--module", help="그 모듈 폴더 대본만(모듈 항목 «종류»가 덮나)")
@@ -370,6 +462,12 @@ def main():
             return 0
         print(json.dumps(rows, ensure_ascii=False, indent=1) if a.json else check_text(rows))
         return 1 if any(r["됨"] is False and r["필수"] for r in rows) else 0
+    if a.cmd == "view":
+        print(json.dumps(view(), ensure_ascii=False))
+        return 0
+    if a.cmd == "did":
+        print(json.dumps({"id": a.id, "했어요": did(a.id, a.undo)}, ensure_ascii=False))
+        return 0
     if a.module:
         gaps, bad = scan_module(a.module)
     else:

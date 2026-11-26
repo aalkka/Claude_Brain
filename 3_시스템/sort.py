@@ -825,6 +825,15 @@ def _run(only, dry, now, learn_dry=None, answers=None, learn=True):
             h['맞은'][rk] = h['맞은'].get(rk, 0) + 1
             h['갈래'].setdefault(rk, {})[out['갈래']] = h['갈래'].get(rk, {}).get(out['갈래'], 0) + 1
             cnt[{'memory': '기억', 'rule': '규칙', 'stats': '통계', 'unknown': '모르면', 'asked': '답'}[kind]] += 1
+            redo = getattr(ad, 'redo', None) and ad.redo(it)   # 판정은 그대로 두고 다시 뽑기 대기에도(원문이 고쳐짐 · 11-21 · 옛 extract 의 again 과 같음)
+            if redo and {**LADDER, **(s.get('사다리') or {})}['claude'] in ('버튼', '자동') \
+                    and not (getattr(ad, 'skip_pending', None) and ad.skip_pending(it)):
+                was = st['대기'].get(it['id']) or {}
+                pend[it['id']] = {'까닭': redo, '특징': (s.get('특징') or {}).get('claude'), '글자': it.get('글자', 0), '지문': out.get('지문'),
+                                  '시각': was['시각'] if was.get('지문') == out.get('지문') and was.get('시각') else now,
+                                  '자리': place_of(s, it), '판정 있음': True}
+                h['대기'] += 1
+                cnt['대기'] += 1
             if kind != 'memory' and changed(old.get(it['id']), out):
                 ledger.append(ledger_line(out))
                 hs = handoff(old.get(it['id']), out, now)
