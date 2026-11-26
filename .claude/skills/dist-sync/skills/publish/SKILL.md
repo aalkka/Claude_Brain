@@ -93,6 +93,22 @@ py -3 .claude/skills/dist-sync/scripts/dist-diff.py --a . --b <배포판 worktre
 
 README 의 받는 명령은 태그를 붙이지 않는다(기본 가지 = 최신). 태그를 새로 찍어도 README 에 적지 않는다 — 옛 태그를 받게 적어 두면 처음 받는 사람이 옛 판을 깐다(2026-11-26 · 72 커밋 뒤 판을 받게 돼 있었다).
 
+### 5-2. 릴리스 첨부 — 실행 파일은 저장소에 싣지 않는다
+
+받는 문 구동부 셋(`brain-key.exe` · `brain-inbox-menu.dll` · `brain-inbox-menu.msix`)은 서명 없는 실행 파일이라 저장소 밖이다(`.gitignore` · 층 = 개인). 저장소에는 해시 표 `3_시스템/door-app/release.json`(판 꼬리표 · 주소 · 크기 · sha256)만 싣고, 받는 쪽 `door.py install` 이 표와 같을 때만 놓는다.
+
+구동부를 다시 빌드했을 때만 한다(안 바뀌었으면 건너뛴다):
+
+```bash
+py -3 <첨부 검사 대본> <구동부 폴더>                      # 글자열 유출(사용자 경로·pdb·이름·기기) 0 · 게시자 = CN=BrainInbox
+py -3 3_시스템/door.py relhash <구동부 폴더> door-app-<N> <릴리스 내려받기 주소>   # release.json 다시 씀 → 볼트 커밋 → 배포판에 반영
+gh release create door-app-<N> <구동부 폴더>/brain-key.exe <구동부 폴더>/brain-inbox-menu.dll <구동부 폴더>/brain-inbox-menu.msix --repo <공개 저장소> --title "받는 문 구동부 <N>" --notes "서명 없는 실행 파일 — door.py 가 sha256 을 확인한다"   # 사람 승인
+```
+
+판 꼬리표는 올릴 때마다 새 번호다 — 같은 꼬리표의 첨부를 바꿔 올리면 이미 받은 표와 어긋나 옛 판 사용자의 설치가 거절된다. 올린 뒤 `py -3 3_시스템/door.py relcheck` 가 «맞음»(종료 0)이어야 push 한다 — 표가 가리키는 첨부를 실제로 받아 크기·sha256 을 견준다. 표만 올라가고 첨부가 없으면 새 설치의 `door.py state` 가 «못 받음»이다.
+
+글 아닌 파일(그림·wasm·번들)을 배포판에 놓을 때는 바이트 그대로 복사한다 — 줄끝을 바꾸는 길로 지나가면 깨진다(2026-11-26 · 새로 실은 실행 파일·그림 넷이 CRLF→LF 로 깨진 채 후보에 들어갔다 · 글자열 검사는 통과했다). 놓은 뒤 볼트 파일과 sha256 이 같은지 본다.
+
 ### 6. 검증 — 스크립트로 다시 센다
 
 **새 설치로 잰다(판마다 한 번).** 배포판 후보를 빈 폴더에 `git clone` 해 README 의 설치 순서를 그대로 가고, 그 볼트에서 `brain.py doctor` · `external.py check` · 튜토리얼(사람 입력 재생)을 돌린다. 시험 볼트를 손으로 조립해 돌리는 시험은 «받은 그대로»에 없는 폴더를 못 본다.

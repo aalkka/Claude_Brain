@@ -167,6 +167,7 @@
    "3_시스템/_eval/autocommit_check.py",
    "3_시스템/_eval/mem_check.py",
    "3_시스템/_eval/door_check.py",
+   "3_시스템/_eval/door_release_check.py",
    "3_시스템/_eval/follow_check.py",
    "3_시스템/_eval/hardpaths.py",
    "3_시스템/_eval/outside_check.py",
