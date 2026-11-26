@@ -14,6 +14,7 @@
    {"이름": "가격 조회 조리법", "자리": ["3_시스템/collect/price/*.json"], "길": "스킬 sort(새 감시 의뢰 · 가격) — 칸 = collect_price.py 머리말"},
    {"이름": "가격 조회 키", "자리": ["3_시스템/collect-price.local.json"], "길": "collect_price.py 머리말대로 무료 키를 적음(없으면 조용히 «키 없음»)"},
    {"이름": "되찾기 이 PC 값(시험 AVD·시험 잠금)", "자리": ["3_시스템/own.local.json"], "길": "py -3 3_시스템/own.py local (없으면 시험 AVD 없음·기본 잠금으로 돎)"},
+   {"이름": "폰 승인 키 목록", "자리": ["3_시스템/hooks/approve/keys.txt"], "길": "py -3 3_시스템/hooks/approve/approve.py register (손발 앱이 보낸 등록 요청 → 짝 숫자 6자리 → 콘솔 y) — 없으면 폰 승인은 꺼진 채(PC 콘솔 y 길만)"},
    {"이름": "자동 재시작 설정", "자리": ["3_시스템/restart.local.json"], "길": "restart.py 머리말 DEFAULTS 의 바꿀 칸만 적음(없으면 기본 시각 05:00·마감 06:30) · 켜기 = 바깥 설정 «자동 재시작 예약»(예약이 없으면 안 돎)"}
   ]
  },
@@ -297,6 +298,10 @@
    "3_시스템/ink/sdocx-dump.cjs",
    "3_시스템/inkrender.py",
    "3_시스템/viewlook.py"
+  ],
+  "본체 · 폰 승인 적용기": [
+   "3_시스템/hooks/approve/approve.py",
+   "3_시스템/hooks/approve/used/.gitignore"
   ],
   "본체 · 받는 문 구동부": [
    "3_시스템/door-app/inbox.png",
