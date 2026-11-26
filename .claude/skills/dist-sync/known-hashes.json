@@ -32,12 +32,14 @@
 },
 ".claude/skills/canvas/scripts/canvas-check.py": {
 "60375b56dbb3": "a9fb3b3b064c7bec",
-"6449e12da1b4": "251f2ca833f7bf51"
+"6449e12da1b4": "251f2ca833f7bf51",
+"f5508de42bd8": "63ac7dd99275184b"
 },
 ".claude/skills/collect_desk/.claude-plugin/plugin.json": {
 "5ced40d0c1c5": "492ede645cb67584"
 },
 ".claude/skills/collect_desk/scripts/collect_desk.py": {
+"05b98a2a2bef": "3ad93db8ee1f2a16",
 "2679ecd411cf": "2da29fb18fb4c145",
 "3e875d8d8faf": "1d5122a857185535",
 "47eba9e0e411": "3dca320f3c0b37f5",
@@ -135,6 +137,7 @@
 "650ccef264e6": "92ec18fdf6deec41",
 "7527303b95a3": "64c6abd930d7e650",
 "7dc86662f1a4": "a2099a62e0116e73",
+"7eb7ef6bf43b": "1e4f52d258ca5a7b",
 "9cfed26a59c0": "1685d0f6f09b25b2",
 "ae54158f57bc": "c3ba73e538a60059",
 "b74873a745c3": "53f6adaacd9737c3",
@@ -202,12 +205,14 @@
 },
 ".claude/skills/dist-sync/scripts/doctor.py": {
 "36fe5fb4a9c1": "657ccb83b04688e6",
+"6050f59e38a8": "cf2650cc269d9c09",
 "871ab9bd4e31": "a25d1bd51060b137",
 "b78ee88c3022": "e6457bfdbc634088"
 },
 ".claude/skills/dist-sync/scripts/external.py": {
 "588d5be321c7": "288d10e10fa1fade",
 "92cc8ee90a63": "bc0dcea1fa6a1498",
+"beaf20a25a0e": "17bc89772321adc5",
 "ccbd497e209d": "d833c50da78890bb",
 "fa70db9bbb9a": "037325ab0cd6630f"
 },
@@ -461,6 +466,7 @@
 "05262b970ea0": "15fe096f281f7132",
 "1c246b209275": "38e5f7756d0b4028",
 "26058fadcb04": "b5140865dce79bdf",
+"3a3af8d5de84": "5fcb691e2b60b293",
 "742154106af7": "4935e72b5b1b62c1",
 "8db3a06dfc6b": "1953f05e6a5bdaf1",
 "8f1b6ea3c9d6": "6fadf17b3568cbb8",
@@ -982,6 +988,7 @@
 "ab4ba7706504": "fa09f8b00ccda9ee"
 },
 "3_시스템/autocommit.py": {
+"a85ce192dead": "bd8ca8d891134c5d",
 "b52041f87c26": "5ede3d0a97f39609"
 },
 "3_시스템/brain.py": {
@@ -998,6 +1005,7 @@
 "9424530e1016": "f9e61d41c32b3986"
 },
 "3_시스템/claude_login.py": {
+"9f5da827f581": "03f88f869a752fbb",
 "dd55fc49c513": "1d7dd344ec4250cd"
 },
 "3_시스템/cleanup.py": {
@@ -1165,6 +1173,7 @@
 "8c653d6b0477": "85d956c62b5f9ac5",
 "91a00a384791": "c6849edd8801ef49",
 "c95b7ecdeb6b": "a5518a0e5ee31085",
+"d8fcb9b8c013": "8029f51ad3884168",
 "d9cc9f51b564": "edffe2244d77710e"
 },
 "3_시스템/filter-learn.py": {
@@ -1339,6 +1348,7 @@
 "ca8f8d63c278": "022d1cf02857256a"
 },
 "3_시스템/hwlayout.py": {
+"a3a0fbe66500": "341564cb7ccc5004",
 "abf9de6879d5": "f62a71e53776b737"
 },
 "3_시스템/inbox.py": {
@@ -1360,6 +1370,7 @@
 "ef2b18c3639e": "ef4fd74a7cd6b7a2"
 },
 "3_시스템/ingest_vision.py": {
+"1d62d8a9ab7b": "b089c7beb6386c94",
 "2f24ed4eeab2": "ab167d79aa084b62",
 "308f20e410c1": "1aa5be67c2629ab0",
 "77790c1bd07f": "9e9931708e05202d",
@@ -1375,7 +1386,8 @@
 "de1bdcf42618": "27a52e4052c5e436"
 },
 "3_시스템/inkrender.py": {
-"0d90bd6d5958": "d83d6954375c2c10"
+"0d90bd6d5958": "d83d6954375c2c10",
+"ae3387524447": "06c25d11f1b67855"
 },
 "3_시스템/mdtable.py": {
 "9226acb7ebcf": "6e5b0229ece11670",
@@ -1389,6 +1401,7 @@
 "e1ac5ff2cb97": "1063f9f12333aa2c"
 },
 "3_시스템/moc.py": {
+"031c7eeef819": "8c2be2b5ece80456",
 "5795de089e8e": "7807fee8d4945047"
 },
 "3_시스템/module_ship.py": {
@@ -1438,7 +1451,8 @@
 "3_시스템/own.py": {
 "0e9c1f71104b": "4299eb38d20e1297",
 "5133f87bdbf1": "e1efc0f736c2a98b",
-"9be4adb209e5": "0189167dc23066b7"
+"9be4adb209e5": "0189167dc23066b7",
+"cf75c5e82ed0": "ed542c7a309cf0e7"
 },
 "3_시스템/props-sync.py": {
 "b46be639a4c8": "920206095fc17196"
@@ -1455,6 +1469,7 @@
 "64286b13752c": "998bbba3d867b82f"
 },
 "3_시스템/restart.py": {
+"23d314e24bcd": "308fac584587b835",
 "a2c832443ed6": "2e59bcf00874a236"
 },
 "3_시스템/restructure.py": {
@@ -1516,6 +1531,7 @@
 "6d70b3e712ee": "47bbe4a1389272d6"
 },
 "3_시스템/session-stub.py": {
+"1b0270a5fc65": "5336cc37368920b0",
 "1b83cb088373": "0748ea99db692b60",
 "40bbae820ee0": "c4bda10756a87c90",
 "4a76fe3549ed": "10851752e5c99f72",
@@ -1570,6 +1586,7 @@
 "d84483b32068": "064dd0c521283248"
 },
 "3_시스템/skillstat.py": {
+"352ed5428036": "62fa31380fa595d8",
 "af45cc96281f": "605951d2a688adcd"
 },
 "3_시스템/sort-examples/태그/사전.json": {
@@ -1689,7 +1706,8 @@
 "a4f6f5f54fd6": "7db5ed6b5dedbac3"
 },
 "3_시스템/viewlook.py": {
-"0e38f49a1290": "d1f7ce12fa067323"
+"0e38f49a1290": "d1f7ce12fa067323",
+"7d9845df4ca3": "9a73586cc0f80920"
 },
 "3_시스템/views.json": {
 "b6eb5663d0ab": "a82f6f3f85907e1e",
@@ -1712,6 +1730,7 @@
 },
 "3_시스템/weekly.py": {
 "74a113e0fc4c": "9d808a62df85eec2",
+"9fca9ba90014": "750c8a2223cce194",
 "df0d8c674abb": "a5d2832635922875",
 "f2a6797c4219": "577c2910d1aa51a6"
 },
@@ -1726,6 +1745,7 @@
 },
 "3_시스템/work.py": {
 "3c4dad2397ba": "48c9ff24ae29c68a",
+"52b530b776ef": "a8164d515ac591df",
 "a109dd83d50d": "01f22bf013ec63a8",
 "bd5f346786f9": "117d875f03230cd1",
 "d43480f1a156": "b944c9391d8fa076",
@@ -1842,6 +1862,7 @@
 "4239e0ef0b13": "8887b254b1cc340a",
 "472a3d8c8578": "3f98bae7ca7318b6",
 "534a65747b42": "858cd722864c017d",
+"633bbaf922ab": "c2e31ae738d021e5",
 "6426aa488e15": "fc18d7a0916e238e",
 "7112c76a6292": "b87da0fb4cb34c31",
 "7334d2716038": "d8f0922a3a13d803",
@@ -1852,6 +1873,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "aae0e8d97d39",
+"rev": "5ca57d9639f5",
 "schema": 1
 }
