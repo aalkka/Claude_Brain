@@ -21,6 +21,7 @@ put("0_작업/과목/보고서.pdf", b"PDF-A", age_days=40)          # 제출된
 put("0_작업/과목/새 보고서.pdf", b"PDF-B")
 put("1_수집/학교/과목/제출/새 보고서.pdf", b"PDF-B")          # 작업 쪽이 갓 만든 것 → 아직
 put("1_수집/학교/과목/강의자료/a.pdf", b"PDF-C")
+time.sleep(0.05)    # «나중 것» = 만든 시각 — 윈도 시계 눈금(약 15ms) 안에 둘을 만들면 같은 시각이 돼 남길 것이 흔들린다(11-27 9/11)
 put("1_수집/학교/과목/강의자료/a 사본.pdf", b"PDF-C")          # 원본끼리 사본 → 후보(나중 것)
 put("1_수집/_색인/학교/과목/강의자료/a.pdf.색인.md", b"")       # 색인 칸 = 기계 → 안 봄
 put("0_작업/과목/빈.txt", b"")                                  # 빈 파일 → 후보
@@ -67,3 +68,4 @@ gone = lambda r_: not os.path.exists(os.path.join(V, *r_.split("/")))
 ok("승인 뒤 적용 = 후보만 휴지통", a.returncode == 0 and gone("1_수집/배움/옛과목/강의자료") and gone(ARC + "/archive/1_수집/배움/학교공지/장학/옛글.md") and gone("2_지식/분야/안 쓰는 그림.png") and not gone("1_수집/배움/옛과목/과제/z.pdf") and not gone("1_수집/배움/새과목/강의자료/n.pdf") and not gone("2_지식/분야/쓰는 그림.png"), a.stdout[-300:] + a.stderr[-200:])
 print("%d/%d" % (sum(res), len(res)))
 shutil.rmtree(root, ignore_errors=True)
+sys.exit(0 if all(res) else 1)      # 실패를 종료 코드로도(시험 묶음이 종료 코드로 가른다)
