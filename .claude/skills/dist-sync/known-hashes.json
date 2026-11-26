@@ -53,6 +53,7 @@
 "bb230506d617": "1dae8b9d4b02fcb6",
 "d2277ce29d57": "a629e58dfba34cfb",
 "d92519e02ca4": "6a33c47287ae6289",
+"d95d1bab6ed1": "619af3e67a16702e",
 "d97c8afd49fc": "2a2c73f8227f666f",
 "dbe9a572e7b3": "11579d3705dd3a80",
 "e3c8352f90c9": "e26d1fcb5eac08fe",
@@ -176,6 +177,7 @@
 "2850f5376704": "9034358635ca9611",
 "4de506ccb99f": "c7c2dcca5cf95dc1",
 "5354177f4ee7": "785d1723d014c665",
+"53f385250367": "bb025a9f6340895a",
 "612b056fb18e": "b6dc0634027b35a8",
 "66da44a7f7eb": "306cb4435ff48132",
 "74dbd489f0dc": "870569cba7ac07cd",
@@ -225,6 +227,7 @@
 "012744975a0c": "e4b808b59f35dfd6",
 "12589c0bf00c": "3270ca21a6284d07",
 "8983e89d4dc3": "5359f05160f2a823",
+"8dac8086b01f": "9fdf2c92338b832c",
 "9d31409066bc": "a0cd0476b0ba6775",
 "a7f96d3235c2": "c1433ed91c2765d5",
 "bdd10f759839": "884248407e2ad13d",
@@ -249,6 +252,7 @@
 "fc60e208826f": "171c3768befc01a7"
 },
 ".claude/skills/dist-sync/skills/update/SKILL.md": {
+"157b92d6a016": "424a4f35ce08ebe0",
 "17cfb9f8b2a4": "82431770b0737e8a",
 "353286b86633": "431e11de8d1b93a3",
 "5a8cabbb97d0": "a238fdfc7cd2ae2a",
@@ -459,6 +463,7 @@
 "ede48696ebe0": "356c23fe3d7dc563"
 },
 ".claude/skills/sort/SKILL.md": {
+"2c652483a9dd": "cbbcc79013fcf3b6",
 "afb0fc7a9b78": "98d9d36708e05ba5",
 "ce711818b454": "070273f62202b7c0"
 },
@@ -740,10 +745,12 @@
 "c73b913c0f70": "88b69a3f2dc2dfb1"
 },
 "3_시스템/_eval/sort_batch_quality.py": {
-"519d4c412578": "b5543bbf98ad4134"
+"519d4c412578": "b5543bbf98ad4134",
+"f1180dc9e772": "0fb00fa677dab1c9"
 },
 "3_시스템/_eval/sort_check.py": {
-"c2c3be49e545": "675de83fd27c240f"
+"c2c3be49e545": "675de83fd27c240f",
+"f60ee34abbe2": "25312792b6517290"
 },
 "3_시스템/_eval/sort_desk_check.py": {
 "a9679c105e86": "d60e0d1c47d93d8b",
@@ -754,6 +761,7 @@
 "fca8113778eb": "42f65ab270e42d13"
 },
 "3_시스템/_eval/sort_notice_golden.py": {
+"6276c0faf121": "383e5826b3852c0d",
 "62772cc779c7": "5ac91d18e5f9fe1f"
 },
 "3_시스템/_eval/stop_inbox_check.py": {
@@ -944,7 +952,8 @@
 "55f1fb41398c": "e2ec56021102acc1",
 "6541fee60400": "c2edf29c10b4d8d5",
 "7c7fb8a761fb": "ce671497eef6d498",
-"c7c6ec1fbaf8": "72108c4c6d09238d"
+"c7c6ec1fbaf8": "72108c4c6d09238d",
+"e0a696c22262": "8c60d06efacb7957"
 },
 "3_시스템/after_restart.json": {
 "d2bbc4020fd2": "7269c1f34c10bcb4"
@@ -999,7 +1008,8 @@
 "9877f8a29389": "7e0071665a4397d7"
 },
 "3_시스템/collect-examples/card-template.md": {
-"9c420602f825": "d1c05b693ca21143"
+"9c420602f825": "d1c05b693ca21143",
+"e6b596c719e8": "eb3260c15bc0ab0d"
 },
 "3_시스템/collect-examples/units.json": {
 "758a06c0182c": "dafd88ab3976a3bd"
@@ -1133,6 +1143,7 @@
 "645883f87e40": "daf54046f14968cd",
 "80948005bca1": "c98846e1b10c69c7",
 "8a795dae360c": "41b9d120b35b956f",
+"8c653d6b0477": "85d956c62b5f9ac5",
 "91a00a384791": "c6849edd8801ef49",
 "c95b7ecdeb6b": "a5518a0e5ee31085",
 "d9cc9f51b564": "edffe2244d77710e"
@@ -1152,14 +1163,16 @@
 "afae703946e0": "3b375c277d43347e"
 },
 "3_시스템/gather/gather.py": {
-"0f5c2d63be73": "b8468d554f01556c"
+"0f5c2d63be73": "b8468d554f01556c",
+"89cf3701dc6e": "dcc43c9120f0ca92"
 },
 "3_시스템/gather/view.html": {
 "3b107783d447": "f1eab4ab89ed349d",
 "4d94868af1f0": "8513088ced1a93ad",
 "8303763c3d79": "3f1918c7632cb1df",
 "9c5316d44c24": "41b088df255a7d0d",
-"b3c25f024536": "812d902505dfa9fe"
+"b3c25f024536": "812d902505dfa9fe",
+"e306076e6c5d": "566346ecb014f68b"
 },
 "3_시스템/graph_topics.py": {
 "29a7115eb25c": "84b01d5d066af720"
@@ -1374,7 +1387,8 @@
 "db2add254306": "1f310e29d5162c48",
 "df0cf59adf06": "9582c7e95ef344df",
 "e943a4f7cdc1": "e693b3ef99eb8747",
-"eefdbc57b073": "0444ff410d88fd51"
+"eefdbc57b073": "0444ff410d88fd51",
+"f2ad6577a248": "00f5d9c281fbce5f"
 },
 "3_시스템/nowin.py": {
 "ae04e8f3b725": "63c2f89f2290536e"
@@ -1537,23 +1551,27 @@
 "af45cc96281f": "605951d2a688adcd"
 },
 "3_시스템/sort-examples/태그/사전.json": {
-"8e3454f5bb25": "4e1cd8c482989efa"
+"8e3454f5bb25": "4e1cd8c482989efa",
+"fc9d31e2bdf8": "e90e593c6c0431b3"
 },
 "3_시스템/sort-examples/항공권-티어.json": {
 "ee1db757f350": "0fad43dc135f10b7"
 },
 "3_시스템/sort.py": {
+"2b9cb19115ee": "dddde37b15103968",
 "d42c5cab241c": "2e7c15d0322a13c9",
 "e7b1faa58a0d": "3bf217ecd30b802c"
 },
 "3_시스템/sort_collect.py": {
-"37c95649a516": "88a6eb33ab4b785a"
+"37c95649a516": "88a6eb33ab4b785a",
+"639769b9907e": "b4d9028a67463113"
 },
 "3_시스템/sort_inbox.py": {
 "a9948496adc1": "12e9c2236c323a7d"
 },
 "3_시스템/sort_learn.py": {
-"54453defb4ff": "c24c69a69cfc800d"
+"54453defb4ff": "c24c69a69cfc800d",
+"f4c342e039e9": "506310d5a2dd810e"
 },
 "3_시스템/sort_price.py": {
 "1c7340f8366e": "445dc14e3ac13e0d",
@@ -1564,6 +1582,7 @@
 "db507822ba91": "d57f57916aca03b1"
 },
 "3_시스템/tag.py": {
+"51e2cd08f216": "2c066a76728ea18a",
 "526268c49466": "92b5e0e0a44a57d8"
 },
 "3_시스템/tokens.py": {
@@ -1623,6 +1642,7 @@
 "155047fe9719": "67fda24d19f782d8",
 "259faa54dae0": "120f77e81f9cbe14",
 "4bc2b6fdeb16": "617c86fe3ccfb85f",
+"4f163ac1bb9a": "7d0cd4edac9937a6",
 "84d78ff2587b": "67b9c8bf3c2a2e76",
 "9515b012ef0c": "44a82657068a2875",
 "b8772027f9be": "09877b971abf207a",
@@ -1702,6 +1722,7 @@
 "d9c512a89b33": "9acdfd7f61041131"
 },
 "3_시스템/설명서/설명서-모아보기.md": {
+"4bb528282b69": "360844b1b01cfbe7",
 "6c702a009ac8": "8f3618282e525216",
 "861f31460484": "13bbfb40b09c6123",
 "d081b0ea6896": "82511d301976d5d0"
@@ -1716,6 +1737,7 @@
 "f2fc54b111a7": "70633d029a65fb1e"
 },
 "3_시스템/설명서/설명서-분류와-알림.md": {
+"346b075fb285": "d51740308681cc46",
 "9b183a24d9f1": "923315eaf8e39645"
 },
 "3_시스템/설명서/설명서-사용법.md": {
@@ -1806,6 +1828,6 @@
 "a0dd5cb999f3": "23253beb6ac68742"
 }
 },
-"rev": "7a48615aa168",
+"rev": "6b8d4df32299",
 "schema": 1
 }
