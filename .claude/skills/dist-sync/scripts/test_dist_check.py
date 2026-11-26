@@ -129,8 +129,9 @@ def external_tests(A, E):
     print("%s 바깥 설정 확인 — 안 했을 때 %s · 한 뒤 %s" % ("✓" if ok else "✗", got, got2))
     if not ok:
         FAIL.append("바깥 설정 확인")
-    rows = ex.check(A)          # 임시 볼트에는 검색 대본만 있다 — 그것을 쓰는 항목만 묻는다
-    want = {it["id"] for it in items.values() if PY in it["쓰는 곳"]}
+    rows = ex.check(A)          # 임시 볼트에는 검색 대본(과 앞 시험이 둔 README)만 있다 — 그것을 쓰는 항목만 묻는다
+    have = {PY} | ({"README.md"} if os.path.exists(os.path.join(A, "README.md")) else set())   # README 를 쓰는 곳으로 둔 항목(claude-path · 설치 안내 단계)도 물음
+    want = {it["id"] for it in items.values() if have & set(it["쓰는 곳"])}
     ok = {r["id"] for r in rows} == want and want
     print("%s 있는 기능만 물음 — %s" % ("✓" if ok else "✗", sorted(r["id"] for r in rows)))
     if not ok:
