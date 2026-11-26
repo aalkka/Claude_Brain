@@ -1260,7 +1260,8 @@
 "3856a0091741": "eeb08459d717e93c"
 },
 "3_시스템/hooks/approve/approve.py": {
-"9be020678550": "e95ae5044e5edbd0"
+"9be020678550": "e95ae5044e5edbd0",
+"cec344235e52": "b2e0ca7478a09302"
 },
 "3_시스템/hooks/core-gate-decide.ps1": {
 "12596851f03d": "292437424e154bbf",
@@ -1938,6 +1939,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "c88e28f01874",
+"rev": "185697b6fc5f",
 "schema": 1
 }
