@@ -696,7 +696,21 @@ def relcheck():
     return 0 if st == "ok" else 1
 
 
-def install():
+def win11():
+    """윈도 11(빌드 22000 이상) — 우클릭 첫 메뉴가 «현대 메뉴»라 옛 레지스트리 동사는 «더 많은 옵션 표시» 안으로 숨는다."""
+    try:
+        return sys.getwindowsversion().build >= 22000
+    except AttributeError:
+        return False
+
+
+def menu_pkg():
+    """첫 메뉴 꾸러미(BrainInbox.Menu)가 이 사용자에게 등록됐나."""
+    r = powershell("if (Get-AppxPackage -Name 'BrainInbox.Menu') { 'yes' } else { 'no' }")
+    return r.stdout.strip().endswith("yes")
+
+
+def install(with_menu=True):
     exe = os.path.join(APP, "brain-key.exe")
     st, msg = fetch(DRIVERS[:2])
     if msg:
@@ -728,6 +742,11 @@ $s.TargetPath=$exe; $s.IconLocation=$exe+',0'; $s.Description='외부뇌 받은�
         print("등록 실패:\n" + (r.stderr or r.stdout)[-1500:])
         return 1
     mark_seen(names_in_inbox())     # 지금 받은함에 있는 것은 사람이 볼 것 — 새로 든 것만 정리한다
+    if with_menu and win11() and not menu_pkg():
+        # 윈도 11 은 첫 메뉴가 따로다 — 안 넣으면 «우클릭 › 더 많은 옵션 › 보내기» 에만 뜬다(11-27 빈 윈도 · 사용자 «우클릭하자마자 뜨게»).
+        # 윈도가 관리자 확인을 한 번 묻는다(사람이 «예»). 빼려면 install --no-menu · 나중에 menu.
+        print("첫 우클릭 메뉴 넣기 — 윈도의 관리자 확인 창에서 «예»")
+        return menu()
     return status()
 
 
@@ -783,6 +802,9 @@ def installed(quiet=False):
     if os.path.normcase(os.path.normpath(reg)) != os.path.normcase(os.path.normpath(dll)):
         say("안 됨 — 다른 볼트가 등록함 " + reg)
         return 1
+    if win11() and not menu_pkg():
+        say("안 됨 — 윈도 11 첫 우클릭 메뉴 없음(지금은 «더 많은 옵션 › 보내기» 에만 · door.py menu · 관리자 확인 1번)")
+        return 1
     say("됨")
     return 0
 
@@ -837,7 +859,7 @@ def main(argv=None):
             write_cfg()
             return 0
         if cmd == "install":
-            return install()
+            return install("--no-menu" not in a)
         if cmd == "remove":
             return remove()
         if cmd == "status":
