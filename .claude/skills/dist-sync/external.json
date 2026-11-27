@@ -22,15 +22,15 @@
    "id": "pip-core",
    "이름": "파이썬 꾸러미(검색·원본 색인)",
    "종류": ["파이썬 패키지"],
-   "쓰는 곳": ["3_시스템/search.py", "3_시스템/ingest.py"],
+   "쓰는 곳": ["3_시스템/search.py", "3_시스템/ingest.py", "3_시스템/brain.py"],
    "필수": true,
    "까닭": "찾기(하이브리드 검색)와 PDF·Office·한글 원본 색인에 쓴다.",
-   "확인": "py -3 -c \"import importlib.util as u, importlib.metadata as md, sys; ok = all(u.find_spec(m) for m in ('sentence_transformers','markitdown','pypdfium2','PIL','olefile','psutil')) and tuple(int(x) for x in md.version('markitdown').split('.')[:2]) >= (0, 1); sys.exit(0 if ok else 1)\"",
-   "하기": "py -3 -m pip install sentence-transformers \"markitdown[docx,pptx,xlsx]\" pypdfium2 pillow olefile psutil",
+   "확인": "py -3 -c \"import importlib.util as u, importlib.metadata as md, sys; ok = all(u.find_spec(m) for m in ('sentence_transformers','markitdown','pypdfium2','PIL','olefile','psutil')) and tuple(int(x) for x in md.version('markitdown').split('.')[:2]) >= (0, 1) and (u.find_spec('lxml') is None or tuple(int(x) for x in md.version('lxml').split('.')[:2]) < (6, 2)); sys.exit(0 if ok else 1)\"",
+   "하기": "py -3 -m pip install sentence-transformers \"markitdown[docx,pptx,xlsx]\" \"lxml<6.2\" pypdfium2 pillow olefile psutil",
    "안내": [
     "Claude 에게 «파이썬 꾸러미 설치해 줘» 라고 하면 하기 명령을 대신 돌린다(몇 분).",
     "직접 하려면 시작 메뉴에서 «터미널» 을 열고 하기 명령을 붙여 넣은 뒤 Enter.",
-    "깔았는데도 «안 됨»이면 markitdown 이 옛 0.0.2 로 깔린 것이다 — 파이썬 판(3.10~3.14)부터 본다."
+    "깔았는데도 «안 됨»이면 markitdown 이 옛 0.0.2 로 깔렸거나 lxml 이 6.2 이상이다(docx 추출이 깨짐) — 파이썬 판(3.10~3.14)부터 보고, 하기 명령을 한 번 더 돌리면 lxml 은 내려간다."
    ]
   },
   {
