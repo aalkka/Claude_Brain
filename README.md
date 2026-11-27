@@ -27,9 +27,9 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
    (훅을 안 켜면 secret-scan 이 조용히 안 돈다 — 건강 줄이 «볼트 밖 설정 안 됨»으로 알린다.)
 3. **Python 의존성**:
    ```
-   py -3 -m pip install sentence-transformers "markitdown[docx,pptx,xlsx]" pypdfium2 pillow olefile psutil
+   py -3 -m pip install sentence-transformers "markitdown[docx,pptx,xlsx]" "lxml<6.2" pypdfium2 pillow olefile psutil
    ```
-   (`sentence-transformers`=하이브리드 검색 · `psutil` = 자동 재시작·되찾기가 프로세스를 읽음 · 나머지 = `3_시스템/ingest.py` 원본 색인(PDF 글자·쪽 그림 · docx·pptx·xlsx · hwp). 그림 쪽 글자는 윈도우 내장 OCR 로 읽는다(한국어 윈도우면 설치 없음 · 아니면 설정 › 시간 및 언어 › 언어 추가 › 한국어 · «광학 문자 인식» 체크). 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
+   (`sentence-transformers`=하이브리드 검색 · `"lxml<6.2"` = lxml 6.2.0 에서는 docx 가 모두 «추출 실패»(markitdown 의 docx 앞처리가 `w:` 이름공간을 잃음) — 이미 6.2.0 이 깔렸으면 이 줄을 다시 치면 내려간다 · `psutil` = 자동 재시작·되찾기가 프로세스를 읽음 · 나머지 = `3_시스템/ingest.py` 원본 색인(PDF 글자·쪽 그림 · docx·pptx·xlsx · hwp). 그림 쪽 글자는 윈도우 내장 OCR 로 읽는다(한국어 윈도우면 설치 없음 · 아니면 설정 › 시간 및 언어 › 언어 추가 › 한국어 · «광학 문자 인식» 체크). 강GPU가 bge-m3 티어로 올릴 때만 CUDA torch 별도:
    `py -3 -m pip install torch --index-url https://download.pytorch.org/whl/cu121`)
 4. **첫 인덱스 빌드**(최초 1회 수동 — 모델 ~470MB 다운로드 + 임베딩이 세션 훅 타임아웃을 넘길 수 있어 수동 권장):
    ```
