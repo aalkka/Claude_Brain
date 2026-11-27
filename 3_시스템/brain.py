@@ -258,6 +258,14 @@ def doctor_checks():
         res.append(chk("파이썬", "ok", "py 실행기 · %d.%d.%d" % sys.version_info[:3]))
     else:
         res.append(chk("파이썬", "bad", "py 실행기 없음 — 훅·대본이 `py -3` 으로 불러 절반이 안 돈다 · python.org 설치판(py 실행기 포함)을 깐다(Microsoft Store 판은 py 가 없다)"))
+    # lxml 6.2 이상이면 markitdown 의 docx 앞처리가 w: 이름공간을 잃어 docx 색인이 모두 «추출 실패»(11-28 · README 3단계 pip 줄은 새로 까는 사람에게만 닿음)
+    try:
+        import importlib.metadata as im
+        lv = im.version("lxml")
+        if tuple(int(x) for x in re.findall(r"\d+", lv)[:2]) >= (6, 2):
+            res.append(chk("문서 꾸러미", "warn", "lxml %s — docx 추출이 깨짐 · `py -3 -m pip install \"lxml<6.2\"`" % lv))
+    except Exception:  # noqa: BLE001 — lxml 이 없으면(docx 꾸러미 안 깜) 이 줄은 없다
+        pass
     try:
         sys.path.insert(0, HERE)
         import claude_bin
