@@ -24,6 +24,9 @@ import json, re, sys
 HIT = re.compile(r"루프")
 # 루프 지시가 아닌 용례만 뺀다. 오탐(60 토큰 낭비)보다 미탐(규율 0)의 비용이 크므로 넓게 잡는다.
 NEG = re.compile(r"폐루프|루프백|무한루프|이벤트\s*루프|for\s*루프|while\s*루프|루프문")
+# 사람이 친 말이 아닌 턴 — 작업 끝 알림·다른 세션 메시지·서브에이전트 보고도 UserPromptSubmit 으로 들어온다(11-27 실측:
+# 보고 글의 «9루프» 에 박혀 보스·일꾼 턴에 deep-loop 를 시킴). 그 꼴이면 건너뛴다.
+NONUSER = re.compile(r"<task-notification>|<cross-session-message|<agent-message|\[SYSTEM NOTIFICATION|NOT USER INPUT|\[MESSAGE FROM NON-USER SOURCE")
 
 PIN = """[loop-pin] 이 지시는 deep-loop 대상이다.
 ⑴ 먼저 Skill(deep-loop) 를 호출한다.
@@ -42,7 +45,7 @@ def main():
     try:
         raw = sys.stdin.read()
         prompt = (json.loads(raw) or {}).get("prompt") or ""
-        if HIT.search(prompt) and not NEG.search(prompt):
+        if HIT.search(prompt) and not NEG.search(prompt) and not NONUSER.search(prompt):
             out = {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
                                           "additionalContext": PIN}}
     except Exception:
