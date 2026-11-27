@@ -21,6 +21,8 @@
 
 목적·사유(11-20):모든 승인(묶음 meta · 명령 요청)에 purpose(목적 40자)·reason(사유 80자)이 한 줄씩 있어야 한다 · 비면 거절.
 명령 승인 = 사용자 권한 PowerShell 한 줄(관리자 승격·숨긴 명령·게이트 코어 경로 거절) · 서명 글이 명령 글·작업 폴더·이름이 나온 파일 sha 를 덮는다.
+순서(11-28): 요청·묶음 meta 의 after = 같은 run 의 앞 항목 목록. 앞 항목이 끝나야(묶음 = 같은 sha 로 붙음 · 명령 = done) 도전값을 낸다 -
+  아니면 '먼저: 묶음 03(대기)' 로 거절. after 는 요청 바이트(req)·meta sha 와 함께 서명에 묶인다. after 가 없는 옛 요청은 지금처럼.
 
 믿음: 폰 승인의 근거는 키 목록(keys.txt · 이 폴더)에 있는 폰 Keystore 키의 서명 하나뿐이다. 서버 토큰·서버·pending.py 는 나르기만 한다.
 서명 글 = 용도 · 저장소 · run · 항목(번호 · diff sha · meta sha) · 이어 붙인 sha · 적용 전 파일 상태 sha · 도전값 · 폰 시각 · 키 id.
@@ -686,6 +688,9 @@ def bundle(run):
     root, group = vault_group(run)
     if not group:
         raise Refuse("볼트 대기 없음")
+    group, why = ready_prefix(run, group)  # 순서(11-28) - 앞 항목이 안 끝난 묶음부터는 이번 서명에 안 넣는다
+    if not group:
+        raise Refuse(why)
     root2, diffs, why = verify(group)
     if why:
         raise Refuse(why)
@@ -736,7 +741,128 @@ def cmd_item(run, nn):
 
 def cmd_waiting(run, now=None):
     now = now or time.time()
-    return [j for j in cmd_items(run) if j.get("state") == "pending" and now - int(j.get("added_at") or 0) <= REQ_TTL]
+    return [j for j in cmd_items(run) if j.get("state") == "pending" and now - int0(j.get("added_at")) <= REQ_TTL]
+
+
+# ── 순서(11-28 · 순서가 있는 승인을 앱만 보고 거꾸로 눌러 실패하던 일) ─────────
+# after = [{"kind": "bundle", "nn": 3, "sha": "<diff sha 앞 16>"}, {"kind": "cmd", "nn": 2}] (같은 run).
+# 버림·실패·시효인 앞 항목은 풀리지 않는다(뒤를 돌리지 않음) - 거두기는 pending.py 가 뒤 요청을 고쳐 다시 올린다(새 req sha).
+AFTER_MAX = 50
+CMD_WORD = {"pending": "대기", "running": "도는 중", "failed": "실패", "timeout": "시간 넘김", "rejected": "거절됨", "dropped": "버림"}
+
+
+def int0(v):
+    try:
+        return int(v or 0)
+    except (TypeError, ValueError, OverflowError):
+        return 0
+
+
+def after_list(it):
+    """after 꼴을 잰다 · ([(kind, nn, sha 또는 None)], 까닭 또는 None) · 꼴이 어긋나면 막는다(fail-closed)."""
+    a = it.get("after")
+    if a is None:
+        return [], None
+    if not isinstance(a, list) or len(a) > AFTER_MAX:
+        return [], f"after 꼴이 다름(목록 · {AFTER_MAX}개까지)"
+    out = []
+    for e in a:
+        if not isinstance(e, dict) or e.get("kind") not in ("bundle", "cmd"):
+            return [], "after 꼴이 다름(kind)"
+        nn, s = e.get("nn"), e.get("sha")
+        if not isinstance(nn, int) or isinstance(nn, bool) or not 1 <= nn <= 9999:
+            return [], "after 꼴이 다름(nn)"
+        if e["kind"] == "bundle" and not (isinstance(s, str) and re.fullmatch(r"[0-9a-f]{16}", s)):
+            return [], "after 꼴이 다름(묶음 sha 16자리)"
+        out.append((e["kind"], nn, s if e["kind"] == "bundle" else None))
+    return out, None
+
+
+def bundle_any(run, nn):
+    """묶음 NN 의 (상태, sha256) - pending/ · applied/ · dropped/ 어디든 · 없으면 (None, '')."""
+    d = pend_dir(run)
+    for f in (d, os.path.join(d, "applied"), os.path.join(d, "dropped")):
+        try:
+            names = os.listdir(f)
+        except OSError:
+            continue
+        for n in names:
+            m = re.match(r"(\d+)-.*\.json$", n)
+            if not m or int(m.group(1)) != nn:
+                continue
+            raw = load_json(os.path.join(f, n))
+            try:
+                j = json.loads(raw.decode("utf-8")) if raw is not None else None
+            except (ValueError, UnicodeDecodeError):
+                j = None
+            if isinstance(j, dict):
+                return j.get("state"), str(j.get("sha256") or "")
+    return None, ""
+
+
+def group_shas(group):
+    """같은 서명으로 함께 붙는 앞 묶음 {번호: diff sha 앞 16}."""
+    return {g["_nn"]: str(g.get("sha256") or "")[:16] for g in group}
+
+
+def after_why(run, it, group=None, now=None):
+    """앞 항목이 다 끝났나 · 안 끝난 것의 까닭('먼저: 묶음 03(대기)') 또는 None.
+    group = 같은 서명으로 함께 붙는 앞 묶음 {번호: sha 앞 16}(sha 가 맞으면 끝난 것으로 친다 · 검증 4)."""
+    lst, why = after_list(it)
+    if why:
+        return why
+    now, left, cmds, group = now or time.time(), [], None, group or {}
+    for kind, nn, s in lst:
+        if kind == "bundle":
+            if nn in group:
+                if group[nn] == s:
+                    continue
+                left.append(f"묶음 {nn:02d}(sha 다름)")
+                continue
+            st, full = bundle_any(run, nn)
+            if st == "applied" and full[:16] == s:
+                continue
+            w = "없음" if st is None else "sha 다름" if full[:16] != s else {"pending": "대기", "dropped": "버림"}.get(st, str(st))
+            left.append(f"묶음 {nn:02d}({w})")
+        else:
+            if cmds is None:
+                cmds = {j["_nn"]: j for j in cmd_items(run)}
+            j = cmds.get(nn)
+            st = j.get("state") if j else None
+            if st == "done":
+                continue
+            w = "없음" if st is None else "시효" if st == "pending" and now - int0(j.get("added_at")) > REQ_TTL \
+                else "멈춤" if st == "running" and stuck(j, now) else CMD_WORD.get(st, str(st))
+            left.append(f"명령 {nn:02d}({w})")
+    if not left:
+        return None
+    return "먼저: " + left[0] + (f" 외 {len(left) - 1}" if len(left) > 1 else "")
+
+
+def stuck(j, now=None):
+    """running 인데 실행기가 없음(적은 pid 가 죽음) 또는 시간 상한 + 5분을 넘김(pid 없는 옛 기록) - pending.py drop·retry 가 받는다.
+    pid 가 다른 프로세스로 다시 쓰였으면 산 것으로 보여 시각 쪽으로만 잡힌다(안전 쪽)."""
+    now = now or time.time()
+    pid = j.get("pid")
+    if isinstance(pid, int) and not isinstance(pid, bool) and pid > 0 and not alive(pid):
+        return True
+    t0 = int0(j.get("started_at"))
+    if not t0:
+        try:
+            t0 = int(time.mktime(time.strptime(str(j.get("started") or ""), "%Y-%m-%d %H:%M:%S")))
+        except (ValueError, OverflowError):
+            return False
+    lim = j.get("timeout") if isinstance(j.get("timeout"), int) and not isinstance(j.get("timeout"), bool) else RUN_MAX
+    return now - t0 > min(max(lim, 1), RUN_MAX) + 300
+
+
+def ready_prefix(run, group):
+    """한 저장소 대기 묶음(번호 순)에서 앞 항목이 다 끝난 앞부분 · (앞부분, 그 뒤 첫 막힘 까닭 또는 None)."""
+    for i, it in enumerate(group):
+        w = after_why(run, it, group=group_shas(group[:i]))
+        if w:
+            return group[:i], f"{it['_nn']:02d} {w}"
+    return group, None
 
 
 def cmd_text_why(cmd, cwd):
@@ -954,13 +1080,23 @@ def req_why(it, now=None):
     now = now or time.time()
     if it.get("state") != "pending":
         return f"명령 요청이 대기가 아님({it.get('state')})"
-    if now - int(it.get("added_at") or 0) > REQ_TTL:
+    if now - int0(it.get("added_at")) > REQ_TTL:
         return f"명령 요청이 시효({REQ_TTL // 3600}시간)를 넘김 - 다시 올림"
     if it.get("shell") != "powershell":
         return "셸이 powershell 이 아님"
     if req_timeout(it) is None:
         return f"시간 상한 꼴이 다름(1~{RUN_MAX}초)"
+    lst, why = after_list(it)
+    if why:
+        return why
+    if any(k == "cmd" and nn == it.get("_nn") for k, nn, _ in lst):
+        return "after 가 자기 자신을 가리킴"
     return pr_why(it.get("purpose"), it.get("reason")) or cmd_text_why(it.get("cmd"), it.get("cwd"))
+
+
+def req_order_why(run, it, now=None):
+    """req_why + 순서 · 도전값을 내거나 돌리기 직전에 부른다(올린 직후 check-cmd 는 순서를 안 본다 - 앞이 대기인 것이 보통)."""
+    return req_why(it, now) or after_why(run, it, now=now)
 
 
 def run_message(run, nn, it, files, challenge, ms, key):
@@ -1025,7 +1161,7 @@ def run_verify(msg, sig):
     if now - int(c.get("at") or 0) > CHALLENGE_TTL:
         raise Refuse("도전값이 만료됨(30분) - 다시 받아 승인")
     it = cmd_item(f["run"], nn)
-    why = req_why(it, now)
+    why = req_order_why(f["run"], it, now)
     if why:
         raise Refuse(why)
     if c.get("req") != sha(it["_raw"]):
@@ -1051,12 +1187,12 @@ def cmd_challenge_cmd(a):
     fz = bool(frozen(led))
     try:
         it = cmd_item(a.run, a.nn)
-        why = req_why(it)
+        why = req_order_why(a.run, it)
         if why:
             raise Refuse(why)
         files = cmd_files(it["cmd"], it["cwd"])
     except Refuse as e:
-        out_json({"ok": False, "why": str(e), "frozen": fz})
+        out_json(dict({"ok": False, "why": str(e), "frozen": fz}, **({"blocked_by": str(e)} if str(e).startswith("먼저: ") else {})))
         return 1
     obj = {"ok": True, "purpose": RUN_PURPOSE, "run": a.run, "id": a.nn, "frozen": fz, "req": b64(it["_raw"]),
            "files": [dict({"path": p, "sha": sha(d)}, **({"data": b64(d)} if nm else {})) for p, d, nm in files],
@@ -1080,7 +1216,7 @@ def cmd_check_cmd(a):
     except Refuse as e:
         out_json({"ok": False, "why": str(e)})
         return 1
-    out_json({"ok": True, "files": [p for p, _, nm in files if nm], "bound": len(files)})
+    out_json({"ok": True, "files": [p for p, _, nm in files if nm], "bound": len(files), "blocked_by": after_why(a.run, it)})
     return 0
 
 
@@ -1181,7 +1317,7 @@ def cmd_run_exec(a):
     try:
         ff = parse_run_message(msg)
         it0 = cmd_item(ff["run"], int(ff["id"]))
-        why = req_why(it0)
+        why = req_order_why(ff["run"], it0)
         if why:
             raise Refuse(why)
         # 묶을 파일을 먼저 잠그고(쓰기·지우기 금지) 그 상태에서 처음부터 다시 잰다 - 잰 내용 = 도는 내용(검증 11-20 (a)②)
@@ -1190,11 +1326,11 @@ def cmd_run_exec(a):
         nn = int(f["id"])
         with locked(cmd_dir(f["run"])):
             it = cmd_item(f["run"], nn)
-            if req_why(it) or sha(it["_raw"]) != f["req"]:
+            if req_order_why(f["run"], it) or sha(it["_raw"]) != f["req"]:
                 raise Refuse("재는 사이 명령 요청이 바뀜")
             mark_used(f["challenge"], {"t": now_iso(), "run": f["run"], "id": nn, "req": f["req"], "sig": sigsha, "key": f["key"]})
             note("run-start", run=f["run"], id=nn, challenge=f["challenge"], sig=sigsha, key=f["key"], req=f["req"])
-            save_req(it, state="running", started=now_iso(), approved_by="phone:" + f["key"])
+            save_req(it, state="running", started=now_iso(), started_at=int(time.time()), pid=os.getpid(), approved_by="phone:" + f["key"])
     except Refuse as e:
         held.close()
         try:
@@ -1265,6 +1401,8 @@ def cmd_result(a):
     refused = [j for j in ledger() if j.get("ev") == "run-refuse" and j.get("run") == a.run and j.get("id") == a.nn]
     if refused and obj.get("state") == "pending":
         obj["refused"] = refused[-1].get("why")
+    if obj.get("state") == "pending":
+        obj["blocked_by"] = after_why(a.run, it)
     obj.update(ok=True, run=a.run, id=a.nn)
     out_json(obj)
     return 0
@@ -1303,6 +1441,71 @@ def age_min(it, now):
         return 0
 
 
+def added_t(it):
+    if it.get("added_at") is not None:
+        return int0(it.get("added_at"))
+    try:
+        return int(time.mktime(time.strptime(it.get("added") or "", "%Y-%m-%d %H:%M:%S")))
+    except (ValueError, OverflowError):
+        return 0
+
+
+def order_item(kind, it, why):
+    """폰 목록 한 줄 · after 는 꼴을 잰 것만 되돌려 준다(깨진 after 는 [] · 그 까닭은 blocked_by)."""
+    lst, bad = after_list(it)
+    p = it.get("purpose")
+    return {"kind": kind, "nn": it["_nn"], "purpose": p if isinstance(p, str) else "", "t": added_t(it), "blocked_by": why,
+            "after": [] if bad else [dict({"kind": k, "nn": n}, **({"sha": h} if h else {})) for k, n, h in lst]}
+
+
+def run_order(run, w, c, now):
+    """run 안 대기 묶음·명령을 올린 순서로 · 항목마다 order(1~)·blocked_by(글 또는 None) - 폰 목록이 그대로 그린다.
+    묶음은 저장소마다 번호 순으로 한 서명에 쌓이므로 앞 묶음이 막히면 뒤 묶음도 막힌다."""
+    # 항목 하나의 꼴이 깨져도(after · 시각 · 목적) 그 항목만 막힘으로 두고 나머지는 나온다(검증 5 · 폰 목록·배지 전체가 죽던 것)
+    out = []
+    for group in by_repo(w):
+        try:
+            ok_part, _ = ready_prefix(run, group)
+        except Exception as e:  # noqa: BLE001 - 앞부분을 못 재면 이 저장소 묶음은 다 막힘(fail-closed)
+            ok_part = []
+        first = None
+        for i, it in enumerate(group):
+            try:
+                if i < len(ok_part):
+                    why = None
+                elif first is None:
+                    why = after_why(run, it, group=group_shas(group[:i]))
+                    first = it["_nn"]
+                else:
+                    why = f"먼저: 묶음 {first:02d}(막힘)"
+            except Exception as e:  # noqa: BLE001
+                why, first = f"요청 꼴이 다름({type(e).__name__})", first if first is not None else it["_nn"]
+            out.append(order_item("bundle", it, why))
+    for it in c:
+        try:
+            why = req_order_why(run, it, now)
+        except Exception as e:  # noqa: BLE001
+            why = f"요청 꼴이 다름({type(e).__name__})"
+        out.append(order_item("cmd", it, why))
+    out.sort(key=lambda x: (x["t"], x["kind"] != "bundle", x["nn"]))
+    # 앞 항목이 목록에 있으면 그 뒤에 둔다(다시 올린 앞 명령은 번호·시각이 뒤라도 먼저) · 고리면 시각 순
+    keys = {(x["kind"], x["nn"]) for x in out}
+    need = {(x["kind"], x["nn"]): {(e["kind"], e["nn"]) for e in x["after"]} & keys for x in out}
+    for x in out:
+        if x["kind"] == "bundle":  # 같은 저장소 앞 묶음은 한 서명에 먼저 쌓인다
+            need[("bundle", x["nn"])] |= {("bundle", y["nn"]) for y in out if y["kind"] == "bundle" and y["nn"] < x["nn"]}
+    placed, seq = set(), []
+    while len(seq) < len(out):
+        nxt = next((x for x in out if (x["kind"], x["nn"]) not in placed and need[(x["kind"], x["nn"])] <= placed), None)
+        nxt = nxt or next(x for x in out if (x["kind"], x["nn"]) not in placed)
+        placed.add((nxt["kind"], nxt["nn"]))
+        seq.append(nxt)
+    for i, x in enumerate(seq, 1):
+        x["order"] = i
+        del x["t"]
+    return seq
+
+
 def cmd_status(a):
     now, res, total, oldest = time.time(), [], 0, 0
     for r in runs():
@@ -1310,8 +1513,13 @@ def cmd_status(a):
         if not w and not c:
             continue
         o = max(age_min(it, now) for it in w + c)
+        seq = run_order(r, w, c, now)
         res.append({"run": r, "n": len(w) + len(c), "bundles": len(w), "oldest_min": o,
-                    "cmds": [{"id": it["_nn"], "purpose": it.get("purpose"), "age_min": age_min(it, now)} for it in c]})
+                    "bundles_blocked_by": next((x["blocked_by"] for x in seq if x["kind"] == "bundle" and x["blocked_by"]), None),
+                    "cmds": [{"id": it["_nn"], "purpose": it.get("purpose"), "age_min": age_min(it, now),
+                              "order": x["order"], "blocked_by": x["blocked_by"]}
+                             for it in c for x in seq if x["kind"] == "cmd" and x["nn"] == it["_nn"]],
+                    "items": seq})
         total, oldest = total + len(w) + len(c), max(oldest, o)
     fz = frozen()
     obj = {"ok": True, "waiting": total, "oldest_min": oldest, "frozen": bool(fz), "frozen_at": (fz or {}).get("t"), "runs": res, "keys": len(read_keys())}
@@ -1321,6 +1529,8 @@ def cmd_status(a):
         print(f"승인 대기 {total} · 가장 오래 {oldest}분" + (" · 폰 승인 얼어 있음" if fz else "") + f" · 키 {obj['keys']}")
         for r in res:
             print(f"  {r['run']}: {r['n']} · {r['oldest_min']}분")
+            for x in r["items"]:
+                print(f"    {x['order']}. {'묶음' if x['kind'] == 'bundle' else '명령'} {x['nn']:02d} {x.get('purpose') or ''}" + (f" - {x['blocked_by']}" if x["blocked_by"] else ""))
     return 0
 
 
@@ -1480,6 +1690,11 @@ def cmd_apply_console(a):
     for group in by_repo(its):
         repo = group[0].get("repo") or "?"
         name = os.path.basename(repo)
+        group, later = ready_prefix(a.run, group)  # 순서(11-28) - 앞 항목이 안 끝난 묶음부터는 이번에 안 붙인다
+        if later:
+            fails.append((name, later + (" · 그 앞까지만 붙임" if group else " · 이 저장소는 하나도 안 붙임")))
+        if not group:
+            continue
         root, diffs, why = verify(group)
         if why is None:
             why = next((f"{it['_nn']:02d} {w} - pending.py fill 로 채움" for it in group
