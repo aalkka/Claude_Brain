@@ -4,7 +4,7 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
 
 ## 필수 요건
 - **Windows** (훅이 PowerShell — 현재 Windows 전용. 타 OS는 훅 스크립트 포팅 필요)
-- **Git for Windows**(Git Bash 포함 — 훅 하나가 Bash 문법) · Claude Code v2.1.59+(구독 로그인) · Obsidian
+- **Git for Windows**(Git Bash 포함 — 훅 하나가 Bash 문법) · Claude Code v2.1.59+(구독 로그인 · 받기 = PowerShell 에 `irm https://claude.ai/install.ps1 | iex` · 끝에 «not in your PATH» 가 나오면 설치 6단계의 PATH 한 줄을 친다) · Obsidian
 - 선택: Node.js(웹페이지 읽기 도구 `defuddle` · 삼성노트 `.sdocx` 색인) · MS Word(docx 를 PDF 로) · 크롬(수집 창이 글을 여는 브라우저)
 - **Microsoft Visual C++ 재배포 패키지(x64)** — 없으면 검색 모델(torch)이 «c10.dll … WinError 126»으로 안 뜬다. 다른 프로그램이 이미 깔아 둔 PC 가 많다 · 없으면 `aka.ms/vs/17/release/vc_redist.x64.exe` 를 받아 실행(«볼트 밖 설정 점검»이 잰다).
 - **Python 3.10~3.14 — python.org 설치판**(3.15 이상은 아직 문서 색인 꾸러미 `markitdown` 이 옛 0.0.2 로만 깔려 docx·pptx·xlsx 색인이 안 된다 — 노란 «Download Python» 단추 대신 «Looking for a specific release?» 에서 3.14 · `py` 실행기가 함께 깔린다 · 훅·대본이 `py -3` 으로 부른다 · Microsoft Store 판은 `py` 가 없어 훅 절반이 안 돈다 — `brain.py doctor` 의 «파이썬» 줄로 확인) + `sentence-transformers`(하이브리드 검색) + `markitdown`·`pypdfium2`·`pillow`·`olefile`(원본 색인 — PDF·Office·한글·그림).
