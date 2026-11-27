@@ -135,6 +135,7 @@
 "f2cec7b63c48": "83df83a7c56ca3ef"
 },
 ".claude/skills/dist-sync/external.json": {
+"048b749ded42": "959d59e71b4e57e8",
 "20cd292dc761": "ea8f5cf6ad0a9bf9",
 "2ecbda4491ba": "7b4c0d60532c14e5",
 "650ccef264e6": "92ec18fdf6deec41",
@@ -1946,6 +1947,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "686f7c7096f5",
+"rev": "51117dad5190",
 "schema": 1
 }
