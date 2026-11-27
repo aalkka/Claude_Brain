@@ -1,5 +1,9 @@
 {
   "permissions": {
+    "deny": [
+      "Bash(git log *--output*)",
+      "Bash(git * log *--output*)"
+    ],
     "allow": [
       "Bash(git status:*)",
       "Bash(git log:*)",
