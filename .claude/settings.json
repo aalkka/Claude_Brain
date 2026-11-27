@@ -1,4 +1,24 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git branch)",
+      "Bash(git branch -a)",
+      "Bash(git branch -vv)",
+      "Bash(git remote -v)",
+      "Bash(git worktree list)",
+      "Bash(git fetch dist)",
+      "Bash(git fetch origin)",
+      "Bash(tasklist:*)",
+      "Bash(py -3 3_시스템/brain.py list)",
+      "Bash(py -3 3_시스템/brain.py list --json)",
+      "Bash(py -3 3_시스템/brain.py doctor)",
+      "Bash(py -3 3_시스템/brain.py doctor --json)",
+      "Bash(py -3 .claude/skills/dist-sync/scripts/external.py check)",
+      "Bash(py -3 .claude/skills/dist-sync/scripts/external.py check --json)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
