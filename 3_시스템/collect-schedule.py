@@ -37,6 +37,7 @@ TEST_STATE = os.environ.get('COLLECT_TEST_STATE') or ''         # 시험 상태 
 STATE = TEST_STATE or os.path.join(SYS, '_index', 'collect')  # 반영 기록·잠금 = 엔진 자리(S6 · 로그인 출처의 기록은 그 출처 상태 폴더)
 LOG = os.path.join(STATE, 'tick.log') if not TEST_STATE else os.path.join(STATE, 'auto.log')
 PY = sys.executable
+PYFLAG = '-3'                                              # 예약이 부르는 파이썬 = README 의 `py -3`(꾸러미를 깐 쪽) · 11-28 Sandbox: `-3.11` 을 박아 3.11 이 없는 PC 에서 예약이 rc 103(py 실행기 «맞는 파이썬 없음»)으로 안 돎
 
 
 def log(msg):
@@ -110,7 +111,7 @@ def task_xml(at, wake, act, desc):
         trig.append(f'<CalendarTrigger><StartBoundary>{time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(s))}</StartBoundary><Enabled>true</Enabled>'
                     '<ScheduleByDay><DaysInterval>1</DaysInterval></ScheduleByDay></CalendarTrigger>')
     pyw = shutil.which('pyw') or r'C:\Windows\pyw.exe'
-    args = f'-3.11 "{os.path.join(SYS, "brain.py")}" run {act[0]} --by schedule' + ''.join(' ' + x for x in act[1:])
+    args = f'{PYFLAG} "{os.path.join(SYS, "brain.py")}" run {act[0]} --by schedule' + ''.join(' ' + x for x in act[1:])
     return ('<?xml version="1.0" encoding="UTF-16"?>\n<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">'
             f'<RegistrationInfo><Description>{escape("외부뇌 수집 시각: " + desc + " · " + " ".join(at) + " · 수집 창이 맞춘다(collect-schedule.py --sync)")}</Description></RegistrationInfo>'
             f'<Triggers>{"".join(trig)}</Triggers>'
@@ -127,7 +128,7 @@ def tick_xml():
     from xml.sax.saxutils import escape
     start = time.strftime('%Y-%m-%dT%H:%M:%S', time.localtime(time.time() + 60))
     pyw = shutil.which('pyw') or r'C:\Windows\pyw.exe'
-    args = f'-3.11 "{os.path.join(SYS, "brain.py")}" run {TICK_ACT[0]} --by schedule'
+    args = f'{PYFLAG} "{os.path.join(SYS, "brain.py")}" run {TICK_ACT[0]} --by schedule'
     return ('<?xml version="1.0" encoding="UTF-16"?>\n<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">'
             f'<RegistrationInfo><Description>{escape("외부뇌 수집 15분 반영: 확장이 내려받은 것을 볼트에 반영 · 웹 출처는 받을 차례만 · 수집 창이 맞춘다(collect-schedule.py --sync)")}</Description></RegistrationInfo>'
             f'<Triggers><TimeTrigger><Repetition><Interval>PT15M</Interval><StopAtDurationEnd>false</StopAtDurationEnd></Repetition>'

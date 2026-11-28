@@ -136,8 +136,8 @@ def main():
                 res = mine
             else:
                 base = pick_base(rel, mine, strip, rn)
-                if base is NOHIST:
-                    # 볼트 판으로 덮으면 배포판에만 있는 손 익명화가 되돌아간다 — 배포판 판을 두고 사람이 바뀐 줄을 읽어 옮긴다
+                if base is NOHIST or base is None:
+                    # 이력이 없거나(NOHIST) 있어도 읽을 판이 없으면(None) 기준을 못 고른다 — 볼트 판으로 덮으면 배포판에만 있는 손 익명화가 되돌아간다 — 배포판 판을 두고 사람이 바뀐 줄을 읽어 옮긴다
                     d = [t for t in difflib.unified_diff(mine.decode("utf-8", "replace").split("\n"), new.decode("utf-8", "replace").split("\n"), lineterm="", n=0)
                          if t[:1] in "+-" and not t.startswith(("+++", "---"))]
                     out["기준 없음(배포판 판 둠)"].append("%s (바뀐 줄 %d)" % (rel, len(d)))
@@ -145,7 +145,7 @@ def main():
                         print("### %s — 기준 없음 · 배포판(-) ↔ 볼트(+)" % rel)
                         print("\n".join("  " + t[:200] for t in d[:40]))
                     res = mine
-                elif base is None or base == mine:
+                elif base == mine:
                     out["그대로(손 고침 없음)"].append(rel)
                     res = new
                 elif base == new:

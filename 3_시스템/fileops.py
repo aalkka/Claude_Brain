@@ -695,21 +695,24 @@ def memo_of(ctx, r):
     return [m for m in ("%s.md" % s, "%s (%s).md" % (s, e[1:])) if os.path.isfile(ctx.abs(m))]
 
 
-def ink_pair_of(ctx, r):
-    """PDF 원본 옆 필기 짝(`<이름> (필기).note` · brain-source 필기 13차 · 11-18) — 있으면 그 경로."""
+INK_PAIR_EXTS = (".note", ".pdf")                         # 쓰던 짝 · 구운 짝 PDF(brain-source 과제 5 · 11-28 — 짝 = `<이름> (필기).pdf`)
+
+
+def ink_pairs_of(ctx, r):
+    """PDF 원본 옆 필기 짝(`<이름> (필기).note` · `<이름> (필기).pdf` · brain-source 필기 13차·과제 5) — 있는 것만."""
     s, e = posixpath.splitext(r)
-    m = "%s (필기).note" % s
-    return m if e.lower() == ".pdf" and os.path.isfile(ctx.abs(m)) else None
+    if e.lower() != ".pdf" or s.endswith(" (필기)"):          # 짝 PDF 자신은 원본이 아님
+        return []
+    return [m for m in ("%s (필기)%s" % (s, x) for x in INK_PAIR_EXTS) if os.path.isfile(ctx.abs(m))]
 
 
 def pair_memos(ctx, rs, rd):
-    """짝 메모도 같이 옮긴다 — brain-source followRename 과 같은 규칙 · PDF 의 필기 짝(`<이름> (필기).note`)도."""
+    """짝 메모도 같이 옮긴다 — brain-source followRename 과 같은 규칙 · PDF 의 필기 짝(`<이름> (필기).note` · 짝 PDF `<이름> (필기).pdf`)도."""
     so, eo = posixpath.splitext(rs)
     sn, en = posixpath.splitext(rd)
     out = []
-    ink = ink_pair_of(ctx, rs)
-    if ink:
-        new = "%s (필기).note" % sn
+    for ink in ink_pairs_of(ctx, rs):
+        new = "%s (필기)%s" % (sn, posixpath.splitext(ink)[1])
         if ink.lower() != new.lower():
             if os.path.exists(ctx.abs(new)):
                 print("  ⚠ 필기 짝을 못 옮김(새 자리에 이미 있음): %s" % new)
@@ -859,8 +862,7 @@ def op_rm(ctx, src, why, count=None, user_asked=False, lenient=False, by_undo=No
         print("  ⚠ 이것을 가리키던 링크 %d곳이 깨진다(되살리면 돌아옴)" % nlink)
     if memo:
         print("  · 짝 메모는 남김(사람 것): %s" % ", ".join(memo))
-    ink = None if info["kind"] == "dir" else ink_pair_of(ctx, rs)
-    if ink:                                                 # 필기 짝은 원본과 같이 휴지통(같은 묶음 → undo 한 번에 둘 다 · 11-18)
+    for ink in ([] if info["kind"] == "dir" else ink_pairs_of(ctx, rs)):  # 필기 짝(.note·짝 PDF)은 원본과 같이 휴지통(같은 묶음 → undo 한 번에 · 11-18)
         op_rm(ctx, ink, why="필기 짝 따라감", user_asked=True, lenient=True, by_undo=by_undo, core_ok=core_ok, quiet=True)
     return ev
 

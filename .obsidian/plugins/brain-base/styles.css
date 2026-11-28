@@ -116,6 +116,15 @@
 /* 입력 상자 */
 .bb-composer { margin: 0 10px 4px; border: 1px solid var(--background-modifier-border); border-radius: 16px; background: var(--background-primary); box-shadow: var(--shadow-s); padding: 6px 8px 6px; display: flex; flex-direction: column; gap: 2px; transition: border-color 0.15s; }
 .bb-composer:focus-within { border-color: var(--interactive-accent); }
+/* «맨 아래로»(사용자 11-28) — 맨 아래에서 멀어졌을 때만 · 입력 상자 바로 위 가운데 · 답하는 중 = 도는 고리(초안 A · 사용자 11-28 고름 · 대화창 진행 고리와 같은 말) */
+.bb-composer { position: relative; }
+.bb-down { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 2; display: none; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 1px solid var(--background-modifier-border); background: var(--background-primary); box-shadow: var(--shadow-s); color: var(--text-muted); }
+.bb-down.is-on { display: flex; }
+.bb-down:hover { background: var(--background-primary); color: var(--text-normal); }
+.bb-down svg { width: 16px; height: 16px; }
+.bb-down.is-busy, .bb-down.is-busy:hover { border-color: transparent; color: var(--text-accent); }
+.bb-down.is-busy::before { content: ""; position: absolute; inset: -1px; border-radius: 50%; border: 2px solid var(--interactive-accent); border-right-color: transparent; border-bottom-color: transparent; animation: bb-spin 0.8s linear infinite; }
+body.bb-nospin .bb-down.is-busy::before { animation: none !important; }
 .bb-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 2px 0; }
 .bb-chip { display: flex; align-items: center; gap: 4px; font-size: var(--font-ui-smaller); padding: 1px 8px; border-radius: 8px; background: var(--background-secondary); color: var(--text-muted); cursor: pointer; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .bb-chip:hover { color: var(--text-normal); }
@@ -432,11 +441,18 @@ body.bb-noshimmer .bb-activity .bb-wait-text { animation: none !important; }
 body.bb-nospin.bb-noshimmer [class*="bb-"], body.bb-nospin.bb-noshimmer [class*="bb-"]::before, body.bb-nospin.bb-noshimmer [class*="bb-"]::after, body.bb-nospin.bb-noshimmer [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
 @media (prefers-reduced-motion: reduce) {
   [class*="bb-"], [class*="bb-"]::before, [class*="bb-"]::after, [class*="bb-"] .is-spinning svg { animation: none !important; transition: none !important; }
+  /* 기다림 표시는 돌지 않고 흐려졌다 짙어짐(움직임 없음) — 멈춘 고리가 고장처럼 보였다(사용자 11-28 Windows Sandbox = «애니메이션 효과» 끔 ·
+     기본 세팅 고리 «멈춰 있음» · 격리 옵시디언 reduced-motion 켬에서 같은 증상 잼). 설정 «기다림 회전» 끔(bb-nospin)은 전처럼 멈춘 채 */
+  body:not(.bb-nospin) .bb-wait::before, body:not(.bb-nospin) .bb-wait-ring, body:not(.bb-nospin) .bb-health-bar.is-waiting::after, body:not(.bb-nospin) .bb-tool-run .bb-tool-state::after, body:not(.bb-nospin) [class*="bb-"] .is-spinning svg { animation: bb-breathe 1.4s ease-in-out infinite !important; }
 }
+@keyframes bb-breathe { 50% { opacity: 0.3; } }
 
 /* 세션창(진행 중 대화 · 11-14 초안 A) — 옵시디언 메뉴에 이름 + 캐시 남은 분 */
 .bb-live-menu { max-width: min(360px, 90vw); }
 .bb-live-menu .menu-item-title { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.bb-live-st { flex: none; display: flex; color: var(--text-muted); }
+.bb-live-st.is-wait { color: var(--interactive-accent); }
+.bb-live-st svg { width: 14px; height: 14px; }
 .bb-live-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bb-live-menu .menu-item.is-cur .bb-live-name { font-weight: var(--font-semibold); }
 .bb-live-left { flex: none; font-size: var(--font-ui-smaller); color: var(--text-faint); font-variant-numeric: tabular-nums; }
