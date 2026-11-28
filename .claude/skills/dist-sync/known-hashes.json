@@ -4,6 +4,7 @@
 "8fdab50d7f49": "bc442190aee0ad40"
 },
 ".claude/settings.json": {
+"01195405fa52": "2c3387f091724367",
 "2e0af4cdf2a7": "515fc92ace11837b",
 "3ee6713575f4": "74369bce1bcc9d66",
 "4e787d83d1ce": "3d28eea85fd67b68",
@@ -168,6 +169,9 @@
 "c41db71d164c": "5da5d6e2c10f2aca",
 "d7189c38d662": "fd7ce028d99b551d"
 },
+".claude/skills/dist-sync/scripts/ahead_check.py": {
+"bbe41ec42a53": "771652ebf0a8b171"
+},
 ".claude/skills/dist-sync/scripts/context_read.py": {
 "666fa49d13ce": "bb18cbeff4533a1e"
 },
@@ -233,6 +237,7 @@
 ".claude/skills/dist-sync/scripts/pub_merge.py": {
 "016d259d6443": "f033dd867d524f92",
 "d4dd4c27876a": "39a13503c60e0ffc",
+"f144b14a4d64": "ee32a2575b8b68d5",
 "f9c7a30a0a0e": "7e39876e73e496cf"
 },
 ".claude/skills/dist-sync/scripts/test_dist_check.py": {
@@ -1129,7 +1134,8 @@
 },
 "3_시스템/collect-schedule.py": {
 "4916e4dba0f9": "4b730d027acf3f9e",
-"72affb8c524f": "a8379f8f8632b8c9"
+"72affb8c524f": "a8379f8f8632b8c9",
+"ff9c6a613794": "5df66ce8c1aa7edb"
 },
 "3_시스템/collect-tick.py": {
 "1bb7e8fa244b": "edb2d45ebed9c973",
@@ -1218,6 +1224,7 @@
 },
 "3_시스템/fileops.py": {
 "0046d8298c38": "b68c84f227d24e74",
+"0aacee84b28d": "6296fb66eaebf6be",
 "13ff04370dcf": "044510f4c50f5ac5",
 "641ba25b7106": "89d828e0062ea1ac",
 "645883f87e40": "daf54046f14968cd",
@@ -1929,6 +1936,7 @@
 "cef5604ef97b": "526ae39e35d1fab8"
 },
 "README.md": {
+"02071b9ebcd0": "57ce67cb44608d5c",
 "028c056b8aa9": "d81b47a22fa18aae",
 "0903a2059464": "debc70e0bedfa4bd",
 "0cfebb38fa1d": "4212a12c5357609e",
@@ -1958,6 +1966,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "8ac72d2edf5c",
+"rev": "438550e38ffa",
 "schema": 1
 }
