@@ -5,6 +5,7 @@
   기준   = 볼트 이력에서 배포판 판과 가장 닮은 판(배포 커밋 시각의 볼트 판을 쓰면 볼트의 새 기능이 «배포판이 지운 것»으로 읽혀 빠진다)
   볼트   = 지금 볼트 판
 기준 = 배포판(손 고침 없음) → 볼트 판 · 기준 = 볼트(볼트 안 바뀜) → 배포판 판 · 그 밖 = git merge-file.
+볼트 git 이 그 파일을 안 따르면(이력 0 · 예: 플러그인 styles.css) 기준을 못 고른다 — 볼트 판으로 덮지 않고 배포판 판을 둔 채 «기준 없음»으로 낸다(11-28 · 손 익명화가 되돌아간 뿌리).
 충돌 칸: 줄 수가 같고 닮았으면(«같은 줄의 두 익명화») 이미 공개·검토된 배포판 글 · 아니면 배포판 글을 두고 «읽을 것»으로 낸다.
 글 아닌 파일(실행 파일·그림)은 판정을 맨 먼저 하고 바이트 그대로 — 줄끝을 바꾸지 않는다(새 파일 포함 · 11-26 실행 파일 넷이 깨진 뿌리).
 
@@ -28,6 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 V = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(HERE))))
 TEXT = (".md", ".py", ".ps1", ".psm1", ".json", ".mjs", ".cjs", ".js", ".ts", ".tsv", ".txt", ".html", ".css", ".sh", ".yml", ".yaml",
         ".gitattributes", ".gitignore", ".tmpl", ".toml", ".ini", ".cfg")  # mf:allow-path  (글 파일 끝 이름 — 읽기만)
+NOHIST = object()   # 볼트 git 이력에 그 파일이 없음
 SEM = re.compile(r"\n*>[ \t]*\[!info\]-[ \t]*관련 노트[ \t]*%%sl%%(?:\n>[^\n]*)*".encode("utf-8"))   # 찾기 색인이 쓰는 칸 — 싣지 않는다
 
 
@@ -56,7 +58,10 @@ def renames():
 
 
 def pick_base(rel, mine, strip, rn):
+    """볼트 이력에서 배포판 판과 가장 닮은 판 · 이력이 하나도 없으면 NOHIST(«손 고침 없음»과 가른다)."""
     _, hs = git(V, "log", "-30", "--format=%H", "HEAD", "--", rel)
+    if not hs.split():
+        return NOHIST
     ml = mine.split(b"\n")
     cands = []
     for h in hs.decode().split():
@@ -112,7 +117,7 @@ def main():
     ap.add_argument("--show", default="", help="읽을 것 충돌을 보일 경로 조각 · all")
     a = ap.parse_args()
     rn = renames()
-    out = {k: [] for k in ("글 아님(바이트 그대로)", "새 파일", "바뀐 것 없음", "그대로(손 고침 없음)", "손 고침만(볼트 안 바뀜)", "합침", "읽을 것")}
+    out = {k: [] for k in ("글 아님(바이트 그대로)", "새 파일", "바뀐 것 없음", "그대로(손 고침 없음)", "손 고침만(볼트 안 바뀜)", "합침", "읽을 것", "기준 없음(배포판 판 둠)")}
     for rel in [x.strip() for x in io.open(a.list, encoding="utf-8") if x.strip() and not x.startswith("#")]:
         raw = open(os.path.join(V, *rel.split("/")), "rb").read()
         if not is_text(rel, raw):                                  # 맨 먼저 — 새 파일이어도 줄끝을 건드리지 않는다
@@ -131,7 +136,16 @@ def main():
                 res = mine
             else:
                 base = pick_base(rel, mine, strip, rn)
-                if base is None or base == mine:
+                if base is NOHIST:
+                    # 볼트 판으로 덮으면 배포판에만 있는 손 익명화가 되돌아간다 — 배포판 판을 두고 사람이 바뀐 줄을 읽어 옮긴다
+                    d = [t for t in difflib.unified_diff(mine.decode("utf-8", "replace").split("\n"), new.decode("utf-8", "replace").split("\n"), lineterm="", n=0)
+                         if t[:1] in "+-" and not t.startswith(("+++", "---"))]
+                    out["기준 없음(배포판 판 둠)"].append("%s (바뀐 줄 %d)" % (rel, len(d)))
+                    if a.show and (a.show == "all" or a.show in rel):
+                        print("### %s — 기준 없음 · 배포판(-) ↔ 볼트(+)" % rel)
+                        print("\n".join("  " + t[:200] for t in d[:40]))
+                    res = mine
+                elif base is None or base == mine:
                     out["그대로(손 고침 없음)"].append(rel)
                     res = new
                 elif base == new:
@@ -154,10 +168,10 @@ def main():
             open(dst, "wb").write(res)
     for k, v in out.items():
         print("== %s %d" % (k, len(v)))
-        if k in ("합침", "읽을 것", "손 고침만(볼트 안 바뀜)"):
+        if k in ("합침", "읽을 것", "손 고침만(볼트 안 바뀜)", "기준 없음(배포판 판 둠)"):
             for x in v:
                 print("   ", x)
-    return 1 if out["읽을 것"] else 0
+    return 1 if out["읽을 것"] or out["기준 없음(배포판 판 둠)"] else 0
 
 
 if __name__ == "__main__":
