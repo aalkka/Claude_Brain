@@ -547,6 +547,7 @@
 ".gitignore": {
 "20fba1fd8094": "2b60e07a3ea64488",
 "2769af6abe07": "59bc5ea83ac7a614",
+"307a738817d4": "15f0abc9a6635e4b",
 "44683b2e4fd7": "eea937d47fee78be",
 "660187534b37": "2777e297f2b99a48",
 "7986478d0b4a": "c67b376da4c38bfb",
@@ -814,6 +815,7 @@
 "f60ee34abbe2": "25312792b6517290"
 },
 "3_시스템/_eval/sort_desk_check.py": {
+"0d61396eb87b": "754a6014de7e8d01",
 "479c2ef5b2c4": "0c2b009819bac95b",
 "a9679c105e86": "d60e0d1c47d93d8b",
 "fd44363202ff": "7c1e735eb96ecef7"
@@ -1433,6 +1435,7 @@
 "755b1f65295a": "a37e5d5789d51b91",
 "93678cad42e5": "0b89fb41fee50b7d",
 "93d76ae1a4b6": "c4ab8919aa3183bc",
+"989c7091eb99": "6e9c1b38014756bf",
 "9bde91b6e63c": "5f6757c897f9c6cf",
 "b20b281bae23": "a8ce4518a16f8bce",
 "b5b5685cafb1": "d10b7589a1f02b4c",
@@ -1966,6 +1969,6 @@
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "438550e38ffa",
+"rev": "2a89b1dbce9d",
 "schema": 1
 }
