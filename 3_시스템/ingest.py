@@ -1069,6 +1069,8 @@ def build(sha, origins, sizes, mtimes, old_fm):
         fmt, (body, meta, q) = extract(path, origin, sha)
     except Exception as e:                              # 파일 하나의 실패가 전체를 멈추지 않게
         fmt, body, meta, q = os.path.splitext(path)[1][1:], "", {"extractor": VERSION}, f"추출 실패: {type(e).__name__}: {e}"
+        if path.lower().endswith(".docx") and "body element" in str(e):   # lxml 6.2 이상이면 markitdown 의 docx 앞처리가 w: 이름공간을 잃는다(11-28)
+            q += " — lxml 6.2 이상이면 docx 가 모두 이렇게 깨진다 · doctor «문서 꾸러미» 줄 · py -3 -m pip install \"lxml<6.2\""
     name = os.path.basename(origin)
     today = date.today().isoformat()
     fm = {
