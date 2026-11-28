@@ -3,8 +3,9 @@
 
   py -3 3_시스템/module_ship.py <모듈 id> <저장소 폴더>          # 옮겨 쓰기 + 검사(종료 0 = 걸림 0)
   py -3 3_시스템/module_ship.py <모듈 id> <저장소 폴더> --check  # 쓰지 않고 저장소 폴더만 검사
+  py -3 3_시스템/module_ship.py --selftest                         # 임시 폴더 시험(.git 파일·폴더 보존 · 저장소에만 있는 파일 지움)
 
-- 빼는 것 = 모듈 폴더의 .gitignore 줄(끝 / = 폴더 · fnmatch) + __pycache__ · *.pyc. 저장소에만 있는 파일은 지운다(.git 은 그대로).
+- 빼는 것 = 모듈 폴더의 .gitignore 줄(끝 / = 폴더 · fnmatch) + __pycache__ · *.pyc. 저장소에만 있는 파일은 지운다(.git 은 폴더든 worktree 의 파일이든 그대로).
 - 익명화 = 글 파일(확장자 무관 · UTF-8 · dist-diff text_encoding 이 가름)에 «바꿈 짝»을 차례로 — 짝 파일은 git 밖
   3_시스템/_index/dist-sync/anon-pairs.txt(«찾을 글<TAB>바꿀 글» · 위에서부터 · 조사 붙은 꼴을 먼저 적는다). 이 대본에는 값을 적지 않는다.
 - 검사 = dist-diff 의 LEAK + 볼트 leak-patterns.txt + mobility-leak.txt(있으면) + 짝 파일의 «찾을 글» + 기계 치환 흔적(BROKEN).
@@ -76,6 +77,8 @@ def walk(root, pats=()):
     for dp, dns, fns in os.walk(root):
         dns[:] = [d for d in dns if d != ".git"]
         for fn in fns:
+            if fn == ".git":                 # worktree·하위 모듈의 .git 은 폴더가 아닌 파일(gitdir: …) — 지우면 저장소가 끊긴다(11-28)
+                continue
             rel = os.path.relpath(os.path.join(dp, fn), root).replace(os.sep, "/")
             if not skipped(rel, pats):
                 out[rel] = os.path.join(dp, fn)
@@ -88,8 +91,8 @@ def anon(text, pairs):
     return text
 
 
-def ship(mid, repo):
-    src = os.path.join(VAULT, ".claude", "skills", mid)
+def ship(mid, repo, src=None):
+    src = src or os.path.join(VAULT, ".claude", "skills", mid)
     if not os.path.isfile(os.path.join(src, "module.json")):
         raise SystemExit("모듈 아님: " + src)
     pairs = tab_file("anon-pairs.txt")
@@ -131,7 +134,46 @@ def check(repo):
     return files, hard, soft, broken
 
 
+def selftest():
+    """임시 폴더에서 — worktree 꼴 저장소(.git = 파일)·보통 저장소(.git = 폴더)의 .git 이 남고 저장소에만 있는 파일은 지워지는지."""
+    import tempfile
+    bad = []
+    with tempfile.TemporaryDirectory() as t:
+        src = os.path.join(t, "src")
+        os.makedirs(os.path.join(src, "scripts"))
+        with open(os.path.join(src, "module.json"), "w", encoding="utf-8") as f:
+            f.write("{}")
+        with open(os.path.join(src, "scripts", "a.py"), "w", encoding="utf-8") as f:
+            f.write("x = 1\n")
+        for kind in ("file", "dir"):
+            repo = os.path.join(t, "repo-" + kind)
+            os.makedirs(repo)
+            g = os.path.join(repo, ".git")
+            if kind == "file":
+                with open(g, "w", encoding="utf-8") as f:
+                    f.write("gitdir: ../main/.git/worktrees/x\n")
+            else:
+                os.makedirs(os.path.join(g, "objects"))
+                with open(os.path.join(g, "HEAD"), "w", encoding="utf-8") as f:
+                    f.write("ref: refs/heads/main\n")
+            with open(os.path.join(repo, "old.txt"), "w", encoding="utf-8") as f:
+                f.write("only in repo\n")
+            n, wrote, gone = ship("t", repo, src=src)
+            if kind == "file" and not os.path.isfile(g):
+                bad.append(".git 파일이 지워짐")
+            if kind == "dir" and not os.path.isfile(os.path.join(g, "HEAD")):
+                bad.append(".git 폴더가 지워짐")
+            if gone != ["old.txt"] or os.path.exists(os.path.join(repo, "old.txt")):
+                bad.append("%s: 저장소에만 있는 파일 처리 틀림 %r" % (kind, gone))
+            if not os.path.isfile(os.path.join(repo, "scripts", "a.py")):
+                bad.append("%s: 옮겨 쓰기 안 됨" % kind)
+    print("selftest: " + ("통과" if not bad else "실패 " + " · ".join(bad)))
+    return 1 if bad else 0
+
+
 def main(argv):
+    if argv[:1] == ["--selftest"]:
+        return selftest()
     if len(argv) < 2:
         print(__doc__)
         return 2
