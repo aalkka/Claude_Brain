@@ -144,6 +144,7 @@
 "7527303b95a3": "64c6abd930d7e650",
 "7dc86662f1a4": "a2099a62e0116e73",
 "7eb7ef6bf43b": "1e4f52d258ca5a7b",
+"80c708124ee2": "432a69089e23b799",
 "86eadc1fa1d4": "7bf6308e5e788134",
 "9cfed26a59c0": "1685d0f6f09b25b2",
 "ae54158f57bc": "c3ba73e538a60059",
@@ -231,6 +232,7 @@
 },
 ".claude/skills/dist-sync/scripts/pub_merge.py": {
 "016d259d6443": "f033dd867d524f92",
+"d4dd4c27876a": "39a13503c60e0ffc",
 "f9c7a30a0a0e": "7e39876e73e496cf"
 },
 ".claude/skills/dist-sync/scripts/test_dist_check.py": {
@@ -267,6 +269,7 @@
 ".claude/skills/dist-sync/skills/publish/SKILL.md": {
 "179b537f4991": "5d7739c4f7ba6714",
 "2b4af894f663": "644b8e53821ad2a4",
+"4c51b5a8bc84": "3df9a6cd32f2ca61",
 "51c7af4b5d9f": "173ffda0da20c277",
 "7d3aca584536": "3de822b39fd05f21",
 "98683c724762": "038464d1d9a94cb4",
@@ -1425,6 +1428,7 @@
 "b20b281bae23": "a8ce4518a16f8bce",
 "b5b5685cafb1": "d10b7589a1f02b4c",
 "bedcf431350f": "c0b27687d2e9a859",
+"d380ed9202fd": "dc3c2500a971db2b",
 "d95cc01ea80f": "fd3dfaecd6c77a86",
 "e4c985f1ae5b": "13f7f6e3063f5a09",
 "ef2b18c3639e": "ef4fd74a7cd6b7a2"
@@ -1466,6 +1470,7 @@
 },
 "3_시스템/module_ship.py": {
 "6399171e54c4": "eb20f4baf8047ad7",
+"8a4007f7a5d1": "d122929f76dff420",
 "a64cb7c56948": "9ce3c23175395fb9",
 "e76a8e742696": "e2e3465e3685198d"
 },
@@ -1944,11 +1949,12 @@
 "82561a69123a": "d8c9ace8dfce0cfa",
 "825ffe155137": "01916f82a2b09b95",
 "8eb97a2da247": "37fb5daf58893a44",
+"9aad8a4854a1": "c793d7e597f37e4b",
 "a0dd5cb999f3": "23253beb6ac68742",
 "bdcb718c886f": "c86c26327df717f8",
 "ee6ae77ae203": "d168445d9c0c3e26"
 }
 },
-"rev": "f8bd693474af",
+"rev": "b9b6d798ad84",
 "schema": 1
 }
