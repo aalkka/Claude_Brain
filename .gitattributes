@@ -11,6 +11,12 @@
 *.md text eol=lf
 *.py text eol=lf
 *.ps1 text eol=lf
+# 끝이름 없는 git 훅·Node 대본도 LF(2026-11-28 · autocrlf 를 켠 PC 에서 새로 받으면 CRLF 로 풀렸다 — Git Bash 훅·node 는 LF 가 제 꼴).
+3_시스템/hooks/pre-commit text eol=lf
+3_시스템/hooks/pre-push text eol=lf
+*.cjs text eol=lf
+*.mjs text eol=lf
+*.sh text eol=lf
 # 동봉 플러그인 폴더(번들 js·wasm·css·manifest)는 통째로 binary — 줄바꿈 변환 금지(Windows autocrlf 가 LF 480개를 CRLF 로 바꿨다 — 10-13 실측. 문자열 리터럴 안 줄바꿈이면 동작이 달라질 수 있다) · 줄 단위 diff 도 만들지 않는다.
 .obsidian/plugins/brain-source/** binary
 .obsidian/plugins/brain-base/** binary

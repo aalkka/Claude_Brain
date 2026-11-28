@@ -396,6 +396,7 @@ def put(paths):
                 bad.append((os.path.basename(a.rstrip("\\/")), reason(e)))
         if ctx.events:
             fileops.write_view(ctx)
+            print("묶음 %s — 되돌리기 = py -3 3_시스템/fileops.py undo %s (원래 자리로)" % (ctx.batch, ctx.batch))   # 11-28 · 알림 단추 밖의 되돌리기 길을 글에도
         rows = {r["name"]: r for r in settle([g["name"] for g in got])} if got and vault_on() else {}
     for g in got:
         r = rows.get(g["name"], {})

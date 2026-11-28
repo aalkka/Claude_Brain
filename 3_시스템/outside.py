@@ -31,6 +31,8 @@ DOCS = {".pdf", ".docx", ".doc", ".hwp", ".hwpx", ".pptx", ".ppt", ".xlsx", ".xl
 BIG = 300 * 1024 * 1024         # 이보다 큰 문서는 해시를 재지 않는다(홈을 붙들지 않게) — 이름·크기로만 보인다
 HOME = os.path.expanduser("~")
 PLACES = [("내려받기", os.path.join(HOME, "Downloads")), ("바탕화면", os.path.join(HOME, "Desktop"))]
+NOSNAP = "볼트 «따라가기 사진»이 아직 없어 볼트에 있는 것과 견주지 못함 — 사진을 먼저 찍는다: py -3 3_시스템/brain.py run follow.run (처음 한 번 · 몇 초)"
+_nosnap = [False]   # 마지막 candidates() 가 사진 없음으로 빈 목록을 냈나(새 볼트 첫날 «후보 0» 의 까닭을 말하려고 · 11-28)
 
 
 def places():
@@ -53,6 +55,7 @@ def vault_hashes():
 def candidates(days=60, hidden_only=False):
     """→ [{key, name, place, size, days, a}] 새것 먼저 · a(절대 경로)는 메모리 안에서만. 볼트 사진이 없으면 []."""
     have = vault_hashes()
+    _nosnap[0] = have is None
     if have is None:
         return []
     hidden = set(follow.load_json(HIDDEN) or [])
@@ -94,7 +97,7 @@ def candidates(days=60, hidden_only=False):
 def pick(rows, key):
     hit = [x for x in rows if x["key"] == key or x["name"] == key]
     if len(hit) != 1:
-        print("후보에 없음(또는 같은 이름이 둘): %s" % key)
+        print("후보에 없음(또는 같은 이름이 둘): %s" % key + (" — " + NOSNAP if _nosnap[0] else ""))
         return None
     return hit[0]
 
@@ -134,13 +137,14 @@ def main(argv=None):
             print("✗ %s" % e)
             return 1
         fileops.write_view(ctx)
+        print("묶음 %s — 되돌리기 = py -3 3_시스템/fileops.py undo %s (원래 자리로)" % (ctx.batch, ctx.batch))
         return 0
     if a.json:
-        print(json.dumps([{k: x[k] for k in ("key", "name", "place", "size", "days")} for x in rows], ensure_ascii=False))
+        print(json.dumps([{k: x[k] for k in ("key", "name", "place", "size", "days")} for x in rows], ensure_ascii=False))   # 꼴 그대로(읽는 쪽 · 시험이 stdout+stderr 를 합쳐 json 으로 읽음)
         return 0
     for x in rows:
         print("%s · %s · %.1fMB · %d일 · %s" % (x["name"], x["place"], x["size"] / 1e6, x["days"], x["key"]))
-    print("볼트 밖 후보 %d" % len(rows))
+    print("볼트 밖 후보 %d" % len(rows) + (" — " + NOSNAP if _nosnap[0] else ""))
     return 0
 
 
