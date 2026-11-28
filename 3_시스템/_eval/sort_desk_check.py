@@ -99,7 +99,7 @@ def load(name, path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--shots', help='그림 폴더(제작-밝음.png · 제작-어둠.png)')
-    ap.add_argument('--source', default='school-a')
+    ap.add_argument('--source', help='출처 id(없으면 수집 창 자료의 첫 출처 — 볼트마다 다름)')
     a = ap.parse_args()
     T = tempfile.mkdtemp(prefix='sort-desk-')
     try:

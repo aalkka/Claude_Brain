@@ -1031,6 +1031,8 @@ def candidates():
             for fn in sorted(fns):
                 if fn.startswith((".", "~$")) or fn.lower().endswith(".md"):
                     continue
+                if fn.lower().endswith(" (필기).pdf") and os.path.isfile(os.path.join(dp, fn[: -len(" (필기).pdf")] + ".pdf")):
+                    continue                                # 필기 짝 PDF(brain-source 과제 5 · 원본 옆 구운 것) = 원본 아님 · 저장마다 바뀌어 다시 읽으면 OCR 비용
                 if kinds is not None and os.path.splitext(fn)[1].lower() not in kinds:
                     continue
                 yield os.path.join(dp, fn)

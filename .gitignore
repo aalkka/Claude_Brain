@@ -50,6 +50,8 @@ __pycache__/
 .obsidian/plugins/brain-base/data.json
 .obsidian/plugins/brain-calendar/data.json
 .obsidian/plugins/brain-source/data.json
+# 켤 때 덮개 조각 — brain-base 가 켤 때마다 지금 판 그림으로 다시 쓴다(만들어지는 파일이라 추적 안 함)
+.obsidian/snippets/brain-boot.css
 # 로그인 수집 확장이 읽는 출처 목록·«이미 받은 것» — collect-browser.py 가 조리법·manifest 에서 다시 만든다(파생물 · 개인 값)
 3_시스템/collect-ext/ext-state.json
 3_시스템/collect-ext/known-*.json
