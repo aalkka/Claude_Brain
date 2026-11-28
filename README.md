@@ -18,6 +18,7 @@ Obsidian 볼트 + Claude Code 개인 지식 시스템. 토큰 최적화·맥락 
    git branch --show-current
    ```
    마지막 줄이 `main` 을 내면 됐다. 아무것도 안 내면(태그로 받은 경우) `git switch -c main` 을 한 번 친다 — 가지가 없으면 세션 커밋이 고아가 된다.
+   `<내볼트경로>` 는 짧게 둔다(140자 이하). 더 길면 윈도의 260자 경로 제한에 걸려 받기가 `failed to create directory`·`failed to unlink` 로 멈춘다 — 그때는 먼저 `git config --global core.longpaths true` 를 치고 다시 받는다.
 2. **git 훅 활성**(secret 차단 게이트) **+ 이름·메일**(자동 커밋에 필요 · 이 볼트에만):
    ```
    git config core.hooksPath 3_시스템/hooks
